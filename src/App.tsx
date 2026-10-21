@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import type { CharacterKind } from "@/bindings/CharacterKind";
 import { CharacterCard } from "@/components/character/character-card";
 import { CharacterSheet } from "@/components/character/character-sheet";
+import { InitiativeTracker } from "@/components/combat/initiative-tracker";
 import { DamageDialog } from "@/components/combat/damage-dialog";
 import { LastDamage } from "@/components/combat/last-damage";
 import { CoverPanel } from "@/components/scene/cover-panel";
@@ -24,6 +25,15 @@ export default function App() {
   const injuries = useInjuries();
   const damageTarget = entries.find((e) => e.id === damageTargetId) ?? null;
   const selected = entries.find((e) => e.id === selectedCharacterId) ?? null;
+
+  const combat = sceneState.scene?.combat ?? null;
+  // Fighters first, in acting order; everyone else keeps the database order.
+  const railEntries = combat
+    ? [
+        ...combat.combatants.flatMap((c) => entries.filter((e) => e.id === c.character_id)),
+        ...entries.filter((e) => !combat.combatants.some((c) => c.character_id === e.id)),
+      ]
+    : entries;
 
   const createCharacter = async (kind: CharacterKind) => {
     const record = await create(kind, t(`characters.default_name_${kind}`));
@@ -115,6 +125,24 @@ export default function App() {
                 onUndo={() => undoDamage().catch((e: unknown) => window.alert(errorMessage(e)))}
               />
             )}
+            {combat && (
+              <InitiativeTracker
+                combat={combat}
+                characters={entries.map((e) => ({
+                  id: e.id,
+                  name: e.character.name,
+                  wound: e.derived.wound_state,
+                }))}
+                onAdd={sceneState.combatAdd}
+                onReroll={sceneState.combatReroll}
+                onSetInitiative={sceneState.combatSetInitiative}
+                onShift={sceneState.combatShift}
+                onRemove={sceneState.combatRemove}
+                onStart={sceneState.combatStart}
+                onNextTurn={sceneState.combatNextTurn}
+                onEnd={sceneState.combatEnd}
+              />
+            )}
             {sceneState.scene && (
               <CoverPanel
                 scene={sceneState.scene}
@@ -133,12 +161,14 @@ export default function App() {
       }
       rail={
         <>
-          {entries.map((e) => (
+          {railEntries.map((e) => (
             <CharacterCard
               key={e.id}
+              active={combat?.active === e.id}
               character={{
                 id: String(e.id),
                 name: e.character.name,
+                initiative: combat?.combatants.find((c) => c.character_id === e.id)?.initiative,
                 hp: e.character.hp,
                 maxHp: e.derived.max_hp,
                 spHead: e.character.armor_head.sp,

@@ -44,4 +44,17 @@ export const api = {
   applyDamage: (characterId: number, request: DamageRequest, injuryId: string | null) =>
     invoke<DamageApplied>("apply_damage", { characterId, request, injuryId }),
   undoDamage: () => invoke<DamageApplied>("undo_damage"),
+  /** Adds to the fight with REF + 1d10; `manual` is the face of a physical die. */
+  combatAdd: (characterId: number, manual: number | null) =>
+    invoke<SceneRecord>("combat_add", { characterId, manual }),
+  combatReroll: (characterId: number, manual: number | null) =>
+    invoke<SceneRecord>("combat_reroll", { characterId, manual }),
+  combatSetInitiative: (characterId: number, initiative: number) =>
+    invoke<SceneRecord>("combat_set_initiative", { characterId, initiative }),
+  combatShift: (characterId: number, delta: number) =>
+    invoke<SceneRecord>("combat_shift", { characterId, delta }),
+  combatRemove: (characterId: number) => invoke<SceneRecord>("combat_remove", { characterId }),
+  combatStart: () => invoke<SceneRecord>("combat_start"),
+  combatNextTurn: () => invoke<SceneRecord>("combat_next_turn"),
+  combatEnd: () => invoke<SceneRecord>("combat_end"),
 };

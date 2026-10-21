@@ -12,6 +12,7 @@ use ts_rs::TS;
 use crate::catalog::CoverThickness;
 use crate::damage_event::DamageEvent;
 use crate::data_source::{DataResult, DataSource};
+use crate::initiative::Combat;
 
 /// Current version of the scene document.
 pub const SCHEMA_VERSION: u32 = 1;
@@ -93,6 +94,9 @@ pub struct Scene {
     /// Last applied hit, kept so it can be undone (only this one).
     #[serde(default)]
     pub last_damage: Option<DamageEvent>,
+    /// Initiative order and round counter of the current fight.
+    #[serde(default)]
+    pub combat: Combat,
 }
 
 fn first_cover_id() -> u32 {
@@ -127,6 +131,7 @@ impl Default for Scene {
             covers: Vec::new(),
             next_cover_id: 1,
             last_damage: None,
+            combat: Combat::default(),
         }
     }
 }

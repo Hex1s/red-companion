@@ -7,6 +7,7 @@ use rules_core::damage::DamageOutcome;
 use rules_core::damage_event::{self, DamageApplied, DamageRequest, InjuryRoll};
 use rules_core::data_source::{DataSource, SeedDataSource};
 use rules_core::dice::{DiceError, DiceNotation, RollResult, ThreadDice, roll, roll_manual};
+use rules_core::initiative::INITIATIVE_DIE;
 use rules_core::scene::{CoverPreset, Scene, SceneRecord, cover_presets};
 use storage::{CharacterRow, Storage};
 use tauri::{Manager, State};
@@ -90,6 +91,10 @@ fn delete_character(state: State<'_, AppStorage>, id: i64) -> Result<(), String>
     if let Some(row) = storage.latest_scene().map_err(|e| e.to_string())? {
         let mut scene: Scene = serde_json::from_str(&row.data).map_err(|e| e.to_string())?;
         scene.unlink_character(id);
+        if scene.combat.combatants.iter().any(|c| c.character_id == id) {
+            let skip = dead_ids(&storage, &scene)?;
+            scene.combat.remove(id, &skip).map_err(|e| e.to_string())?;
+        }
         save_scene_row(&storage, row.id, &scene)?;
     }
     Ok(())
@@ -210,6 +215,123 @@ fn store_character(storage: &Storage, id: i64, character: &Character) -> Result<
     let data = serde_json::to_string(character).map_err(|e| e.to_string())?;
     storage.update_character(id, &character.name, &data).map_err(|e| e.to_string())?;
     Ok(())
+}
+
+/// Ids of fighters who cannot take a turn: dead, or no longer in the database.
+fn dead_ids(storage: &Storage, scene: &Scene) -> Result<Vec<i64>, String> {
+    let mut dead = Vec::new();
+    for c in &scene.combat.combatants {
+        match load_character(storage, c.character_id)? {
+            Some(character) if !character.dead => {}
+            _ => dead.push(c.character_id),
+        }
+    }
+    Ok(dead)
+}
+
+/// Rolls the initiative die, or takes the face read off a physical die.
+fn initiative_die(manual: Option<u32>) -> Result<u32, String> {
+    let notation = DiceNotation { count: 1, sides: INITIATIVE_DIE, modifier: 0 };
+    let result = match manual {
+        Some(face) => roll_manual(notation, &[face]).map_err(|e| e.to_string())?,
+        None => roll(notation, &mut ThreadDice::new()),
+    };
+    Ok(result.dice[0])
+}
+
+/// Runs a change on the working scene with access to the character storage.
+fn with_combat(
+    state: &State<'_, AppStorage>,
+    change: impl FnOnce(&mut Scene, &Storage) -> Result<(), String>,
+) -> Result<SceneRecord, String> {
+    let storage = lock(state)?;
+    let (id, mut scene) = load_scene(&storage)?;
+    change(&mut scene, &storage)?;
+    save_scene_row(&storage, id, &scene)?;
+    Ok(SceneRecord { id, scene })
+}
+
+/// Adds a character to the fight with REF + 1d10 (`manual` = the die face).
+#[tauri::command]
+fn combat_add(
+    state: State<'_, AppStorage>,
+    character_id: i64,
+    manual: Option<u32>,
+) -> Result<SceneRecord, String> {
+    with_combat(&state, |scene, storage| {
+        let reflex = require_character(storage, character_id)?.stats.reflex;
+        let die = initiative_die(manual)?;
+        scene.combat.add(character_id, reflex, die).map_err(|e| e.to_string())
+    })
+}
+
+#[tauri::command]
+fn combat_reroll(
+    state: State<'_, AppStorage>,
+    character_id: i64,
+    manual: Option<u32>,
+) -> Result<SceneRecord, String> {
+    with_combat(&state, |scene, storage| {
+        let reflex = require_character(storage, character_id)?.stats.reflex;
+        let die = initiative_die(manual)?;
+        scene.combat.reroll(character_id, reflex, die).map_err(|e| e.to_string())
+    })
+}
+
+/// Sets the initiative total by hand.
+#[tauri::command]
+fn combat_set_initiative(
+    state: State<'_, AppStorage>,
+    character_id: i64,
+    initiative: u32,
+) -> Result<SceneRecord, String> {
+    with_combat(&state, |scene, _| {
+        scene.combat.set_initiative(character_id, initiative).map_err(|e| e.to_string())
+    })
+}
+
+/// Moves a fighter one place earlier (`delta < 0`) or later (`delta > 0`).
+#[tauri::command]
+fn combat_shift(
+    state: State<'_, AppStorage>,
+    character_id: i64,
+    delta: i32,
+) -> Result<SceneRecord, String> {
+    with_combat(&state, |scene, _| {
+        scene.combat.shift(character_id, delta).map_err(|e| e.to_string())
+    })
+}
+
+#[tauri::command]
+fn combat_remove(state: State<'_, AppStorage>, character_id: i64) -> Result<SceneRecord, String> {
+    with_combat(&state, |scene, storage| {
+        let skip = dead_ids(storage, scene)?;
+        scene.combat.remove(character_id, &skip).map_err(|e| e.to_string())
+    })
+}
+
+#[tauri::command]
+fn combat_start(state: State<'_, AppStorage>) -> Result<SceneRecord, String> {
+    with_combat(&state, |scene, storage| {
+        let skip = dead_ids(storage, scene)?;
+        scene.combat.start(&skip).map_err(|e| e.to_string())
+    })
+}
+
+#[tauri::command]
+fn combat_next_turn(state: State<'_, AppStorage>) -> Result<SceneRecord, String> {
+    with_combat(&state, |scene, storage| {
+        let skip = dead_ids(storage, scene)?;
+        scene.combat.next_turn(&skip).map_err(|e| e.to_string())
+    })
+}
+
+#[tauri::command]
+fn combat_end(state: State<'_, AppStorage>) -> Result<SceneRecord, String> {
+    with_combat(&state, |scene, _| {
+        scene.combat.end();
+        Ok(())
+    })
 }
 
 fn injury_table() -> Result<Vec<CriticalInjury>, String> {
@@ -341,7 +463,15 @@ pub fn run() {
             roll_injury,
             preview_damage,
             apply_damage,
-            undo_damage
+            undo_damage,
+            combat_add,
+            combat_reroll,
+            combat_set_initiative,
+            combat_shift,
+            combat_remove,
+            combat_start,
+            combat_next_turn,
+            combat_end
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

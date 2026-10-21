@@ -9,6 +9,7 @@ pub mod damage;
 pub mod damage_event;
 pub mod data_source;
 pub mod dice;
+pub mod initiative;
 pub mod scene;
 
 use serde::Serialize;

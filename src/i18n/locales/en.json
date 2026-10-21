@@ -388,5 +388,26 @@
       "hp_lost": "HP {{before}} → {{after}}",
       "wound_state_changed": "State: {{from}} → {{to}}"
     }
+  },
+  "initiative": {
+    "title": "Initiative",
+    "round": "Round",
+    "next_turn": "Next turn",
+    "start": "Start fight",
+    "end": "End fight",
+    "clear": "Clear",
+    "empty": "Nobody in the fight. Add fighters: initiative is REF + 1d10.",
+    "fighter": "Fighter",
+    "pick": "Pick a character",
+    "die": "d10",
+    "die_random": "random",
+    "add": "Add to fight",
+    "total": "Initiative",
+    "manual": "manual",
+    "turn": "turn",
+    "up": "Move up",
+    "down": "Move down",
+    "reroll": "Re-roll",
+    "remove": "Remove"
   }
 }
