@@ -1,8 +1,10 @@
 //! Character sheet: stats, armor, injuries and everything derived from them.
 //!
 //! One document type for PCs and NPCs; storage keeps it as a JSON string, so
-//! `schema_version` lets old documents be migrated on load. Skills are not
-//! part of the sheet yet (roadmap 1.3b).
+//! `schema_version` lets old documents be migrated on load. Skills are kept as
+//! levels by skill id (see `catalog::Skill`).
+
+use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -19,6 +21,8 @@ pub const STAT_MAX: u8 = 10;
 pub const SP_MAX: u8 = 20;
 /// Humanity per point of EMP (p. 79).
 pub const HUMANITY_PER_EMP: u32 = 10;
+/// Skill level range on the sheet.
+pub const SKILL_MAX: u8 = 10;
 /// Stat value used by "quick create"; the GM tunes it afterwards.
 pub const QUICK_STAT: u8 = 5;
 
@@ -86,6 +90,10 @@ pub struct Character {
     pub dead: bool,
     #[serde(default)]
     pub notes: String,
+    /// Skill levels by skill id; skills that are absent are at level 0.
+    #[serde(default)]
+    #[ts(type = "Record<string, number>")]
+    pub skills: BTreeMap<String, u8>,
 }
 
 /// Numbers computed from the sheet; never stored.
@@ -136,6 +144,8 @@ pub enum CharacterError {
     BadArmor { area: &'static str, sp: u8, max_sp: u8 },
     #[error("HP {hp} exceeds max HP {max_hp}")]
     HpAboveMax { hp: u32, max_hp: u32 },
+    #[error("skill {skill} level {level} is out of range")]
+    SkillOutOfRange { skill: String, level: u8 },
     #[error("unsupported schema version {0}")]
     UnsupportedVersion(u32),
 }
@@ -156,6 +166,7 @@ impl Character {
             death_save_penalty: 0,
             dead: false,
             notes: String::new(),
+            skills: BTreeMap::new(),
         }
     }
 
@@ -220,6 +231,9 @@ impl Character {
             if slot.max_sp > SP_MAX || slot.sp > slot.max_sp {
                 return Err(CharacterError::BadArmor { area, sp: slot.sp, max_sp: slot.max_sp });
             }
+        }
+        if let Some((skill, &level)) = self.skills.iter().find(|(_, l)| **l > SKILL_MAX) {
+            return Err(CharacterError::SkillOutOfRange { skill: skill.clone(), level });
         }
         let max_hp = self.max_hp();
         if self.hp > max_hp {
@@ -306,6 +320,12 @@ mod tests {
         assert!(matches!(c.validate(), Err(CharacterError::HpAboveMax { .. })));
 
         let mut c = Character::quick("V");
+        c.skills.insert("handgun".into(), 11);
+        assert!(matches!(c.validate(), Err(CharacterError::SkillOutOfRange { level: 11, .. })));
+        c.skills.insert("handgun".into(), SKILL_MAX);
+        assert_eq!(c.validate(), Ok(()));
+
+        let mut c = Character::quick("V");
         c.schema_version = 99;
         assert_eq!(c.validate(), Err(CharacterError::UnsupportedVersion(99)));
     }
@@ -318,7 +338,7 @@ mod tests {
 
         // A document without the optional fields still loads.
         let mut value: serde_json::Value = serde_json::from_str(&json).unwrap();
-        for key in ["injuries", "death_save_penalty", "dead", "notes"] {
+        for key in ["injuries", "death_save_penalty", "dead", "notes", "skills"] {
             value.as_object_mut().unwrap().remove(key);
         }
         let loaded: Character = serde_json::from_value(value).unwrap();

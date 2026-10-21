@@ -10,4 +10,8 @@ injuries: Array<string>,
 /**
  * Accumulated death save penalty (p. 186).
  */
-death_save_penalty: number, dead: boolean, notes: string, };
+death_save_penalty: number, dead: boolean, notes: string, 
+/**
+ * Skill levels by skill id; skills that are absent are at level 0.
+ */
+skills: Record<string, number>, };

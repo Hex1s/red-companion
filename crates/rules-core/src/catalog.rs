@@ -117,6 +117,51 @@ pub struct Shield {
     pub source: Source,
 }
 
+/// Stat a skill is linked to (same names as the fields of `character::Stats`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+#[serde(rename_all = "snake_case")]
+pub enum StatKey {
+    Int,
+    Reflex,
+    Dex,
+    Tech,
+    Cool,
+    Will,
+    Luck,
+    Movement,
+    Body,
+    Emp,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+#[serde(rename_all = "snake_case")]
+pub enum SkillCategory {
+    Perception,
+    Body,
+    Control,
+    Education,
+    Fighting,
+    Performance,
+    RangedWeapon,
+    Social,
+    Technique,
+}
+
+/// Skill from the list on p. 131-142. Descriptions are not stored (book text).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+pub struct Skill {
+    pub id: String,
+    pub name_key: String,
+    pub stat: StatKey,
+    pub category: SkillCategory,
+    /// Marked "(x2)" in the book: costs twice as much to learn and improve.
+    pub double_cost: bool,
+    pub source: Source,
+}
+
 /// A versioned set of entries of one type, the unit of sync with the future API.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct Collection<T> {
@@ -236,6 +281,20 @@ pub fn validate_shields(c: &Collection<Shield>) -> Result<(), CatalogError> {
     }
 }
 
+/// The Russian edition lists 66 skills (p. 131-142).
+pub const SKILL_COUNT: usize = 66;
+
+pub fn validate_skills(c: &Collection<Skill>) -> Result<(), CatalogError> {
+    check_ids(c.entries.iter().map(|e| (e.id.as_str(), e.name_key.as_str(), e.source.page)))?;
+    if c.entries.len() != SKILL_COUNT {
+        return Err(CatalogError::OutOfRange(format!("skills: {} entries", c.entries.len())));
+    }
+    match c.entries.iter().find(|e| !(131..=142).contains(&e.source.page)) {
+        Some(e) => Err(CatalogError::OutOfRange(e.id.clone())),
+        None => Ok(()),
+    }
+}
+
 /// JSON Schemas of all reference collections, by file name.
 pub fn json_schemas() -> Vec<(&'static str, schemars::Schema)> {
     use schemars::schema_for;
@@ -244,6 +303,7 @@ pub fn json_schemas() -> Vec<(&'static str, schemars::Schema)> {
         ("cover_materials", schema_for!(Collection<CoverMaterial>)),
         ("armor", schema_for!(Collection<Armor>)),
         ("shields", schema_for!(Collection<Shield>)),
+        ("skills", schema_for!(Collection<Skill>)),
         ("collection_version", schema_for!(CollectionVersion)),
     ]
 }

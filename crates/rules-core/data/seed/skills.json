@@ -1,0 +1,666 @@
+{
+  "name": "skills",
+  "version": 1,
+  "entries": [
+    {
+      "id": "concentration",
+      "name_key": "skill.items.concentration",
+      "stat": "will",
+      "category": "perception",
+      "double_cost": false,
+      "source": {
+        "page": 131
+      }
+    },
+    {
+      "id": "conceal_reveal_object",
+      "name_key": "skill.items.conceal_reveal_object",
+      "stat": "int",
+      "category": "perception",
+      "double_cost": false,
+      "source": {
+        "page": 131
+      }
+    },
+    {
+      "id": "lip_reading",
+      "name_key": "skill.items.lip_reading",
+      "stat": "int",
+      "category": "perception",
+      "double_cost": false,
+      "source": {
+        "page": 131
+      }
+    },
+    {
+      "id": "perception",
+      "name_key": "skill.items.perception",
+      "stat": "int",
+      "category": "perception",
+      "double_cost": false,
+      "source": {
+        "page": 131
+      }
+    },
+    {
+      "id": "tracking",
+      "name_key": "skill.items.tracking",
+      "stat": "int",
+      "category": "perception",
+      "double_cost": false,
+      "source": {
+        "page": 131
+      }
+    },
+    {
+      "id": "athletics",
+      "name_key": "skill.items.athletics",
+      "stat": "dex",
+      "category": "body",
+      "double_cost": false,
+      "source": {
+        "page": 131
+      }
+    },
+    {
+      "id": "contortionist",
+      "name_key": "skill.items.contortionist",
+      "stat": "dex",
+      "category": "body",
+      "double_cost": false,
+      "source": {
+        "page": 131
+      }
+    },
+    {
+      "id": "dance",
+      "name_key": "skill.items.dance",
+      "stat": "dex",
+      "category": "body",
+      "double_cost": false,
+      "source": {
+        "page": 132
+      }
+    },
+    {
+      "id": "endurance",
+      "name_key": "skill.items.endurance",
+      "stat": "will",
+      "category": "body",
+      "double_cost": false,
+      "source": {
+        "page": 132
+      }
+    },
+    {
+      "id": "resist_torture_drugs",
+      "name_key": "skill.items.resist_torture_drugs",
+      "stat": "will",
+      "category": "body",
+      "double_cost": false,
+      "source": {
+        "page": 132
+      }
+    },
+    {
+      "id": "stealth",
+      "name_key": "skill.items.stealth",
+      "stat": "dex",
+      "category": "body",
+      "double_cost": false,
+      "source": {
+        "page": 132
+      }
+    },
+    {
+      "id": "drive_land_vehicle",
+      "name_key": "skill.items.drive_land_vehicle",
+      "stat": "reflex",
+      "category": "control",
+      "double_cost": false,
+      "source": {
+        "page": 132
+      }
+    },
+    {
+      "id": "pilot_air_vehicle",
+      "name_key": "skill.items.pilot_air_vehicle",
+      "stat": "reflex",
+      "category": "control",
+      "double_cost": true,
+      "source": {
+        "page": 132
+      }
+    },
+    {
+      "id": "pilot_sea_vehicle",
+      "name_key": "skill.items.pilot_sea_vehicle",
+      "stat": "reflex",
+      "category": "control",
+      "double_cost": false,
+      "source": {
+        "page": 132
+      }
+    },
+    {
+      "id": "riding",
+      "name_key": "skill.items.riding",
+      "stat": "reflex",
+      "category": "control",
+      "double_cost": false,
+      "source": {
+        "page": 133
+      }
+    },
+    {
+      "id": "accounting",
+      "name_key": "skill.items.accounting",
+      "stat": "int",
+      "category": "education",
+      "double_cost": false,
+      "source": {
+        "page": 133
+      }
+    },
+    {
+      "id": "animal_handling",
+      "name_key": "skill.items.animal_handling",
+      "stat": "int",
+      "category": "education",
+      "double_cost": false,
+      "source": {
+        "page": 133
+      }
+    },
+    {
+      "id": "bureaucracy",
+      "name_key": "skill.items.bureaucracy",
+      "stat": "int",
+      "category": "education",
+      "double_cost": false,
+      "source": {
+        "page": 133
+      }
+    },
+    {
+      "id": "business",
+      "name_key": "skill.items.business",
+      "stat": "int",
+      "category": "education",
+      "double_cost": false,
+      "source": {
+        "page": 134
+      }
+    },
+    {
+      "id": "composition",
+      "name_key": "skill.items.composition",
+      "stat": "int",
+      "category": "education",
+      "double_cost": false,
+      "source": {
+        "page": 134
+      }
+    },
+    {
+      "id": "criminology",
+      "name_key": "skill.items.criminology",
+      "stat": "int",
+      "category": "education",
+      "double_cost": false,
+      "source": {
+        "page": 134
+      }
+    },
+    {
+      "id": "cryptography",
+      "name_key": "skill.items.cryptography",
+      "stat": "int",
+      "category": "education",
+      "double_cost": false,
+      "source": {
+        "page": 134
+      }
+    },
+    {
+      "id": "deduction",
+      "name_key": "skill.items.deduction",
+      "stat": "int",
+      "category": "education",
+      "double_cost": false,
+      "source": {
+        "page": 134
+      }
+    },
+    {
+      "id": "education",
+      "name_key": "skill.items.education",
+      "stat": "int",
+      "category": "education",
+      "double_cost": false,
+      "source": {
+        "page": 135
+      }
+    },
+    {
+      "id": "gambling",
+      "name_key": "skill.items.gambling",
+      "stat": "int",
+      "category": "education",
+      "double_cost": false,
+      "source": {
+        "page": 135
+      }
+    },
+    {
+      "id": "language",
+      "name_key": "skill.items.language",
+      "stat": "int",
+      "category": "education",
+      "double_cost": false,
+      "source": {
+        "page": 135
+      }
+    },
+    {
+      "id": "library_search",
+      "name_key": "skill.items.library_search",
+      "stat": "int",
+      "category": "education",
+      "double_cost": false,
+      "source": {
+        "page": 135
+      }
+    },
+    {
+      "id": "local_expert",
+      "name_key": "skill.items.local_expert",
+      "stat": "int",
+      "category": "education",
+      "double_cost": false,
+      "source": {
+        "page": 135
+      }
+    },
+    {
+      "id": "science",
+      "name_key": "skill.items.science",
+      "stat": "int",
+      "category": "education",
+      "double_cost": false,
+      "source": {
+        "page": 135
+      }
+    },
+    {
+      "id": "tactics",
+      "name_key": "skill.items.tactics",
+      "stat": "int",
+      "category": "education",
+      "double_cost": false,
+      "source": {
+        "page": 136
+      }
+    },
+    {
+      "id": "wilderness_survival",
+      "name_key": "skill.items.wilderness_survival",
+      "stat": "int",
+      "category": "education",
+      "double_cost": false,
+      "source": {
+        "page": 136
+      }
+    },
+    {
+      "id": "brawling",
+      "name_key": "skill.items.brawling",
+      "stat": "dex",
+      "category": "fighting",
+      "double_cost": false,
+      "source": {
+        "page": 136
+      }
+    },
+    {
+      "id": "evasion",
+      "name_key": "skill.items.evasion",
+      "stat": "dex",
+      "category": "fighting",
+      "double_cost": false,
+      "source": {
+        "page": 137
+      }
+    },
+    {
+      "id": "martial_arts",
+      "name_key": "skill.items.martial_arts",
+      "stat": "dex",
+      "category": "fighting",
+      "double_cost": true,
+      "source": {
+        "page": 137
+      }
+    },
+    {
+      "id": "melee_weapon",
+      "name_key": "skill.items.melee_weapon",
+      "stat": "dex",
+      "category": "fighting",
+      "double_cost": false,
+      "source": {
+        "page": 137
+      }
+    },
+    {
+      "id": "acting",
+      "name_key": "skill.items.acting",
+      "stat": "cool",
+      "category": "performance",
+      "double_cost": false,
+      "source": {
+        "page": 137
+      }
+    },
+    {
+      "id": "play_instrument",
+      "name_key": "skill.items.play_instrument",
+      "stat": "tech",
+      "category": "performance",
+      "double_cost": false,
+      "source": {
+        "page": 137
+      }
+    },
+    {
+      "id": "archery",
+      "name_key": "skill.items.archery",
+      "stat": "reflex",
+      "category": "ranged_weapon",
+      "double_cost": false,
+      "source": {
+        "page": 137
+      }
+    },
+    {
+      "id": "autofire",
+      "name_key": "skill.items.autofire",
+      "stat": "reflex",
+      "category": "ranged_weapon",
+      "double_cost": true,
+      "source": {
+        "page": 138
+      }
+    },
+    {
+      "id": "handgun",
+      "name_key": "skill.items.handgun",
+      "stat": "reflex",
+      "category": "ranged_weapon",
+      "double_cost": false,
+      "source": {
+        "page": 138
+      }
+    },
+    {
+      "id": "heavy_weapons",
+      "name_key": "skill.items.heavy_weapons",
+      "stat": "reflex",
+      "category": "ranged_weapon",
+      "double_cost": true,
+      "source": {
+        "page": 138
+      }
+    },
+    {
+      "id": "shoulder_arms",
+      "name_key": "skill.items.shoulder_arms",
+      "stat": "reflex",
+      "category": "ranged_weapon",
+      "double_cost": false,
+      "source": {
+        "page": 138
+      }
+    },
+    {
+      "id": "bribery",
+      "name_key": "skill.items.bribery",
+      "stat": "cool",
+      "category": "social",
+      "double_cost": false,
+      "source": {
+        "page": 138
+      }
+    },
+    {
+      "id": "conversation",
+      "name_key": "skill.items.conversation",
+      "stat": "emp",
+      "category": "social",
+      "double_cost": false,
+      "source": {
+        "page": 138
+      }
+    },
+    {
+      "id": "human_perception",
+      "name_key": "skill.items.human_perception",
+      "stat": "emp",
+      "category": "social",
+      "double_cost": false,
+      "source": {
+        "page": 139
+      }
+    },
+    {
+      "id": "interrogation",
+      "name_key": "skill.items.interrogation",
+      "stat": "cool",
+      "category": "social",
+      "double_cost": false,
+      "source": {
+        "page": 139
+      }
+    },
+    {
+      "id": "persuasion",
+      "name_key": "skill.items.persuasion",
+      "stat": "cool",
+      "category": "social",
+      "double_cost": false,
+      "source": {
+        "page": 139
+      }
+    },
+    {
+      "id": "personal_grooming",
+      "name_key": "skill.items.personal_grooming",
+      "stat": "cool",
+      "category": "social",
+      "double_cost": false,
+      "source": {
+        "page": 139
+      }
+    },
+    {
+      "id": "streetwise",
+      "name_key": "skill.items.streetwise",
+      "stat": "cool",
+      "category": "social",
+      "double_cost": false,
+      "source": {
+        "page": 139
+      }
+    },
+    {
+      "id": "trading",
+      "name_key": "skill.items.trading",
+      "stat": "cool",
+      "category": "social",
+      "double_cost": false,
+      "source": {
+        "page": 139
+      }
+    },
+    {
+      "id": "wardrobe_style",
+      "name_key": "skill.items.wardrobe_style",
+      "stat": "cool",
+      "category": "social",
+      "double_cost": false,
+      "source": {
+        "page": 139
+      }
+    },
+    {
+      "id": "air_vehicle_tech",
+      "name_key": "skill.items.air_vehicle_tech",
+      "stat": "tech",
+      "category": "technique",
+      "double_cost": false,
+      "source": {
+        "page": 140
+      }
+    },
+    {
+      "id": "basic_tech",
+      "name_key": "skill.items.basic_tech",
+      "stat": "tech",
+      "category": "technique",
+      "double_cost": false,
+      "source": {
+        "page": 140
+      }
+    },
+    {
+      "id": "cybertech",
+      "name_key": "skill.items.cybertech",
+      "stat": "tech",
+      "category": "technique",
+      "double_cost": false,
+      "source": {
+        "page": 140
+      }
+    },
+    {
+      "id": "demolitions",
+      "name_key": "skill.items.demolitions",
+      "stat": "tech",
+      "category": "technique",
+      "double_cost": true,
+      "source": {
+        "page": 140
+      }
+    },
+    {
+      "id": "electronics_security_tech",
+      "name_key": "skill.items.electronics_security_tech",
+      "stat": "tech",
+      "category": "technique",
+      "double_cost": true,
+      "source": {
+        "page": 141
+      }
+    },
+    {
+      "id": "first_aid",
+      "name_key": "skill.items.first_aid",
+      "stat": "tech",
+      "category": "technique",
+      "double_cost": false,
+      "source": {
+        "page": 141
+      }
+    },
+    {
+      "id": "forgery",
+      "name_key": "skill.items.forgery",
+      "stat": "tech",
+      "category": "technique",
+      "double_cost": false,
+      "source": {
+        "page": 141
+      }
+    },
+    {
+      "id": "land_vehicle_tech",
+      "name_key": "skill.items.land_vehicle_tech",
+      "stat": "tech",
+      "category": "technique",
+      "double_cost": false,
+      "source": {
+        "page": 141
+      }
+    },
+    {
+      "id": "paint_draw_sculpt",
+      "name_key": "skill.items.paint_draw_sculpt",
+      "stat": "tech",
+      "category": "technique",
+      "double_cost": false,
+      "source": {
+        "page": 141
+      }
+    },
+    {
+      "id": "paramedic",
+      "name_key": "skill.items.paramedic",
+      "stat": "tech",
+      "category": "technique",
+      "double_cost": true,
+      "source": {
+        "page": 141
+      }
+    },
+    {
+      "id": "photography_film",
+      "name_key": "skill.items.photography_film",
+      "stat": "tech",
+      "category": "technique",
+      "double_cost": false,
+      "source": {
+        "page": 141
+      }
+    },
+    {
+      "id": "pick_lock",
+      "name_key": "skill.items.pick_lock",
+      "stat": "tech",
+      "category": "technique",
+      "double_cost": false,
+      "source": {
+        "page": 142
+      }
+    },
+    {
+      "id": "pick_pocket",
+      "name_key": "skill.items.pick_pocket",
+      "stat": "tech",
+      "category": "technique",
+      "double_cost": false,
+      "source": {
+        "page": 142
+      }
+    },
+    {
+      "id": "sea_vehicle_tech",
+      "name_key": "skill.items.sea_vehicle_tech",
+      "stat": "tech",
+      "category": "technique",
+      "double_cost": false,
+      "source": {
+        "page": 142
+      }
+    },
+    {
+      "id": "weaponstech",
+      "name_key": "skill.items.weaponstech",
+      "stat": "tech",
+      "category": "technique",
+      "double_cost": false,
+      "source": {
+        "page": 142
+      }
+    }
+  ]
+}

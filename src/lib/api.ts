@@ -2,11 +2,13 @@ import { invoke } from "@tauri-apps/api/core";
 import type { Character } from "@/bindings/Character";
 import type { CharacterKind } from "@/bindings/CharacterKind";
 import type { CharacterRecord } from "@/bindings/CharacterRecord";
+import type { Skill } from "@/bindings/Skill";
 
 /** True inside the Tauri window; false in plain `npm run dev` in a browser. */
 export const hasBackend = "__TAURI_INTERNALS__" in globalThis;
 
 export const api = {
+  listSkills: () => invoke<Skill[]>("list_skills"),
   listCharacters: (kind: CharacterKind) => invoke<CharacterRecord[]>("list_characters", { kind }),
   createCharacter: (kind: CharacterKind, name: string) =>
     invoke<CharacterRecord>("create_character", { kind, name }),

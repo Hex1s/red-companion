@@ -4,7 +4,7 @@
 use thiserror::Error;
 
 use crate::catalog::{
-    Armor, Collection, CollectionVersion, CoverMaterial, CriticalInjury, Shield,
+    Armor, Collection, CollectionVersion, CoverMaterial, CriticalInjury, Shield, Skill,
 };
 
 #[derive(Debug, Error)]
@@ -20,6 +20,7 @@ pub trait DataSource {
     fn cover_materials(&self) -> DataResult<Collection<CoverMaterial>>;
     fn armor(&self) -> DataResult<Collection<Armor>>;
     fn shields(&self) -> DataResult<Collection<Shield>>;
+    fn skills(&self) -> DataResult<Collection<Skill>>;
 
     /// Versions of every collection, the "manifest" compared during sync.
     fn versions(&self) -> DataResult<Vec<CollectionVersion>> {
@@ -28,6 +29,7 @@ pub trait DataSource {
             self.cover_materials()?.version_info(),
             self.armor()?.version_info(),
             self.shields()?.version_info(),
+            self.skills()?.version_info(),
         ])
     }
 }
@@ -56,6 +58,9 @@ impl DataSource for SeedDataSource {
     fn shields(&self) -> DataResult<Collection<Shield>> {
         parse("shields", include_str!("../data/seed/shields.json"))
     }
+    fn skills(&self) -> DataResult<Collection<Skill>> {
+        parse("skills", include_str!("../data/seed/skills.json"))
+    }
 }
 
 #[cfg(test)]
@@ -69,12 +74,13 @@ mod tests {
         assert_eq!(ds.cover_materials().unwrap().name, "cover_materials");
         assert_eq!(ds.armor().unwrap().name, "armor");
         assert_eq!(ds.shields().unwrap().name, "shields");
+        assert_eq!(ds.skills().unwrap().name, "skills");
     }
 
     #[test]
     fn manifest_lists_all_collections() {
         let names: Vec<_> = SeedDataSource.versions().unwrap().into_iter().map(|v| v.name).collect();
-        assert_eq!(names, ["critical_injuries", "cover_materials", "armor", "shields"]);
+        assert_eq!(names, ["critical_injuries", "cover_materials", "armor", "shields", "skills"]);
     }
 
     #[test]
@@ -101,6 +107,7 @@ mod tests {
         keys.extend(ds.cover_materials().unwrap().entries.into_iter().map(|e| e.name_key));
         keys.extend(ds.armor().unwrap().entries.into_iter().map(|e| e.name_key));
         keys.extend(ds.shields().unwrap().entries.into_iter().map(|e| e.name_key));
+        keys.extend(ds.skills().unwrap().entries.into_iter().map(|e| e.name_key));
 
         for lang in ["ru", "en"] {
             let path = format!("{}/../../src/i18n/locales/{lang}.json", env!("CARGO_MANIFEST_DIR"));
@@ -121,6 +128,56 @@ mod tests {
         assert_eq!(validate_cover_materials(&ds.cover_materials().unwrap()), Ok(()));
         assert_eq!(validate_armor(&ds.armor().unwrap()), Ok(()));
         assert_eq!(validate_shields(&ds.shields().unwrap()), Ok(()));
+        assert_eq!(validate_skills(&ds.skills().unwrap()), Ok(()));
+    }
+
+    /// Skill categories have a name in both locales, like the entries do.
+    #[test]
+    fn skill_categories_exist_in_both_locales() {
+        for lang in ["ru", "en"] {
+            let path = format!("{}/../../src/i18n/locales/{lang}.json", env!("CARGO_MANIFEST_DIR"));
+            let root: serde_json::Value =
+                serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+            for cat in ["perception", "body", "control", "education", "fighting", "performance", "ranged_weapon", "social", "technique"] {
+                assert!(root["skill"]["category"][cat].is_string(), "{lang}: {cat}");
+            }
+        }
+    }
+
+    /// Spot checks of skills against the book (p. 131-142), per category counts
+    /// and the (x2) marks.
+    #[test]
+    fn skills_match_book() {
+        use crate::catalog::*;
+        let skills = SeedDataSource.skills().unwrap();
+        let count = |c: SkillCategory| skills.entries.iter().filter(|e| e.category == c).count();
+        assert_eq!(
+            [
+                count(SkillCategory::Perception),
+                count(SkillCategory::Body),
+                count(SkillCategory::Control),
+                count(SkillCategory::Education),
+                count(SkillCategory::Fighting),
+                count(SkillCategory::Performance),
+                count(SkillCategory::RangedWeapon),
+                count(SkillCategory::Social),
+                count(SkillCategory::Technique),
+            ],
+            [5, 6, 4, 16, 4, 2, 5, 9, 15]
+        );
+        let mut doubled: Vec<_> =
+            skills.entries.iter().filter(|e| e.double_cost).map(|e| e.id.as_str()).collect();
+        doubled.sort_unstable();
+        assert_eq!(
+            doubled,
+            ["autofire", "demolitions", "electronics_security_tech", "heavy_weapons", "martial_arts", "paramedic", "pilot_air_vehicle"]
+        );
+        let stat = |id: &str| skills.entries.iter().find(|e| e.id == id).unwrap().stat;
+        assert_eq!(stat("concentration"), StatKey::Will);
+        assert_eq!(stat("first_aid"), StatKey::Tech);
+        assert_eq!(stat("handgun"), StatKey::Reflex);
+        // The Russian edition links pick pocket to TECH (p. 142), unlike the original.
+        assert_eq!(stat("pick_pocket"), StatKey::Tech);
     }
 
     /// Spot checks against the book tables (p. 182, 184-185, 187-188).

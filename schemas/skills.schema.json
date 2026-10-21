@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Collection",
+  "description": "A versioned set of entries of one type, the unit of sync with the future API.",
+  "type": "object",
+  "properties": {
+    "entries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Skill"
+      }
+    },
+    "name": {
+      "description": "Collection name, e.g. `critical_injuries`.",
+      "type": "string"
+    },
+    "version": {
+      "description": "Bumped by hand whenever the content changes.",
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "name",
+    "version",
+    "entries"
+  ],
+  "$defs": {
+    "Skill": {
+      "description": "Skill from the list on p. 131-142. Descriptions are not stored (book text).",
+      "type": "object",
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/SkillCategory"
+        },
+        "double_cost": {
+          "description": "Marked \"(x2)\" in the book: costs twice as much to learn and improve.",
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name_key": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "stat": {
+          "$ref": "#/$defs/StatKey"
+        }
+      },
+      "required": [
+        "id",
+        "name_key",
+        "stat",
+        "category",
+        "double_cost",
+        "source"
+      ]
+    },
+    "SkillCategory": {
+      "type": "string",
+      "enum": [
+        "perception",
+        "body",
+        "control",
+        "education",
+        "fighting",
+        "performance",
+        "ranged_weapon",
+        "social",
+        "technique"
+      ]
+    },
+    "Source": {
+      "description": "Where a value comes from in the rulebook.",
+      "type": "object",
+      "properties": {
+        "page": {
+          "description": "Printed page number (PDF page minus one).",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "page"
+      ]
+    },
+    "StatKey": {
+      "description": "Stat a skill is linked to (same names as the fields of `character::Stats`).",
+      "type": "string",
+      "enum": [
+        "int",
+        "reflex",
+        "dex",
+        "tech",
+        "cool",
+        "will",
+        "luck",
+        "movement",
+        "body",
+        "emp"
+      ]
+    }
+  }
+}

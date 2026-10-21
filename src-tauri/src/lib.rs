@@ -1,6 +1,8 @@
 use std::sync::Mutex;
 
+use rules_core::catalog::Skill;
 use rules_core::character::{Character, CharacterKind, CharacterRecord};
+use rules_core::data_source::{DataSource, SeedDataSource};
 use rules_core::RulesInfo;
 use storage::{CharacterRow, Storage};
 use tauri::{Manager, State};
@@ -11,6 +13,11 @@ pub struct AppStorage(pub Mutex<Storage>);
 #[tauri::command]
 fn rules_info() -> RulesInfo {
     rules_core::rules_info()
+}
+
+#[tauri::command]
+fn list_skills() -> Result<Vec<Skill>, String> {
+    SeedDataSource.skills().map(|c| c.entries).map_err(|e| e.to_string())
 }
 
 fn storage_kind(kind: CharacterKind) -> storage::CharacterKind {
@@ -88,6 +95,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             rules_info,
+            list_skills,
             list_characters,
             create_character,
             save_character,

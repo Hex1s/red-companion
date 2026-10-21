@@ -1,8 +1,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useForm, type FieldErrors, type Path } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import type { Character } from "@/bindings/Character";
+import type { Skill } from "@/bindings/Skill";
 import type { Stats } from "@/bindings/Stats";
 import { HpBar } from "@/components/character/hp-bar";
 import { WoundBadge } from "@/components/character/wound-badge";
@@ -18,7 +19,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { errorMessage, type CharacterEntry } from "@/hooks/use-characters";
-import { characterSchema, SP_MAX, STAT_MAX, STAT_MIN } from "@/lib/character-schema";
+import { useSkills } from "@/hooks/use-skills";
+import { characterSchema, SKILL_MAX, SP_MAX, STAT_MAX, STAT_MIN } from "@/lib/character-schema";
 
 const STAT_KEYS: { key: keyof Stats; label: string }[] = [
   { key: "int", label: "INT" },
@@ -32,6 +34,11 @@ const STAT_KEYS: { key: keyof Stats; label: string }[] = [
   { key: "body", label: "BODY" },
   { key: "emp", label: "EMP" },
 ];
+
+const STAT_LABELS = Object.fromEntries(STAT_KEYS.map(({ key, label }) => [key, label])) as Record<
+  keyof Stats,
+  string
+>;
 
 type CharacterSheetProps = {
   entry: CharacterEntry;
@@ -67,6 +74,24 @@ export function CharacterSheet({ entry, onSave, onDelete }: CharacterSheetProps)
   const { derived } = entry;
   const [status, setStatus] = useState<{ kind: "saved" | "error"; text: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const skills = useSkills();
+
+  // Every catalog skill gets an input; missing levels start at 0.
+  const values = useMemo<Character>(
+    () => ({
+      ...entry.character,
+      skills: {
+        ...Object.fromEntries(skills.map((s) => [s.id, 0])),
+        ...entry.character.skills,
+      },
+    }),
+    [entry.character, skills],
+  );
+  const skillGroups = useMemo(() => {
+    const groups = new Map<Skill["category"], Skill[]>();
+    for (const skill of skills) groups.set(skill.category, [...(groups.get(skill.category) ?? []), skill]);
+    return [...groups];
+  }, [skills]);
 
   const {
     register,
@@ -74,13 +99,15 @@ export function CharacterSheet({ entry, onSave, onDelete }: CharacterSheetProps)
     formState: { errors, isDirty, isSubmitting },
   } = useForm<Character>({
     resolver: zodResolver(characterSchema),
-    values: entry.character,
+    values,
   });
 
   const submit = handleSubmit(
     async (values) => {
       try {
-        await onSave(values);
+        // Level 0 is the default, so only trained skills are stored.
+        const trained = Object.entries(values.skills).filter(([, level]) => level > 0);
+        await onSave({ ...values, skills: Object.fromEntries(trained) });
         setStatus({ kind: "saved", text: t("characters.saved") });
       } catch (e) {
         setStatus({ kind: "error", text: t("characters.save_error", { error: errorMessage(e) }) });
@@ -222,6 +249,40 @@ export function CharacterSheet({ entry, onSave, onDelete }: CharacterSheetProps)
           </ul>
         )}
       </Section>
+
+      {skillGroups.length > 0 && (
+        <Section title={t("characters.section.skills")}>
+          <div className="space-y-3">
+            {skillGroups.map(([category, group]) => (
+              <div key={category} className="cut [--cut:6px] space-y-1 p-3">
+                <div className="text-xs text-muted-foreground">{t(`skill.category.${category}`)}</div>
+                <ul className="grid grid-cols-2 gap-x-6 gap-y-1">
+                  {group.map((skill) => (
+                    <li key={skill.id} className="flex items-center gap-2 text-sm">
+                      <Label htmlFor={`skills.${skill.id}`} className="flex-1 font-normal">
+                        {t(skill.name_key)}
+                        {skill.double_cost && <span className="num text-muted-foreground"> ×2</span>}
+                      </Label>
+                      <span className="text-xs text-muted-foreground">
+                        {t(`stats.${STAT_LABELS[skill.stat]}`)}
+                      </span>
+                      <Input
+                        id={`skills.${skill.id}`}
+                        type="number"
+                        min={0}
+                        max={SKILL_MAX}
+                        className="num h-7 w-14"
+                        aria-invalid={!!errors.skills?.[skill.id]}
+                        {...num(`skills.${skill.id}`)}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
 
       <Section title={t("characters.notes")}>
         <textarea

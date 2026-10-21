@@ -5,6 +5,7 @@ import type { Character } from "@/bindings/Character";
 export const STAT_MIN = 1;
 export const STAT_MAX = 10;
 export const SP_MAX = 20;
+export const SKILL_MAX = 10;
 
 const stat = z.number().int().min(STAT_MIN).max(STAT_MAX);
 const armorSlot = z
@@ -33,4 +34,5 @@ export const characterSchema = z.object({
   death_save_penalty: z.number().int().min(0),
   dead: z.boolean(),
   notes: z.string(),
+  skills: z.record(z.string(), z.number().int().min(0).max(SKILL_MAX)),
 }) satisfies z.ZodType<Character>;
