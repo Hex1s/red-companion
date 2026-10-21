@@ -56,7 +56,7 @@ export function useCharacters() {
     [reload],
   );
 
-  return { entries, error, create, save, remove };
+  return { entries, error, create, save, remove, reload };
 }
 
 export { message as errorMessage };

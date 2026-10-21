@@ -1,10 +1,13 @@
 use std::sync::Mutex;
 
-use rules_core::catalog::Skill;
-use rules_core::character::{Character, CharacterKind, CharacterRecord};
-use rules_core::data_source::{DataSource, SeedDataSource};
-use rules_core::scene::{cover_presets, CoverPreset, Scene, SceneRecord};
 use rules_core::RulesInfo;
+use rules_core::catalog::{BodyArea, CriticalInjury, Skill};
+use rules_core::character::{Character, CharacterKind, CharacterRecord};
+use rules_core::damage::DamageOutcome;
+use rules_core::damage_event::{self, DamageApplied, DamageRequest, InjuryRoll};
+use rules_core::data_source::{DataSource, SeedDataSource};
+use rules_core::dice::{DiceError, DiceNotation, RollResult, ThreadDice, roll, roll_manual};
+use rules_core::scene::{CoverPreset, Scene, SceneRecord, cover_presets};
 use storage::{CharacterRow, Storage};
 use tauri::{Manager, State};
 
@@ -33,7 +36,9 @@ fn to_record(row: CharacterRow) -> Result<CharacterRecord, String> {
     Ok(CharacterRecord::new(row.id, character))
 }
 
-fn lock<'a>(state: &'a State<'_, AppStorage>) -> Result<std::sync::MutexGuard<'a, Storage>, String> {
+fn lock<'a>(
+    state: &'a State<'_, AppStorage>,
+) -> Result<std::sync::MutexGuard<'a, Storage>, String> {
     state.0.lock().map_err(|_| "storage lock poisoned".to_string())
 }
 
@@ -96,27 +101,31 @@ fn save_scene_row(storage: &Storage, id: i64, scene: &Scene) -> Result<(), Strin
     Ok(())
 }
 
-/// Loads the working scene (creating a session and an empty scene on first
-/// run), applies `change` and saves only when it succeeds.
-fn with_scene(
-    state: &State<'_, AppStorage>,
-    change: impl FnOnce(&mut Scene) -> Result<(), String>,
-) -> Result<SceneRecord, String> {
-    let storage = lock(state)?;
-    let (id, mut scene) = match storage.latest_scene().map_err(|e| e.to_string())? {
+/// Loads the working scene, creating a session and an empty scene on first run.
+fn load_scene(storage: &Storage) -> Result<(i64, Scene), String> {
+    match storage.latest_scene().map_err(|e| e.to_string())? {
         Some(row) => {
             let scene: Scene = serde_json::from_str(&row.data).map_err(|e| e.to_string())?;
             scene.validate().map_err(|e| e.to_string())?;
-            (row.id, scene)
+            Ok((row.id, scene))
         }
         None => {
             let scene = Scene::default();
             let session = storage.create_session("Session").map_err(|e| e.to_string())?;
             let data = serde_json::to_string(&scene).map_err(|e| e.to_string())?;
             let id = storage.create_scene(session, "Scene", &data).map_err(|e| e.to_string())?;
-            (id, scene)
+            Ok((id, scene))
         }
-    };
+    }
+}
+
+/// Loads the working scene, applies `change` and saves only when it succeeds.
+fn with_scene(
+    state: &State<'_, AppStorage>,
+    change: impl FnOnce(&mut Scene) -> Result<(), String>,
+) -> Result<SceneRecord, String> {
+    let storage = lock(state)?;
+    let (id, mut scene) = load_scene(&storage)?;
     change(&mut scene)?;
     save_scene_row(&storage, id, &scene)?;
     Ok(SceneRecord { id, scene })
@@ -186,6 +195,123 @@ fn set_character_cover(
     })
 }
 
+fn load_character(storage: &Storage, id: i64) -> Result<Option<Character>, String> {
+    match storage.get_character(id).map_err(|e| e.to_string())? {
+        Some(row) => Ok(Some(serde_json::from_str(&row.data).map_err(|e| e.to_string())?)),
+        None => Ok(None),
+    }
+}
+
+fn require_character(storage: &Storage, id: i64) -> Result<Character, String> {
+    load_character(storage, id)?.ok_or_else(|| format!("character {id} not found"))
+}
+
+fn store_character(storage: &Storage, id: i64, character: &Character) -> Result<(), String> {
+    let data = serde_json::to_string(character).map_err(|e| e.to_string())?;
+    storage.update_character(id, &character.name, &data).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+fn injury_table() -> Result<Vec<CriticalInjury>, String> {
+    SeedDataSource.critical_injuries().map(|c| c.entries).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn list_injuries() -> Result<Vec<CriticalInjury>, String> {
+    injury_table()
+}
+
+/// Rolls `notation` with the OS RNG, or builds the result from faces read off
+/// physical dice (`manual`).
+#[tauri::command]
+fn roll_dice(notation: String, manual: Option<Vec<u32>>) -> Result<RollResult, String> {
+    let notation: DiceNotation = notation.parse().map_err(|e: DiceError| e.to_string())?;
+    match manual {
+        Some(faces) => roll_manual(notation, &faces).map_err(|e| e.to_string()),
+        None => Ok(roll(notation, &mut ThreadDice::new())),
+    }
+}
+
+/// Rolls (or takes manual 2d6 faces for) the critical injury of a hit.
+#[tauri::command]
+fn roll_injury(
+    state: State<'_, AppStorage>,
+    character_id: i64,
+    area: BodyArea,
+    manual: Option<Vec<u32>>,
+) -> Result<InjuryRoll, String> {
+    let character = require_character(&*lock(&state)?, character_id)?;
+    damage_event::roll_injury(
+        &injury_table()?,
+        area,
+        &character.injuries,
+        manual.as_deref(),
+        &mut ThreadDice::new(),
+    )
+    .map_err(|e| e.to_string())
+}
+
+/// Calculates a hit against the stored state without saving anything.
+#[tauri::command]
+fn preview_damage(
+    state: State<'_, AppStorage>,
+    character_id: i64,
+    request: DamageRequest,
+) -> Result<DamageOutcome, String> {
+    let storage = lock(&state)?;
+    let character = require_character(&storage, character_id)?;
+    let (_, scene) = load_scene(&storage)?;
+    damage_event::evaluate(&character, &scene, &request).map_err(|e| e.to_string())
+}
+
+/// Applies a hit to the character and the scene's cover; saves both or neither.
+#[tauri::command]
+fn apply_damage(
+    state: State<'_, AppStorage>,
+    character_id: i64,
+    request: DamageRequest,
+    injury_id: Option<String>,
+) -> Result<DamageApplied, String> {
+    let storage = lock(&state)?;
+    let mut character = require_character(&storage, character_id)?;
+    let (scene_id, mut scene) = load_scene(&storage)?;
+    damage_event::apply(
+        &mut character,
+        character_id,
+        &mut scene,
+        &request,
+        injury_id.as_deref(),
+        &injury_table()?,
+    )
+    .map_err(|e| e.to_string())?;
+    character.validate().map_err(|e| e.to_string())?;
+    store_character(&storage, character_id, &character)?;
+    save_scene_row(&storage, scene_id, &scene)?;
+    Ok(DamageApplied {
+        character: Some(CharacterRecord::new(character_id, character)),
+        scene: SceneRecord { id: scene_id, scene },
+    })
+}
+
+/// Undoes the scene's last damage event.
+#[tauri::command]
+fn undo_damage(state: State<'_, AppStorage>) -> Result<DamageApplied, String> {
+    let storage = lock(&state)?;
+    let (scene_id, mut scene) = load_scene(&storage)?;
+    let event = scene.last_damage.clone().ok_or("nothing to undo")?;
+    let character = match load_character(&storage, event.character_id)? {
+        Some(mut character) => {
+            damage_event::undo_character(&mut character, &event);
+            store_character(&storage, event.character_id, &character)?;
+            Some(CharacterRecord::new(event.character_id, character))
+        }
+        None => None,
+    };
+    damage_event::undo_scene(&mut scene, &event);
+    save_scene_row(&storage, scene_id, &scene)?;
+    Ok(DamageApplied { character, scene: SceneRecord { id: scene_id, scene } })
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -209,7 +335,13 @@ pub fn run() {
             add_cover,
             edit_cover,
             remove_cover,
-            set_character_cover
+            set_character_cover,
+            list_injuries,
+            roll_dice,
+            roll_injury,
+            preview_damage,
+            apply_damage,
+            undo_damage
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

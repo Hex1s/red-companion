@@ -11,7 +11,8 @@
   },
   "common": {
     "language": "Language",
-    "roll": "Roll"
+    "roll": "Roll",
+    "close": "Close"
   },
   "stats": {
     "INT": "INT",
@@ -61,7 +62,8 @@
     "armor_mode": {
       "full": "Full armor",
       "half": "Half armor",
-      "ignored": "Armor ignored"
+      "ignored": "Armor ignored",
+      "label": "Armor"
     },
     "area": {
       "head": "Head",
@@ -327,5 +329,64 @@
     "leave": "Leave cover",
     "no_backend": "The scene is only available in the app (npm run tauri dev).",
     "load_error": "Could not load the scene: {{error}}"
+  },
+  "damage": {
+    "mode": {
+      "number": "Number",
+      "dice": "Dice"
+    },
+    "amount": "Damage",
+    "manual_critical": "Critical injury (two 6s)",
+    "notation": "Dice",
+    "manual_faces": "Faces from physical dice (optional)",
+    "accept": "Accept",
+    "manual": "manual",
+    "spot": {
+      "label": "Where it hit",
+      "body": "Body",
+      "head": "Head",
+      "head_aimed": "Head, aimed shot (×2)",
+      "held_item": "Hand with an item, aimed shot",
+      "leg": "Leg, aimed shot"
+    },
+    "armor_mode": {
+      "full": "Full armor",
+      "half_up": "Half armor (melee)",
+      "ignored": "Armor ignored"
+    },
+    "no_cover": "No cover",
+    "explosive": "Explosion (a destroyed cover no longer protects)",
+    "enter_hint": "Enter the damage or roll the dice.",
+    "result": "HP lost",
+    "log": "Why",
+    "injury_roll": "Roll 2d6",
+    "injury_manual": "2d6 faces by hand",
+    "injury_pick": "Pick an injury",
+    "no_free_injury": "The target already has every injury of this table.",
+    "apply": "Apply",
+    "undo": "Undo",
+    "close": "Close",
+    "last": "Last damage",
+    "step": {
+      "damage": "Damage: {{value}}",
+      "damage_critical": "Damage: {{value}}, two 6s: critical injury",
+      "cover_absorbed": "Cover absorbed {{absorbed}} (cover HP {{hp_before}} → {{hp_after}})",
+      "cover_absorbed_destroyed": "Cover absorbed {{absorbed}} and is destroyed (HP {{hp_before}} → 0)",
+      "cover_overflow_dissipated": "The remaining {{amount}} damage dissipates: the target takes none",
+      "cover_destroyed_by_explosion": "The explosion destroyed the cover: the target takes it all ({{damage}})",
+      "armor_full": "Armor: SP {{sp}}",
+      "armor_half_up": "Half armor: SP {{sp}} counts as {{effective_sp}}",
+      "armor_ignored": "Armor ignored",
+      "penetrated": "{{damage}} − SP {{effective_sp}} = {{through}} gets through",
+      "ablation": "Armor damaged: SP {{sp_before}} → {{sp_after}}",
+      "aimed_head_multiplier": "Aimed head shot: ×{{factor}} ({{before}} → {{after}})",
+      "held_item_dropped": "The target drops one held item (attacker's choice)",
+      "leg_broken": "Leg broken: the target gets \"Broken Leg\"",
+      "leg_already_broken": "The leg is already broken; a second leg is not tracked, add the injury by hand",
+      "mortal_wound_critical": "Hit on a mortally wounded target: critical injury, death save penalty +1",
+      "critical_bonus": "Critical injury: +{{amount}} damage ignoring armor",
+      "hp_lost": "HP {{before}} → {{after}}",
+      "wound_state_changed": "State: {{from}} → {{to}}"
+    }
   }
 }

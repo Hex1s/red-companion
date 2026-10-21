@@ -6,6 +6,9 @@ export type AppTab = "combat" | "characters" | "rules";
 type UiState = {
   tab: AppTab;
   selectedCharacterId: number | null;
+  /** Character the "damage taken" window is open for. */
+  damageTargetId: number | null;
+  openDamage: (id: number | null) => void;
   setTab: (tab: AppTab) => void;
   selectCharacter: (id: number | null) => void;
 };
@@ -13,6 +16,8 @@ type UiState = {
 export const useUiStore = create<UiState>((set) => ({
   tab: "characters",
   selectedCharacterId: null,
+  damageTargetId: null,
+  openDamage: (id) => set({ damageTargetId: id }),
   setTab: (tab) => set({ tab }),
   selectCharacter: (id) => set({ selectedCharacterId: id }),
 }));

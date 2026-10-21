@@ -6,6 +6,7 @@
 pub mod catalog;
 pub mod character;
 pub mod damage;
+pub mod damage_event;
 pub mod data_source;
 pub mod dice;
 pub mod scene;

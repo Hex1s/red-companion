@@ -2,7 +2,14 @@ import { invoke } from "@tauri-apps/api/core";
 import type { Character } from "@/bindings/Character";
 import type { CharacterKind } from "@/bindings/CharacterKind";
 import type { CharacterRecord } from "@/bindings/CharacterRecord";
+import type { BodyArea } from "@/bindings/BodyArea";
 import type { CoverPreset } from "@/bindings/CoverPreset";
+import type { CriticalInjury } from "@/bindings/CriticalInjury";
+import type { DamageApplied } from "@/bindings/DamageApplied";
+import type { DamageOutcome } from "@/bindings/DamageOutcome";
+import type { DamageRequest } from "@/bindings/DamageRequest";
+import type { InjuryRoll } from "@/bindings/InjuryRoll";
+import type { RollResult } from "@/bindings/RollResult";
 import type { SceneRecord } from "@/bindings/SceneRecord";
 import type { Skill } from "@/bindings/Skill";
 
@@ -26,4 +33,15 @@ export const api = {
   removeCover: (coverId: number) => invoke<SceneRecord>("remove_cover", { coverId }),
   setCharacterCover: (characterId: number, coverId: number | null) =>
     invoke<SceneRecord>("set_character_cover", { characterId, coverId }),
+  listInjuries: () => invoke<CriticalInjury[]>("list_injuries"),
+  /** Rolls `notation`, or builds the result from faces read off physical dice. */
+  rollDice: (notation: string, manual: number[] | null) =>
+    invoke<RollResult>("roll_dice", { notation, manual }),
+  rollInjury: (characterId: number, area: BodyArea, manual: number[] | null) =>
+    invoke<InjuryRoll>("roll_injury", { characterId, area, manual }),
+  previewDamage: (characterId: number, request: DamageRequest) =>
+    invoke<DamageOutcome>("preview_damage", { characterId, request }),
+  applyDamage: (characterId: number, request: DamageRequest, injuryId: string | null) =>
+    invoke<DamageApplied>("apply_damage", { characterId, request, injuryId }),
+  undoDamage: () => invoke<DamageApplied>("undo_damage"),
 };

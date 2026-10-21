@@ -35,6 +35,8 @@ export function useScene() {
 
   return {
     scene,
+    /** Replaces the scene with a record returned by another command (damage). */
+    replaceScene: (record: SceneRecord) => setScene(record.scene),
     presets,
     error,
     addCover: (preset: string | null, name: string, hp: number | null) =>

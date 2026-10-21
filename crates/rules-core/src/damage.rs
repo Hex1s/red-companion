@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::catalog::{BodyArea, CriticalInjury};
-use crate::dice::{roll, DiceNotation, DiceRng, RollResult};
+use crate::dice::{DiceNotation, DiceRng, RollResult, roll};
 
 /// Flat damage added by every critical injury, ignores armor (p. 187).
 pub const CRITICAL_BONUS_DAMAGE: u32 = 5;
@@ -28,6 +28,19 @@ pub enum ArmorMode {
     /// Fire, poison, suffocation and the like: armor is skipped (p. 186).
     Ignored,
 }
+
+/// Target of an aimed shot (p. 170).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+#[serde(rename_all = "snake_case")]
+pub enum AimedTarget {
+    Head,
+    HeldItem,
+    Leg,
+}
+
+/// Id of the injury an aimed leg shot causes (p. 170).
+pub const BROKEN_LEG_ID: &str = "broken_leg";
 
 /// Where the damage number comes from.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -54,8 +67,10 @@ impl DamageRoll {
 pub struct DamageInput {
     pub damage: DamageRoll,
     pub area: BodyArea,
-    /// Aimed shot at the head doubles the damage that gets through armor.
-    pub aimed_shot: bool,
+    /// Aimed shot (p. 170): head doubles the damage that got through armor,
+    /// held item is dropped, leg is broken. Head needs `area == Head`, the
+    /// other two `area == Body`.
+    pub aimed: Option<AimedTarget>,
     pub armor_mode: ArmorMode,
     /// Explosions: when they destroy the cover, the target takes full damage.
     pub explosive: bool,
@@ -81,21 +96,63 @@ pub struct TargetState {
 #[ts(export)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum DamageStep {
-    Damage { value: u32, critical_dice: bool },
-    CoverAbsorbed { absorbed: u32, hp_before: u32, hp_after: u32, destroyed: bool },
+    Damage {
+        value: u32,
+        critical_dice: bool,
+    },
+    CoverAbsorbed {
+        absorbed: u32,
+        hp_before: u32,
+        hp_after: u32,
+        destroyed: bool,
+    },
     /// Damage left over after the cover broke; it does no harm (p. 182).
-    CoverOverflowDissipated { amount: u32 },
+    CoverOverflowDissipated {
+        amount: u32,
+    },
     /// Explosion that destroyed the cover: the target takes it in full (p. 174).
-    CoverDestroyedByExplosion { damage: u32 },
-    Armor { mode: ArmorMode, sp: u8, effective_sp: u8 },
-    Penetrated { damage: u32, effective_sp: u8, through: u32 },
-    Ablation { sp_before: u8, sp_after: u8 },
-    AimedHeadMultiplier { factor: u32, before: u32, after: u32 },
+    CoverDestroyedByExplosion {
+        damage: u32,
+    },
+    Armor {
+        mode: ArmorMode,
+        sp: u8,
+        effective_sp: u8,
+    },
+    Penetrated {
+        damage: u32,
+        effective_sp: u8,
+        through: u32,
+    },
+    Ablation {
+        sp_before: u8,
+        sp_after: u8,
+    },
+    AimedHeadMultiplier {
+        factor: u32,
+        before: u32,
+        after: u32,
+    },
+    /// Aimed shot at a held item got through armor: the target drops one item.
+    HeldItemDropped,
+    /// Aimed leg shot got through armor: the leg breaks (p. 170).
+    LegBroken,
+    /// Aimed leg shot got through armor but the target already has the injury;
+    /// a second leg cannot be tracked, the GM adds it by hand if needed.
+    LegAlreadyBroken,
     /// Hit on a mortally wounded target causes a critical injury (p. 186).
     MortalWoundCritical,
-    CriticalBonus { amount: u32 },
-    HpLost { before: u32, after: u32 },
-    WoundStateChanged { from: WoundState, to: WoundState },
+    CriticalBonus {
+        amount: u32,
+    },
+    HpLost {
+        before: u32,
+        after: u32,
+    },
+    WoundStateChanged {
+        from: WoundState,
+        to: WoundState,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -111,6 +168,10 @@ pub struct DamageOutcome {
     /// A critical injury must be rolled or picked (its +5 damage is already
     /// included in `hp_lost`).
     pub critical: bool,
+    /// The target dropped a held item (aimed shot at the item).
+    pub item_dropped: bool,
+    /// Injury caused by the aimed shot itself (broken leg), on top of `critical`.
+    pub forced_injury: Option<String>,
     /// Added to the target's death save penalty (hit on a mortal wound).
     pub death_save_penalty_increase: u8,
     pub steps: Vec<DamageStep>,
@@ -220,6 +281,8 @@ pub fn resolve_damage(input: &DamageInput, target: &TargetState) -> DamageOutcom
             wound_before,
             wound_after: wound_before,
             critical: false,
+            item_dropped: false,
+            forced_injury: None,
             death_save_penalty_increase: 0,
             steps,
         };
@@ -243,11 +306,31 @@ pub fn resolve_damage(input: &DamageInput, target: &TargetState) -> DamageOutcom
     }
 
     // 4. Aimed head shot multiplies only what passed the armor.
-    if input.area == BodyArea::Head && input.aimed_shot && through > 0 {
+    if input.area == BodyArea::Head && input.aimed == Some(AimedTarget::Head) && through > 0 {
         let factor = if target.injuries.iter().any(|i| i == CRACKED_SKULL_ID) { 3 } else { 2 };
         let after = through * factor;
         steps.push(DamageStep::AimedHeadMultiplier { factor, before: through, after });
         through = after;
+    }
+
+    // Aimed shots at an item or a leg need only one point through the armor.
+    let mut item_dropped = false;
+    let mut forced_injury = None;
+    if through > 0 {
+        match input.aimed {
+            Some(AimedTarget::HeldItem) => {
+                item_dropped = true;
+                steps.push(DamageStep::HeldItemDropped);
+            }
+            Some(AimedTarget::Leg) if target.injuries.iter().any(|i| i == BROKEN_LEG_ID) => {
+                steps.push(DamageStep::LegAlreadyBroken);
+            }
+            Some(AimedTarget::Leg) => {
+                forced_injury = Some(BROKEN_LEG_ID.to_string());
+                steps.push(DamageStep::LegBroken);
+            }
+            _ => {}
+        }
     }
 
     // 5. Critical: two 6s / manual flag / any penetrating hit on a mortal wound.
@@ -278,6 +361,8 @@ pub fn resolve_damage(input: &DamageInput, target: &TargetState) -> DamageOutcom
         wound_before,
         wound_after,
         critical,
+        item_dropped,
+        forced_injury,
         death_save_penalty_increase: u8::from(mortal_hit),
         steps,
     }
@@ -327,7 +412,7 @@ pub fn death_save(body: u8, penalty: u8, roll: RollResult) -> DeathSave {
 mod tests {
     use super::*;
     use crate::data_source::{DataSource, SeedDataSource};
-    use crate::dice::{roll_manual, ScriptedDice};
+    use crate::dice::{ScriptedDice, roll_manual};
 
     fn dice(s: &str, faces: &[u32]) -> RollResult {
         roll_manual(s.parse().unwrap(), faces).unwrap()
@@ -341,7 +426,7 @@ mod tests {
         DamageInput {
             damage: DamageRoll::Total { value },
             area: BodyArea::Body,
-            aimed_shot: false,
+            aimed: None,
             armor_mode: mode,
             explosive: false,
             manual_critical: false,
@@ -427,12 +512,12 @@ mod tests {
     fn head_uses_head_sp_and_aimed_shot_doubles_what_passed_p186() {
         let mut input = hit(20, ArmorMode::Full);
         input.area = BodyArea::Head;
-        input.aimed_shot = true;
+        input.aimed = Some(AimedTarget::Head);
         let out = resolve_damage(&input, &target(40, 11, 4));
         assert_eq!(out.hp_lost, (20 - 11) * 2);
         assert_eq!((out.sp_after, out.new_hp), (10, 22));
 
-        input.aimed_shot = false;
+        input.aimed = None;
         assert_eq!(resolve_damage(&input, &target(40, 11, 4)).hp_lost, 9);
     }
 
@@ -440,7 +525,7 @@ mod tests {
     fn cracked_skull_triples_aimed_head_shots_p188() {
         let mut input = hit(14, ArmorMode::Full);
         input.area = BodyArea::Head;
-        input.aimed_shot = true;
+        input.aimed = Some(AimedTarget::Head);
         let mut t = target(40, 11, 0);
         t.injuries.push(CRACKED_SKULL_ID.to_string());
         assert_eq!(resolve_damage(&input, &t).hp_lost, 3 * 3);
@@ -470,7 +555,7 @@ mod tests {
     fn critical_bonus_is_not_doubled_on_aimed_head_shot_p187() {
         let mut input = hit(13, ArmorMode::Full);
         input.area = BodyArea::Head;
-        input.aimed_shot = true;
+        input.aimed = Some(AimedTarget::Head);
         input.manual_critical = true;
         assert_eq!(resolve_damage(&input, &target(40, 11, 0)).hp_lost, 2 * 2 + 5);
     }
@@ -503,7 +588,10 @@ mod tests {
         use WoundState::*;
         // max 40: serious below 20
         let st = |hp| wound_state(hp, 40, false);
-        assert_eq!([st(40), st(39), st(20), st(19), st(1), st(0)], [Healthy, Light, Light, Serious, Serious, Mortal]);
+        assert_eq!(
+            [st(40), st(39), st(20), st(19), st(1), st(0)],
+            [Healthy, Light, Light, Serious, Serious, Mortal]
+        );
         // odd max rounds half up: 35 -> 18
         assert_eq!([wound_state(18, 35, false), wound_state(17, 35, false)], [Light, Serious]);
         assert_eq!(wound_state(30, 40, true), Dead);
@@ -513,9 +601,13 @@ mod tests {
     fn wound_penalties_p186() {
         assert_eq!(WoundState::Light.action_penalty(), 0);
         assert_eq!(WoundState::Serious.action_penalty(), 2);
-        assert_eq!((WoundState::Mortal.action_penalty(), WoundState::Mortal.move_penalty()), (4, 6));
         assert_eq!(
-            [WoundState::Light, WoundState::Serious, WoundState::Mortal].map(|w| w.stabilization_dv()),
+            (WoundState::Mortal.action_penalty(), WoundState::Mortal.move_penalty()),
+            (4, 6)
+        );
+        assert_eq!(
+            [WoundState::Light, WoundState::Serious, WoundState::Mortal]
+                .map(|w| w.stabilization_dv()),
             [Some(10), Some(13), Some(15)]
         );
     }
@@ -562,5 +654,38 @@ mod tests {
             table.iter().filter(|i| i.area == BodyArea::Head).map(|i| i.id.clone()).collect();
         let mut rng = ScriptedDice::new([]);
         assert!(roll_critical_injury(&table, BodyArea::Head, &owned, &mut rng).is_none());
+    }
+
+    // Aimed shots at an item or a leg, p. 170: one point through armor is enough.
+    #[test]
+    fn aimed_item_and_leg_need_one_point_through_armor_p170() {
+        let mut input = hit(7, ArmorMode::Full);
+        input.aimed = Some(AimedTarget::HeldItem);
+        let out = resolve_damage(&input, &target(40, 0, 7));
+        assert!(!out.item_dropped && out.forced_injury.is_none());
+
+        let out = resolve_damage(&input, &target(40, 0, 6));
+        assert!(out.item_dropped);
+        assert_eq!(out.hp_lost, 1);
+
+        input.aimed = Some(AimedTarget::Leg);
+        let out = resolve_damage(&input, &target(40, 0, 6));
+        assert_eq!(out.forced_injury.as_deref(), Some(BROKEN_LEG_ID));
+        assert!(out.steps.contains(&DamageStep::LegBroken));
+    }
+
+    #[test]
+    fn aimed_leg_does_not_repeat_broken_leg_and_cover_blocks_it() {
+        let mut input = hit(10, ArmorMode::Full);
+        input.aimed = Some(AimedTarget::Leg);
+        let mut t = target(40, 0, 0);
+        t.injuries.push(BROKEN_LEG_ID.to_string());
+        let out = resolve_damage(&input, &t);
+        assert!(out.forced_injury.is_none());
+        assert!(out.steps.contains(&DamageStep::LegAlreadyBroken));
+
+        input.cover_hp = Some(20);
+        let out = resolve_damage(&input, &target(40, 0, 0));
+        assert!(out.forced_injury.is_none());
     }
 }

@@ -10,6 +10,7 @@ use thiserror::Error;
 use ts_rs::TS;
 
 use crate::catalog::CoverThickness;
+use crate::damage_event::DamageEvent;
 use crate::data_source::{DataResult, DataSource};
 
 /// Current version of the scene document.
@@ -89,6 +90,9 @@ pub struct Scene {
     pub covers: Vec<CoverObject>,
     #[serde(default = "first_cover_id")]
     pub next_cover_id: u32,
+    /// Last applied hit, kept so it can be undone (only this one).
+    #[serde(default)]
+    pub last_damage: Option<DamageEvent>,
 }
 
 fn first_cover_id() -> u32 {
@@ -118,7 +122,12 @@ pub enum SceneError {
 
 impl Default for Scene {
     fn default() -> Self {
-        Self { schema_version: SCHEMA_VERSION, covers: Vec::new(), next_cover_id: 1 }
+        Self {
+            schema_version: SCHEMA_VERSION,
+            covers: Vec::new(),
+            next_cover_id: 1,
+            last_damage: None,
+        }
     }
 }
 
@@ -228,18 +237,14 @@ impl Scene {
 }
 
 fn check_hp(hp: u32) -> Result<(), SceneError> {
-    if (1..=COVER_HP_MAX).contains(&hp) {
-        Ok(())
-    } else {
-        Err(SceneError::BadHp)
-    }
+    if (1..=COVER_HP_MAX).contains(&hp) { Ok(()) } else { Err(SceneError::BadHp) }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::catalog::BodyArea;
-    use crate::damage::{resolve_damage, ArmorMode, DamageInput, DamageRoll, TargetState};
+    use crate::damage::{ArmorMode, DamageInput, DamageRoll, TargetState, resolve_damage};
     use crate::data_source::SeedDataSource;
 
     fn preset(id: &str) -> CoverPreset {
@@ -309,10 +314,7 @@ mod tests {
 
         scene.set_character_cover(1, None).unwrap();
         assert!(scene.cover_of(1).is_none());
-        assert_eq!(
-            scene.set_character_cover(1, Some(99)),
-            Err(SceneError::CoverNotFound(99))
-        );
+        assert_eq!(scene.set_character_cover(1, Some(99)), Err(SceneError::CoverNotFound(99)));
     }
 
     #[test]
@@ -339,7 +341,7 @@ mod tests {
         let input = DamageInput {
             damage: DamageRoll::Total { value: 17 },
             area: BodyArea::Body,
-            aimed_shot: false,
+            aimed: None,
             armor_mode: ArmorMode::Full,
             explosive: false,
             manual_critical: false,

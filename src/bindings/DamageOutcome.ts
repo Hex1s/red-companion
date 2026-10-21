@@ -13,6 +13,14 @@ sp_after: number, cover_hp_after: number | null, wound_before: WoundState, wound
  */
 critical: boolean, 
 /**
+ * The target dropped a held item (aimed shot at the item).
+ */
+item_dropped: boolean, 
+/**
+ * Injury caused by the aimed shot itself (broken leg), on top of `critical`.
+ */
+forced_injury: string | null, 
+/**
  * Added to the target's death save penalty (hit on a mortal wound).
  */
 death_save_penalty_increase: number, steps: Array<DamageStep>, };

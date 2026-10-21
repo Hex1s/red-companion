@@ -2,26 +2,38 @@ import { useTranslation } from "react-i18next";
 import type { CharacterKind } from "@/bindings/CharacterKind";
 import { CharacterCard } from "@/components/character/character-card";
 import { CharacterSheet } from "@/components/character/character-sheet";
+import { DamageDialog } from "@/components/combat/damage-dialog";
+import { LastDamage } from "@/components/combat/last-damage";
 import { CoverPanel } from "@/components/scene/cover-panel";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { errorMessage, useCharacters } from "@/hooks/use-characters";
+import { useInjuries } from "@/hooks/use-injuries";
 import { useScene } from "@/hooks/use-scene";
-import { hasBackend } from "@/lib/api";
+import { api, hasBackend } from "@/lib/api";
 import { SUPPORTED_LANGUAGES } from "@/i18n";
 import { useUiStore, type AppTab } from "@/store/ui-store";
 
 export default function App() {
   const { t, i18n } = useTranslation();
-  const { tab, setTab, selectedCharacterId, selectCharacter } = useUiStore();
-  const { entries, error, create, save, remove } = useCharacters();
+  const { tab, setTab, selectedCharacterId, selectCharacter, damageTargetId, openDamage } =
+    useUiStore();
+  const { entries, error, create, save, remove, reload } = useCharacters();
   const sceneState = useScene();
+  const injuries = useInjuries();
+  const damageTarget = entries.find((e) => e.id === damageTargetId) ?? null;
   const selected = entries.find((e) => e.id === selectedCharacterId) ?? null;
 
   const createCharacter = async (kind: CharacterKind) => {
     const record = await create(kind, t(`characters.default_name_${kind}`));
     selectCharacter(record.id);
+  };
+
+  const undoDamage = async () => {
+    const result = await api.undoDamage();
+    sceneState.replaceScene(result.scene);
+    await reload();
   };
 
   return (
@@ -97,6 +109,12 @@ export default function App() {
                 {t("scene.load_error", { error: sceneState.error })}
               </p>
             )}
+            {sceneState.scene?.last_damage && (
+              <LastDamage
+                event={sceneState.scene.last_damage}
+                onUndo={() => undoDamage().catch((e: unknown) => window.alert(errorMessage(e)))}
+              />
+            )}
             {sceneState.scene && (
               <CoverPanel
                 scene={sceneState.scene}
@@ -113,24 +131,42 @@ export default function App() {
           <p className="text-muted-foreground">{t("app.subtitle")}</p>
         )
       }
-      rail={entries.map((e) => (
-        <CharacterCard
-          key={e.id}
-          character={{
-            id: String(e.id),
-            name: e.character.name,
-            hp: e.character.hp,
-            maxHp: e.derived.max_hp,
-            spHead: e.character.armor_head.sp,
-            spBody: e.character.armor_body.sp,
-          }}
-          selected={e.id === selectedCharacterId}
-          onSelect={() => {
-            selectCharacter(e.id);
-            setTab("characters");
-          }}
-        />
-      ))}
+      rail={
+        <>
+          {entries.map((e) => (
+            <CharacterCard
+              key={e.id}
+              character={{
+                id: String(e.id),
+                name: e.character.name,
+                hp: e.character.hp,
+                maxHp: e.derived.max_hp,
+                spHead: e.character.armor_head.sp,
+                spBody: e.character.armor_body.sp,
+              }}
+              selected={e.id === selectedCharacterId}
+              onSelect={() => {
+                selectCharacter(e.id);
+                setTab("characters");
+              }}
+              onDamage={() => openDamage(e.id)}
+            />
+          ))}
+          {sceneState.scene && (
+            <DamageDialog
+              target={damageTarget}
+              scene={sceneState.scene}
+              injuries={injuries}
+              onApplied={(result) => {
+                sceneState.replaceScene(result.scene);
+                void reload();
+              }}
+              onUndo={undoDamage}
+              onClose={() => openDamage(null)}
+            />
+          )}
+        </>
+      }
     />
   );
 }
