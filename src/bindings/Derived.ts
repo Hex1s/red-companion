@@ -12,4 +12,9 @@ serious_threshold: number, wound_state: WoundState,
 /**
  * Death save succeeds on d10 + penalty <= this (= BODY).
  */
-death_save: number, max_humanity: number, };
+death_save: number, max_humanity: number, 
+/**
+ * DV of stabilising the character in their current wound state (p. 186); `None` when
+ * there is nothing to stabilise (healthy, dead).
+ */
+stabilization_dv: number | null, };

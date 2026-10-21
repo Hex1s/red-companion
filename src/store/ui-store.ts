@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type AppTab = "combat" | "characters" | "rules";
+export type AppTab = "characters" | "rules";
 
 /** UI state only: game data lives in Rust and comes through Tauri commands. */
 type UiState = {

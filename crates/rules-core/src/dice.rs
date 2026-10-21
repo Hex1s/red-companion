@@ -23,6 +23,8 @@ pub enum DiceError {
     WrongManualCount { expected: u32, got: usize },
     #[error("manual value {value} is outside 1..={sides}")]
     ManualValueOutOfRange { value: u32, sides: u32 },
+    #[error("check die total {0} is outside {CHECK_TOTAL_MIN}..={CHECK_TOTAL_MAX}")]
+    CheckTotalOutOfRange(i32),
 }
 
 /// Parsed `NdM[+K|-K]` expression.
@@ -199,6 +201,9 @@ impl CheckRoll {
 }
 
 const CHECK_SIDES: u32 = 10;
+/// Lowest and highest total of a d10 check: 1 - 10 and 10 + 10.
+pub const CHECK_TOTAL_MIN: i32 = -9;
+pub const CHECK_TOTAL_MAX: i32 = 20;
 
 pub fn roll_check(rng: &mut impl DiceRng) -> CheckRoll {
     let mut dice = vec![rng.roll(CHECK_SIDES)];
@@ -222,6 +227,16 @@ pub fn check_manual(values: &[u32]) -> Result<CheckRoll, DiceError> {
         return Err(DiceError::ManualValueOutOfRange { value, sides: CHECK_SIDES });
     }
     Ok(CheckRoll::new(values.to_vec(), RollSource::Manual))
+}
+
+/// Check die typed in as a finished number. Whoever rolls physical dice has already added
+/// (or subtracted) the extra die of a natural 10 or 1 at the table, so the app does not ask
+/// for the faces and does not track the explosion.
+pub fn check_total(total: i32) -> Result<CheckRoll, DiceError> {
+    if !(CHECK_TOTAL_MIN..=CHECK_TOTAL_MAX).contains(&total) {
+        return Err(DiceError::CheckTotalOutOfRange(total));
+    }
+    Ok(CheckRoll { dice: Vec::new(), kind: CheckKind::Normal, total, source: RollSource::Manual })
 }
 
 /// Chronological log of rolls for a session or a single resolution.
@@ -338,5 +353,10 @@ mod tests {
         assert!(check_manual(&[11]).is_err());
         assert!(check_manual(&[10, 0]).is_err());
         assert_eq!(check_manual(&[10, 3]).unwrap().source, RollSource::Manual);
+
+        // A typed total is taken as it is, no extra die required.
+        assert_eq!(check_total(13).unwrap().total, 13);
+        assert_eq!(check_total(-4).unwrap().source, RollSource::Manual);
+        assert!(check_total(21).is_err() && check_total(-10).is_err());
     }
 }

@@ -142,6 +142,43 @@ impl Combat {
         Ok(())
     }
 
+    /// Rolls someone's initiative: a new entry, or a fresh die for an existing
+    /// one. The card's dice button works the same before and during the fight.
+    pub fn roll(
+        &mut self,
+        character_id: i64,
+        reflex: u8,
+        roll: CheckRoll,
+    ) -> Result<(), InitiativeError> {
+        if self.is_in_fight(character_id) {
+            self.reroll(character_id, reflex, roll)
+        } else {
+            self.add(character_id, reflex, roll)
+        }
+    }
+
+    /// Sets the total by hand for someone who may not have one yet: the
+    /// initiative field on a card.
+    pub fn set_or_add(
+        &mut self,
+        character_id: i64,
+        reflex: u8,
+        initiative: i32,
+    ) -> Result<(), InitiativeError> {
+        if !(INITIATIVE_MIN..=INITIATIVE_MAX).contains(&initiative) {
+            return Err(InitiativeError::OutOfRange);
+        }
+        if !self.is_in_fight(character_id) {
+            self.insert_sorted(Combatant { character_id, reflex, roll: None, initiative });
+            return Ok(());
+        }
+        self.set_initiative(character_id, initiative)
+    }
+
+    pub fn is_in_fight(&self, character_id: i64) -> bool {
+        self.combatants.iter().any(|c| c.character_id == character_id)
+    }
+
     /// Moves one place earlier (`delta = -1`) or later (`delta = 1`) in the order.
     pub fn shift(&mut self, character_id: i64, delta: i32) -> Result<(), InitiativeError> {
         let at = self.position(character_id)?;
@@ -381,5 +418,20 @@ mod tests {
         combat.end();
         assert_eq!(combat, Combat::default());
         assert!(!combat.is_started());
+    }
+
+    #[test]
+    fn roll_and_set_or_add_work_for_newcomers_and_veterans() {
+        let mut c = Combat::default();
+        c.roll(1, 6, die(5)).unwrap(); // new: 6 + 5 = 11
+        c.set_or_add(2, 4, 13).unwrap(); // new, typed in
+        assert_eq!(ids(&c), vec![2, 1]);
+        assert!(c.combatants[0].roll.is_none());
+
+        c.roll(1, 6, die(9)).unwrap(); // existing: re-rolled to 15
+        assert_eq!(ids(&c), vec![1, 2]);
+        c.set_or_add(2, 4, 20).unwrap(); // existing: typed in again
+        assert_eq!(ids(&c), vec![2, 1]);
+        assert_eq!(c.set_or_add(3, 4, 100), Err(InitiativeError::OutOfRange));
     }
 }

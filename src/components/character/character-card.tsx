@@ -1,73 +1,267 @@
+import { useEffect, useState, type ReactNode } from "react";
+import { ChevronDown, ChevronUp, Dices, RotateCcw, Swords } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import type { DeathSave } from "@/bindings/DeathSave";
+import { WoundBadge } from "@/components/character/wound-badge";
 import { Button } from "@/components/ui/button";
+import { FieldBadge } from "@/components/ui/field-badge";
+import { Hint } from "@/components/ui/hint";
+import { Input } from "@/components/ui/input";
+import type { CharacterEntry } from "@/hooks/use-characters";
 import { cn } from "@/lib/utils";
 import { HpBar } from "./hp-bar";
 
-export type CharacterCardData = {
-  id: string;
-  name: string;
-  /** Set by the initiative tracker (1.6); absent outside combat. */
-  initiative?: number;
-  hp: number;
-  maxHp: number;
-  spHead: number;
-  spBody: number;
-};
+/** Initiative range the backend accepts. */
+const INITIATIVE_MAX = 99;
+const INITIATIVE_MIN = -99;
 
 type CharacterCardProps = {
-  character: CharacterCardData;
+  entry: CharacterEntry;
+  /** Initiative total; `null` until it is rolled or typed in. */
+  initiative: number | null;
+  /** Position in the acting order, for the up/down buttons; `null` when not in the order. */
+  place: { first: boolean; last: boolean } | null;
   active?: boolean;
   selected?: boolean;
-  onSelect?: () => void;
-  onDamage?: () => void;
+  /** Stands behind cover: the card gets an outline. */
+  inCover: boolean;
+  /** The cover button with its popover (see `CoverPicker`). */
+  coverControl: ReactNode;
+  /** The active fighter is mortally wounded and owes this turn's death save. */
+  deathSaveDue: boolean;
+  /** Result of the last death save of this character, shown until the next turn. */
+  lastSave: DeathSave | null;
+  onSelect: () => void;
+  onDamage: () => void;
+  onSetInitiative: (value: number) => void;
+  onRollInitiative: () => void;
+  onShift: (delta: number) => void;
+  onStabilize: () => void;
+  /** Brings a dead character back (1 HP, no penalty, no injuries). */
+  onRevive: () => void;
+  /** Resolves `true` when the save was made. */
+  onDeathSave: (manual: number | null) => Promise<boolean>;
 };
 
-/** Narrow card for the initiative rail on the right. */
+/** Parses a whole number (may be negative); `null` for empty or invalid text. */
+function parseSigned(text: string): number | null {
+  const n = Number(text);
+  return text.trim() !== "" && Number.isInteger(n) ? n : null;
+}
+
+/** Card of a session character on the right rail: initiative, HP, armor, cover, damage. */
 export function CharacterCard({
-  character,
+  entry,
+  initiative,
+  place,
   active,
   selected,
+  inCover,
+  coverControl,
+  deathSaveDue,
+  lastSave,
   onSelect,
   onDamage,
+  onSetInitiative,
+  onRollInitiative,
+  onShift,
+  onStabilize,
+  onRevive,
+  onDeathSave,
 }: CharacterCardProps) {
   const { t } = useTranslation();
+  const { character, derived } = entry;
+  const [text, setText] = useState(initiative === null ? "" : String(initiative));
+  useEffect(() => setText(initiative === null ? "" : String(initiative)), [initiative]);
+
+  // The total commits on blur / Enter; invalid text snaps back.
+  const commit = () => {
+    const value = parseSigned(text);
+    if (text.trim() === "" || value === null || value > INITIATIVE_MAX || value < INITIATIVE_MIN) {
+      setText(initiative === null ? "" : String(initiative));
+    } else if (value !== initiative) {
+      onSetInitiative(value);
+    }
+  };
+
+  // A click anywhere on the card selects it, except on its own controls.
+  const select = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest("button, input, select, textarea, a, [role=combobox]")) return;
+    onSelect();
+  };
+  const stop = (e: React.SyntheticEvent) => e.stopPropagation();
+  // Only a mortally wounded character (0 HP) is stabilised; the dead can be brought back.
+  const mortal = derived.wound_state === "mortal";
+  const dead = derived.wound_state === "dead";
+
   return (
     <div
       className={cn(
-        "cut [--cut:8px] cursor-pointer space-y-2 p-3 text-left",
+        "cut cursor-pointer space-y-2 p-3 text-left [--cut:8px]",
+        inCover && "[--cut-border:var(--cover)]",
+        selected && !active && !inCover && "[--cut-border:var(--muted-foreground)]",
         active && "[--cut-border:var(--primary)]",
-        selected && !active && "[--cut-border:var(--muted-foreground)]",
+        derived.wound_state === "dead" && "opacity-60",
       )}
-      onClick={onSelect}
+      onClick={select}
     >
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="truncate font-display text-sm font-semibold uppercase">
+      <div className="flex items-center gap-1.5">
+        <Hint label={t("card.initiative_hint")}>
+          <Input
+            inputMode="numeric"
+            value={text}
+            placeholder="—"
+            aria-label={t("initiative.total")}
+            onChange={(e) => setText(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLElement).blur()}
+            className="num h-7 w-12 px-1 text-center text-base font-bold text-primary"
+          />
+        </Hint>
+        <Hint label={t("card.initiative_roll", { reflex: character.stats.reflex })}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            aria-label={t("card.initiative_roll", { reflex: character.stats.reflex })}
+            onClick={onRollInitiative}
+          >
+            <Dices />
+          </Button>
+        </Hint>
+        {place && (
+          <div className="flex flex-col">
+            <Hint label={t("initiative.up")}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                className="h-3 w-5"
+                disabled={place.first}
+                aria-label={t("initiative.up")}
+                onClick={() => onShift(-1)}
+              >
+                <ChevronUp />
+              </Button>
+            </Hint>
+            <Hint label={t("initiative.down")}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                className="h-3 w-5"
+                disabled={place.last}
+                aria-label={t("initiative.down")}
+                onClick={() => onShift(1)}
+              >
+                <ChevronDown />
+              </Button>
+            </Hint>
+          </div>
+        )}
+        <span className="min-w-0 flex-1 truncate font-display text-sm font-semibold uppercase">
           {character.name}
         </span>
-        {character.initiative !== undefined && (
-          <span className="num text-lg font-bold text-primary">{character.initiative}</span>
+      </div>
+
+      <HpBar current={character.hp} max={derived.max_hp} />
+
+      <div className="num flex items-center gap-3 text-xs text-muted-foreground">
+        <span>
+          {t("armor.head")} {character.armor_head.sp}
+        </span>
+        <span>
+          {t("armor.body")} {character.armor_body.sp}
+        </span>
+        <WoundBadge state={derived.wound_state} className="ml-auto text-xs" />
+      </div>
+
+      <div className="flex items-center gap-1.5">
+        {mortal && (
+          <Button type="button" size="xs" variant="outline" onClick={onStabilize}>
+            {t("initiative.stabilize")}
+          </Button>
         )}
-      </div>
-      <HpBar current={character.hp} max={character.maxHp} />
-      <div className="num flex gap-3 text-xs text-muted-foreground">
-        <span>
-          {t("armor.head")} {character.spHead}
+        {dead && (
+          <Hint label={t("card.revive_hint")}>
+            <Button type="button" size="xs" variant="outline" onClick={onRevive}>
+              <RotateCcw />
+              {t("card.revive")}
+            </Button>
+          </Hint>
+        )}
+        <span className="ml-auto flex items-center gap-1.5">
+          {/* The popover is a portal: its clicks must not reach the card. */}
+          <span onClick={stop}>{coverControl}</span>
+          {!dead && (
+            <Hint label={t("combat.damage")}>
+              <Button type="button" size="xs" onClick={onDamage}>
+                <Swords />
+                {t("card.damage")}
+              </Button>
+            </Hint>
+          )}
         </span>
-        <span>
-          {t("armor.body")} {character.spBody}
-        </span>
       </div>
-      <Button
-        size="xs"
-        variant="outline"
-        className="w-full"
-        onClick={(e) => {
-          e.stopPropagation();
-          onDamage?.();
-        }}
-      >
-        {t("combat.damage")}
-      </Button>
+
+      {deathSaveDue && active && mortal && <DeathSaveRow character={entry} onRoll={onDeathSave} />}
+      {lastSave && !deathSaveDue && (
+        <p className="num text-xs">
+          {t("initiative.death_save")}: d10 {lastSave.roll.dice[0]} + {lastSave.penalty} —{" "}
+          <span className={lastSave.passed ? "text-state-ok" : "text-state-dead"}>
+            {t(lastSave.passed ? "initiative.death_save_passed" : "initiative.death_save_failed")}
+          </span>
+        </p>
+      )}
+    </div>
+  );
+}
+
+type DeathSaveRowProps = {
+  character: CharacterEntry;
+  onRoll: (manual: number | null) => Promise<boolean>;
+};
+
+/** Start of a mortally wounded character's turn: the death save, die faces optional. */
+function DeathSaveRow({ character, onRoll }: DeathSaveRowProps) {
+  const { t } = useTranslation();
+  const [text, setText] = useState("");
+  const face = text.trim() === "" ? null : Number(text);
+  const invalid = face !== null && (!Number.isInteger(face) || face < 1 || face > 10);
+
+  return (
+    <div className="space-y-1 border-t pt-2">
+      <p className="num text-xs text-state-mortal">
+        {t("initiative.death_save_rule", {
+          body: character.character.stats.body,
+          penalty: character.character.death_save_penalty,
+        })}
+      </p>
+      <div className="flex items-center gap-2">
+        <FieldBadge error={invalid ? t("validation.die") : null}>
+          {(shown) => (
+            <Input
+              inputMode="numeric"
+              value={text}
+              placeholder={t("initiative.die_random")}
+              aria-label={t("initiative.die")}
+              aria-invalid={shown}
+              onChange={(e) => setText(e.target.value)}
+              className="num h-7 w-24"
+            />
+          )}
+        </FieldBadge>
+        <Button
+          type="button"
+          size="xs"
+          disabled={invalid}
+          onClick={async () => {
+            if (await onRoll(face)) setText("");
+          }}
+        >
+          {t("initiative.death_save")}
+        </Button>
+      </div>
     </div>
   );
 }

@@ -14,6 +14,8 @@ export function validD10Faces(faces: number[]): boolean {
 /** "7", "10 + 4" (natural 10 adds a die) or "1 − 4" (natural 1 subtracts one). */
 export function formatCheck(roll: CheckRoll): string {
   const [first, extra] = roll.dice;
+  // A total typed in from physical dice has no faces: the table already did the sum.
+  if (first === undefined) return String(roll.total);
   if (extra === undefined) return String(first);
   return `${first} ${roll.kind === "critical_failure" ? "−" : "+"} ${extra}`;
 }

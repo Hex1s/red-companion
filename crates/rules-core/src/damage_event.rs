@@ -55,6 +55,9 @@ pub struct DamageEvent {
     /// Injuries this hit added (aimed-leg one first, then the critical one).
     pub added_injuries: Vec<String>,
     pub cover: Option<CoverUndo>,
+    /// This hit killed a filler NPC (0 HP); undo brings them back.
+    #[serde(default)]
+    pub died: bool,
     pub outcome: DamageOutcome,
 }
 
@@ -215,15 +218,30 @@ pub fn apply(
         death_save_penalty_before,
         added_injuries,
         cover,
+        died: false,
         outcome,
     };
     scene.last_damage = Some(event.clone());
     Ok(event)
 }
 
+/// Filler NPCs have no death save: when a hit leaves one at 0 HP, they die on the spot. Marks the
+/// scene's last event so that undo revives them. Call it for NPCs only.
+pub fn kill_downed_npc(character: &mut Character, scene: &mut Scene) {
+    if character.hp == 0 && !character.dead {
+        character.dead = true;
+        if let Some(event) = scene.last_damage.as_mut() {
+            event.died = true;
+        }
+    }
+}
+
 /// Rolls back what `event` changed on the character. HP and SP are clamped to
 /// the sheet's current maximums in case it was edited since.
 pub fn undo_character(character: &mut Character, event: &DamageEvent) {
+    if event.died {
+        character.dead = false;
+    }
     character.hp = event.hp_before.min(character.max_hp());
     let slot = slot_mut(character, event.request.area);
     slot.sp = event.sp_before.min(slot.max_sp);
@@ -449,5 +467,27 @@ mod tests {
             .unwrap_err();
         assert_eq!(err, EventError::InjuryOwned(row.id.clone()));
         assert!(roll_injury(&t, BodyArea::Body, &[], Some(&[3]), &mut rng).is_err());
+    }
+
+    #[test]
+    fn a_downed_npc_dies_and_undo_brings_them_back() {
+        let mut c = Character::quick("Boosterganger");
+        c.hp = 5;
+        let mut scene = Scene::default();
+        let event = apply(&mut c, 1, &mut scene, &request(30), None, &table()).unwrap();
+        assert_eq!(c.hp, 0);
+        kill_downed_npc(&mut c, &mut scene);
+        assert!(c.dead);
+        assert!(scene.last_damage.as_ref().unwrap().died);
+
+        undo_character(&mut c, scene.last_damage.as_ref().unwrap());
+        assert_eq!((c.hp, c.dead), (event.hp_before, false));
+
+        // A hit that leaves HP does not kill, and does not mark the event.
+        let mut c = Character::quick("Boosterganger");
+        let mut scene = Scene::default();
+        apply(&mut c, 1, &mut scene, &request(8), None, &table()).unwrap();
+        kill_downed_npc(&mut c, &mut scene);
+        assert!(!c.dead && !scene.last_damage.unwrap().died);
     }
 }

@@ -35,6 +35,9 @@
   --state-serious: #f0803c;
   --state-mortal: #e5484d;
   --state-dead: #5b636d;
+
+  /* A character standing behind cover: a steel blue, not a wound colour. */
+  --cover: #5b8fb9;
 }
 
 @theme inline {
@@ -65,6 +68,7 @@
   --color-state-serious: var(--state-serious);
   --color-state-mortal: var(--state-mortal);
   --color-state-dead: var(--state-dead);
+  --color-cover: var(--cover);
 
   --radius-sm: 0px;
   --radius-md: 0px;

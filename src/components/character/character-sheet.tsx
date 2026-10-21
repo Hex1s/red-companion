@@ -1,11 +1,13 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMemo, useState, type ReactNode } from "react";
-import { useForm, type FieldErrors, type Path } from "react-hook-form";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useForm, type Path } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import type { Character } from "@/bindings/Character";
-import type { Skill } from "@/bindings/Skill";
+import type { Derived } from "@/bindings/Derived";
 import type { Stats } from "@/bindings/Stats";
+import { InjuryIcon } from "@/components/combat/injury-icons";
 import { HpBar } from "@/components/character/hp-bar";
+import { SkillsSection } from "@/components/character/skills-section";
 import { WoundBadge } from "@/components/character/wound-badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,11 +18,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { FieldBadge } from "@/components/ui/field-badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { errorMessage, type CharacterEntry } from "@/hooks/use-characters";
 import { useSkills } from "@/hooks/use-skills";
-import { characterSchema, SKILL_MAX, SP_MAX, STAT_MAX, STAT_MIN } from "@/lib/character-schema";
+import { api } from "@/lib/api";
+import { characterSchema, SP_MAX, STAT_MAX, STAT_MIN } from "@/lib/character-schema";
+import { status } from "@/store/status-store";
+
+/** Pause after the last edit before the sheet saves itself / asks Rust for the derived numbers. */
+const AUTOSAVE_DELAY_MS = 700;
+const PREVIEW_DELAY_MS = 120;
+/** The "saving" message stays at least this long, so a quick save does not flash. */
+const MIN_SAVING_MS = 350;
 
 const STAT_KEYS: { key: keyof Stats; label: string }[] = [
   { key: "int", label: "INT" },
@@ -34,11 +45,6 @@ const STAT_KEYS: { key: keyof Stats; label: string }[] = [
   { key: "body", label: "BODY" },
   { key: "emp", label: "EMP" },
 ];
-
-const STAT_LABELS = Object.fromEntries(STAT_KEYS.map(({ key, label }) => [key, label])) as Record<
-  keyof Stats,
-  string
->;
 
 type CharacterSheetProps = {
   entry: CharacterEntry;
@@ -71,9 +77,8 @@ function StatTile({ label, value }: StatTileProps) {
 /** Editable character sheet. Derived numbers come from Rust (saved record). */
 export function CharacterSheet({ entry, onSave, onDelete }: CharacterSheetProps) {
   const { t } = useTranslation();
-  const { derived } = entry;
-  const [status, setStatus] = useState<{ kind: "saved" | "error"; text: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [derived, setDerived] = useState<Derived>(entry.derived);
   const skills = useSkills();
 
   // Every plain catalog skill gets an input; missing levels start at 0. Skills with
@@ -88,138 +93,193 @@ export function CharacterSheet({ entry, onSave, onDelete }: CharacterSheetProps)
     }),
     [entry.character, skills],
   );
-  const skillGroups = useMemo(() => {
-    const groups = new Map<Skill["category"], Skill[]>();
-    for (const skill of skills) groups.set(skill.category, [...(groups.get(skill.category) ?? []), skill]);
-    return [...groups];
-  }, [skills]);
 
+  const form = useForm<Character>({
+    resolver: zodResolver(characterSchema),
+    defaultValues: values,
+  });
   const {
     register,
     handleSubmit,
     watch,
-    setValue,
-    unregister,
-    formState: { errors, isDirty, isSubmitting },
-  } = useForm<Character>({
-    resolver: zodResolver(characterSchema),
-    values,
+    getValues,
+    reset,
+    formState: { errors },
+  } = form;
+
+  // New values from the backend (a save, a hit taken) must not wipe what is being typed right
+  // now, and must not look like an edit: `reset` announces every field to `watch`, so the
+  // autosave ignores those announcements while the flag is up.
+  const resetting = useRef(false);
+  useEffect(() => {
+    resetting.current = true;
+    try {
+      reset(values, { keepDirtyValues: true });
+    } finally {
+      resetting.current = false;
+    }
+  }, [values, reset]);
+
+  // The sheet saves itself shortly after the last edit; invalid values wait until fixed. The
+  // progress shows in the status area under one id, so repeated saves update one message.
+  const saveId = `save:${entry.id}`;
+  const pendingSave = useRef(false);
+  const submit = handleSubmit(async (values) => {
+    pendingSave.current = false;
+    status.show({ id: saveId, kind: "loading", text: t("status.saving") });
+    const started = Date.now();
+    try {
+      // Level 0 is the default, so only trained skills are stored.
+      const trained = Object.entries(values.skills).filter(([, level]) => level > 0);
+      await onSave({ ...values, skills: Object.fromEntries(trained) });
+      const wait = Math.max(0, MIN_SAVING_MS - (Date.now() - started));
+      window.setTimeout(() => status.show({ id: saveId, kind: "success", text: t("status.saved") }), wait);
+    } catch (e) {
+      status.show({
+        id: saveId,
+        kind: "error",
+        text: t("characters.save_error", { error: errorMessage(e) }),
+      });
+    }
   });
 
-  const submit = handleSubmit(
-    async (values) => {
-      try {
-        // Level 0 is the default, so only trained skills are stored.
-        const trained = Object.entries(values.skills).filter(([, level]) => level > 0);
-        await onSave({ ...values, skills: Object.fromEntries(trained) });
-        setStatus({ kind: "saved", text: t("characters.saved") });
-      } catch (e) {
-        setStatus({ kind: "error", text: t("characters.save_error", { error: errorMessage(e) }) });
-      }
-    },
-    () => setStatus(null),
-  );
+  const saveTimer = useRef<number>(undefined);
+  const previewTimer = useRef<number>(undefined);
+  const submitRef = useRef(submit);
+  submitRef.current = submit;
 
-  // Specialty rows are keys `id:specialty` of the skills map (see `skill_base_id` in Rust).
-  const skillKeys = Object.keys(watch("skills") ?? {});
-  const [specialtyDraft, setSpecialtyDraft] = useState<Record<string, string>>({});
-  const specialtyName = (key: string) => key.slice(key.indexOf(":") + 1);
-  const addSpecialty = (skillId: string) => {
-    // Dots and brackets would break the form's field paths, the colon the skill key.
-    const name = (specialtyDraft[skillId] ?? "").trim().replace(/[.:[\]]/g, "");
-    setSpecialtyDraft((d) => ({ ...d, [skillId]: "" }));
-    if (!name || skillKeys.includes(`${skillId}:${name}`)) return;
-    setValue(`skills.${skillId}:${name}` as Path<Character>, 1, { shouldDirty: true });
+  const scheduleSave = () => {
+    window.clearTimeout(saveTimer.current);
+    pendingSave.current = true;
+    saveTimer.current = window.setTimeout(() => void submitRef.current(), AUTOSAVE_DELAY_MS);
   };
+
+  // Derived numbers (max HP, wound threshold, death save, humanity) follow every edit: Rust
+  // computes them for the sheet as it is now, the formulas are not repeated here.
+  const schedulePreview = () => {
+    window.clearTimeout(previewTimer.current);
+    previewTimer.current = window.setTimeout(() => {
+      const parsed = characterSchema.safeParse(getValues());
+      if (parsed.success) api.previewDerived(parsed.data).then(setDerived, () => undefined);
+    }, PREVIEW_DELAY_MS);
+  };
+
+  useEffect(() => {
+    setDerived(entry.derived);
+  }, [entry.derived]);
+
+  useEffect(() => {
+    // A reset (values arriving from the backend) has no field name: only real edits count.
+    const subscription = watch((_, info) => {
+      if (resetting.current || !info.name) return;
+      scheduleSave();
+      schedulePreview();
+    });
+    return () => {
+      subscription.unsubscribe();
+      window.clearTimeout(saveTimer.current);
+      window.clearTimeout(previewTimer.current);
+      // Leaving the sheet (another card, a delete) must not lose an edit still waiting for its save.
+      if (pendingSave.current) void submitRef.current();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watch]);
 
   const num = (name: Path<Character>) => register(name, { valueAsNumber: true });
 
-  const fieldError = (e: FieldErrors<Character>, ...path: string[]): string | null => {
-    let node: unknown = e;
-    for (const p of path) node = (node as Record<string, unknown> | undefined)?.[p];
-    const message = (node as { message?: string } | undefined)?.message;
+  /** Text of a field error for the badge; `range` is what the field accepts. */
+  const errorText = (error: unknown, range: { min: number; max: number }): string | null => {
+    const message = (error as { message?: string } | undefined)?.message;
     if (!message) return null;
     return message === "name" || message === "sp_over_max"
       ? t(`characters.validation.${message}`)
-      : t("characters.validation.range", { min: STAT_MIN, max: STAT_MAX });
+      : t("characters.validation.range", range);
   };
 
   const armorField = (area: "armor_head" | "armor_body", label: string) => {
-    const error = fieldError(errors, area, "sp");
+    const range = { min: 0, max: SP_MAX };
     return (
-      <div className="cut [--cut:6px] space-y-2 p-3">
+      <div className="cut [--cut:6px] space-y-2 p-4">
         <div className="text-xs text-muted-foreground">{label}</div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <Label htmlFor={`${area}.sp`}>{t("characters.sp")}</Label>
-            <Input
-              id={`${area}.sp`}
-              type="number"
-              min={0}
-              max={SP_MAX}
-              className="num"
-              {...num(`${area}.sp`)}
-            />
+            <FieldBadge error={errorText(errors[area]?.sp ?? errors[area], range)}>
+              {(invalid) => (
+                <Input
+                  id={`${area}.sp`}
+                  type="number"
+                  min={0}
+                  max={SP_MAX}
+                  className="num"
+                  aria-invalid={invalid}
+                  {...num(`${area}.sp`)}
+                />
+              )}
+            </FieldBadge>
           </div>
           <div className="space-y-1">
             <Label htmlFor={`${area}.max_sp`}>{t("characters.sp_max")}</Label>
-            <Input
-              id={`${area}.max_sp`}
-              type="number"
-              min={0}
-              max={SP_MAX}
-              className="num"
-              {...num(`${area}.max_sp`)}
-            />
+            <FieldBadge error={errorText(errors[area]?.max_sp, range)}>
+              {(invalid) => (
+                <Input
+                  id={`${area}.max_sp`}
+                  type="number"
+                  min={0}
+                  max={SP_MAX}
+                  className="num"
+                  aria-invalid={invalid}
+                  {...num(`${area}.max_sp`)}
+                />
+              )}
+            </FieldBadge>
           </div>
         </div>
-        {error && <p className="text-xs text-destructive">{error}</p>}
       </div>
     );
   };
 
-  const nameError = fieldError(errors, "name");
-
   return (
-    <form onSubmit={submit} className="max-w-3xl space-y-6" noValidate>
+    <form onSubmit={(e) => e.preventDefault()} className="max-w-3xl space-y-6" noValidate>
       <div className="flex items-end gap-3">
         <div className="flex-1 space-y-1">
           <Label htmlFor="name">{t("characters.name")}</Label>
-          <Input id="name" aria-invalid={!!errors.name} {...register("name")} />
-          {nameError && <p className="text-xs text-destructive">{nameError}</p>}
+          <FieldBadge error={errorText(errors.name, { min: 0, max: 0 })}>
+            {(invalid) => <Input id="name" aria-invalid={invalid} {...register("name")} />}
+          </FieldBadge>
         </div>
         <span className="pb-2 text-xs text-muted-foreground uppercase">
           {t(`characters.kind.${entry.kind}`)}
         </span>
-        <Button type="submit" disabled={!isDirty || isSubmitting}>
-          {t("characters.save")}
-        </Button>
         <Button type="button" variant="outline" onClick={() => setConfirmDelete(true)}>
           {t("characters.delete")}
         </Button>
       </div>
-      {status && (
-        <p className={status.kind === "error" ? "text-sm text-destructive" : "text-sm text-state-ok"}>
-          {status.text}
-        </p>
-      )}
-
       <Section title={t("characters.section.stats")}>
         <div className="grid grid-cols-5 gap-2">
           {STAT_KEYS.map(({ key, label }) => (
-            <div key={key} className="cut [--cut:6px] space-y-1 p-2">
+            <div key={key} className="cut [--cut:6px] space-y-1 p-3">
               <Label htmlFor={`stats.${key}`} className="text-xs text-muted-foreground">
                 {t(`stats.${label}`)}
               </Label>
-              <Input
-                id={`stats.${key}`}
-                type="number"
-                min={key === "emp" || key === "luck" ? 0 : STAT_MIN}
-                max={STAT_MAX}
-                className="num text-lg font-bold"
-                aria-invalid={!!errors.stats?.[key]}
-                {...num(`stats.${key}`)}
-              />
+              <FieldBadge
+                error={errorText(errors.stats?.[key], {
+                  min: key === "emp" || key === "luck" ? 0 : STAT_MIN,
+                  max: STAT_MAX,
+                })}
+              >
+                {(invalid) => (
+                  <Input
+                    id={`stats.${key}`}
+                    type="number"
+                    min={key === "emp" || key === "luck" ? 0 : STAT_MIN}
+                    max={STAT_MAX}
+                    className="num text-lg font-bold"
+                    aria-invalid={invalid}
+                    {...num(`stats.${key}`)}
+                  />
+                )}
+              </FieldBadge>
             </div>
           ))}
         </div>
@@ -230,9 +290,20 @@ export function CharacterSheet({ entry, onSave, onDelete }: CharacterSheetProps)
           <div className="flex items-end gap-3">
             <div className="w-28 space-y-1">
               <Label htmlFor="hp">{t("characters.hp")}</Label>
-              <Input id="hp" type="number" min={0} className="num" {...num("hp")} />
+              <FieldBadge error={errorText(errors.hp, { min: 0, max: derived.max_hp })}>
+                {(invalid) => (
+                  <Input
+                    id="hp"
+                    type="number"
+                    min={0}
+                    className="num"
+                    aria-invalid={invalid}
+                    {...num("hp")}
+                  />
+                )}
+              </FieldBadge>
             </div>
-            <HpBar current={entry.character.hp} max={derived.max_hp} className="flex-1 pb-3" />
+            <HpBar current={Number(watch("hp")) || 0} max={derived.max_hp} className="flex-1 pb-3" />
             <WoundBadge state={derived.wound_state} className="pb-2" />
           </div>
           <div className="grid grid-cols-4 gap-2">
@@ -241,7 +312,6 @@ export function CharacterSheet({ entry, onSave, onDelete }: CharacterSheetProps)
             <StatTile label={t("characters.death_save")} value={`≤ ${derived.death_save}`} />
             <StatTile label={t("characters.humanity")} value={derived.max_humanity} />
           </div>
-          <p className="text-xs text-muted-foreground">{t("characters.derived_hint")}</p>
         </div>
       </Section>
 
@@ -258,7 +328,8 @@ export function CharacterSheet({ entry, onSave, onDelete }: CharacterSheetProps)
         ) : (
           <ul className="space-y-1 text-sm">
             {entry.character.injuries.map((id) => (
-              <li key={id} className="cut [--cut:4px] px-3 py-1.5">
+              <li key={id} className="cut flex items-center gap-2 px-3 py-1.5 [--cut:4px]">
+                <InjuryIcon id={id} className="size-5 text-primary" />
                 {t(`injury.${id}.name`, { defaultValue: id })}
               </li>
             ))}
@@ -266,105 +337,9 @@ export function CharacterSheet({ entry, onSave, onDelete }: CharacterSheetProps)
         )}
       </Section>
 
-      {skillGroups.length > 0 && (
-        <Section title={t("characters.section.skills")}>
-          <div className="space-y-3">
-            {skillGroups.map(([category, group]) => (
-              <div key={category} className="cut [--cut:6px] space-y-1 p-3">
-                <div className="text-xs text-muted-foreground">{t(`skill.category.${category}`)}</div>
-                <ul className="grid grid-cols-2 gap-x-6 gap-y-1">
-                  {group.map((skill) =>
-                    skill.specialty ? (
-                      <li key={skill.id} className="col-span-2 space-y-1 text-sm">
-                        <div className="flex items-center gap-2">
-                          <span className="flex-1">
-                            {t(skill.name_key)}
-                            {skill.double_cost && <span className="num text-muted-foreground"> ×2</span>}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {t(`stats.${STAT_LABELS[skill.stat]}`)}
-                          </span>
-                          <Input
-                            aria-label={t("characters.skill_specialty")}
-                            placeholder={t("characters.skill_specialty")}
-                            className="h-7 w-40"
-                            value={specialtyDraft[skill.id] ?? ""}
-                            onChange={(e) =>
-                              setSpecialtyDraft((d) => ({ ...d, [skill.id]: e.target.value }))
-                            }
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                addSpecialty(skill.id);
-                              }
-                            }}
-                          />
-                          <Button
-                            type="button"
-                            size="xs"
-                            variant="outline"
-                            onClick={() => addSpecialty(skill.id)}
-                          >
-                            {t("characters.skill_specialty_add")}
-                          </Button>
-                        </div>
-                        {skillKeys
-                          .filter((key) => key.startsWith(`${skill.id}:`))
-                          .map((key) => (
-                            <div key={key} className="flex items-center gap-2 pl-4">
-                              <Label htmlFor={`skills.${key}`} className="flex-1 font-normal">
-                                {t(`skill.specialties.${specialtyName(key)}`, {
-                                  defaultValue: specialtyName(key),
-                                })}
-                              </Label>
-                              <Input
-                                id={`skills.${key}`}
-                                type="number"
-                                min={0}
-                                max={SKILL_MAX}
-                                className="num h-7 w-14"
-                                aria-invalid={!!errors.skills?.[key]}
-                                {...num(`skills.${key}` as Path<Character>)}
-                              />
-                              <Button
-                                type="button"
-                                size="xs"
-                                variant="outline"
-                                aria-label={t("characters.skill_specialty_remove")}
-                                onClick={() => unregister(`skills.${key}` as Path<Character>)}
-                              >
-                                ×
-                              </Button>
-                            </div>
-                          ))}
-                      </li>
-                    ) : (
-                      <li key={skill.id} className="flex items-center gap-2 text-sm">
-                        <Label htmlFor={`skills.${skill.id}`} className="flex-1 font-normal">
-                          {t(skill.name_key)}
-                          {skill.double_cost && <span className="num text-muted-foreground"> ×2</span>}
-                        </Label>
-                        <span className="text-xs text-muted-foreground">
-                          {t(`stats.${STAT_LABELS[skill.stat]}`)}
-                        </span>
-                        <Input
-                          id={`skills.${skill.id}`}
-                          type="number"
-                          min={0}
-                          max={SKILL_MAX}
-                          className="num h-7 w-14"
-                          aria-invalid={!!errors.skills?.[skill.id]}
-                          {...num(`skills.${skill.id}`)}
-                        />
-                      </li>
-                    ),
-                  )}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </Section>
-      )}
+      <Section title={t("characters.section.skills")}>
+        <SkillsSection form={form} skills={skills} onChange={scheduleSave} />
+      </Section>
 
       <Section title={t("characters.notes")}>
         <textarea

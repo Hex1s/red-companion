@@ -25,6 +25,8 @@ pub enum VitalsError {
     CannotStabilize,
     #[error("{0:?} cannot be used to stabilise")]
     BadSkill(String),
+    #[error("only a dead character can be brought back")]
+    NotDead,
 }
 
 /// Death save penalty a character falls back to after stabilisation: +1 for
@@ -55,14 +57,29 @@ pub fn apply_death_save(
     Ok(save)
 }
 
+/// Brings a dead character back: 1 HP, no death save penalty, no critical injuries. A GM
+/// decision (a miracle, a fix of a mistake), not a rule of the book.
+pub fn revive(character: &mut Character) -> Result<(), VitalsError> {
+    if !character.dead {
+        return Err(VitalsError::NotDead);
+    }
+    character.dead = false;
+    character.hp = 1;
+    character.death_save_penalty = 0;
+    character.injuries.clear();
+    Ok(())
+}
+
 /// Result of a stabilisation attempt.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct Stabilization {
     pub dv: u8,
-    pub roll: CheckRoll,
+    /// `None` when the GM declared the target stabilised without a roll.
+    pub roll: Option<CheckRoll>,
     /// TECH + skill level of the one who helps.
     pub bonus: i32,
+    /// Bonus plus the die; for a declared success, the DV itself.
     pub total: i32,
     pub success: bool,
     /// A mortally wounded target came back to 1 HP and the death save penalty
@@ -82,16 +99,31 @@ pub fn stabilize(
     roll: CheckRoll,
     base_penalty: u8,
 ) -> Result<Stabilization, VitalsError> {
-    let state = target.wound_state();
-    let dv = state.stabilization_dv().ok_or(VitalsError::CannotStabilize)?;
+    let dv = target.wound_state().stabilization_dv().ok_or(VitalsError::CannotStabilize)?;
     let total = bonus + roll.total;
     let success = total >= i32::from(dv);
-    let revived = success && state == WoundState::Mortal;
-    if revived {
+    let revived = success && settle(target, success, base_penalty);
+    Ok(Stabilization { dv, roll: Some(roll), bonus, total, success, revived })
+}
+
+/// The GM says the target is stabilised: the same effects as a successful check, no roll.
+pub fn stabilize_granted(
+    target: &mut Character,
+    base_penalty: u8,
+) -> Result<Stabilization, VitalsError> {
+    let dv = target.wound_state().stabilization_dv().ok_or(VitalsError::CannotStabilize)?;
+    let revived = settle(target, true, base_penalty);
+    Ok(Stabilization { dv, roll: None, bonus: 0, total: i32::from(dv), success: true, revived })
+}
+
+/// Applies a successful stabilisation; `true` when a mortally wounded target came back.
+fn settle(target: &mut Character, success: bool, base_penalty: u8) -> bool {
+    if success && target.wound_state() == WoundState::Mortal {
         target.hp = 1;
         target.death_save_penalty = base_penalty;
+        return true;
     }
-    Ok(Stabilization { dv, roll, bonus, total, success, revived })
+    false
 }
 
 /// What the UI gets back after a death save.
@@ -216,5 +248,39 @@ mod tests {
         owned.push(without.id.clone());
         owned.push("unknown".into());
         assert_eq!(base_death_save_penalty(&owned, &table), 1);
+    }
+
+    #[test]
+    fn a_declared_stabilisation_has_the_effects_of_a_success() {
+        let mut c = mortal(5);
+        c.death_save_penalty = 3;
+        let r = stabilize_granted(&mut c, 1).unwrap();
+        assert!(r.success && r.revived && r.roll.is_none());
+        assert_eq!((r.dv, c.hp, c.death_save_penalty), (15, 1, 1));
+
+        // Lighter wounds: nothing changes but the report.
+        let mut c = Character::quick("T");
+        c.hp = c.max_hp() - 1;
+        let hp = c.hp;
+        let r = stabilize_granted(&mut c, 0).unwrap();
+        assert_eq!((r.dv, r.success, r.revived, c.hp), (10, true, false, hp));
+
+        let mut healthy = Character::quick("T");
+        assert_eq!(stabilize_granted(&mut healthy, 0), Err(VitalsError::CannotStabilize));
+    }
+
+    #[test]
+    fn reviving_gives_one_hp_and_clears_penalty_and_injuries() {
+        let mut c = mortal(5);
+        c.dead = true;
+        c.death_save_penalty = 4;
+        c.injuries = vec!["broken_leg".into(), "lost_eye".into()];
+        assert_eq!(revive(&mut c), Ok(()));
+        assert_eq!((c.hp, c.dead, c.death_save_penalty), (1, false, 0));
+        assert!(c.injuries.is_empty());
+        assert_eq!(c.wound_state(), WoundState::Serious);
+
+        // Only the dead can be brought back.
+        assert_eq!(revive(&mut c), Err(VitalsError::NotDead));
     }
 }

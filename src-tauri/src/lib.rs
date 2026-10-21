@@ -1,21 +1,27 @@
+use std::path::PathBuf;
 use std::sync::Mutex;
 
 use rules_core::RulesInfo;
 use rules_core::catalog::{BodyArea, CriticalInjury, NpcTemplate, Skill};
-use rules_core::character::{Character, CharacterKind, CharacterRecord};
+use rules_core::character::{Character, CharacterKind, CharacterRecord, Derived};
 use rules_core::damage::DamageOutcome;
 use rules_core::damage::WoundState;
 use rules_core::damage_event::{self, DamageApplied, DamageRequest, InjuryRoll};
 use rules_core::data_source::{DataSource, SeedDataSource};
 use rules_core::dice::{
-    CheckRoll, DiceError, DiceNotation, RollResult, ThreadDice, check_manual, roll, roll_check,
+    CheckRoll, DiceError, DiceNotation, RollResult, ThreadDice, check_manual, check_total, roll, roll_check,
     roll_manual,
 };
 use rules_core::scene::{CoverPreset, Scene, SceneRecord, cover_presets};
-use rules_core::transfer::{self, ExportedCharacter};
+use rules_core::transfer::{self, ExportFile, ExportSaved, ExportedCharacter};
 use rules_core::vitals::{self, DeathSaveApplied, STABILIZE_SKILLS, StabilizeApplied};
 use storage::{CharacterRow, Storage};
-use tauri::{Manager, State};
+use tauri::{AppHandle, Manager, State};
+use tauri_plugin_opener::OpenerExt;
+
+/// Folder the export files live in. It is created at startup, so the GM always knows where
+/// exports go and where imports come from.
+pub struct ExportsDir(pub PathBuf);
 
 /// User database, opened once at startup in the app data directory.
 pub struct AppStorage(pub Mutex<Storage>);
@@ -68,8 +74,17 @@ fn storage_kind(kind: CharacterKind) -> storage::CharacterKind {
     }
 }
 
+/// Parses a stored character. Filler NPCs have no mortal wound: at 0 HP they are dead.
+fn parse_row(row: &CharacterRow) -> Result<Character, String> {
+    let mut character: Character = serde_json::from_str(&row.data).map_err(|e| e.to_string())?;
+    if row.kind == storage::CharacterKind::Npc {
+        character.settle_npc();
+    }
+    Ok(character)
+}
+
 fn to_record(row: CharacterRow) -> Result<CharacterRecord, String> {
-    let character: Character = serde_json::from_str(&row.data).map_err(|e| e.to_string())?;
+    let character = parse_row(&row)?;
     Ok(CharacterRecord::new(row.id, character))
 }
 
@@ -104,6 +119,13 @@ fn create_character(
     Ok(CharacterRecord::new(id, character))
 }
 
+/// Derived numbers of a sheet that is being edited (not yet saved): Rust stays the only place
+/// that knows the formulas.
+#[tauri::command]
+fn preview_derived(character: Character) -> Derived {
+    character.derived()
+}
+
 #[tauri::command]
 fn save_character(
     state: State<'_, AppStorage>,
@@ -112,19 +134,41 @@ fn save_character(
 ) -> Result<CharacterRecord, String> {
     character.name = character.name.trim().to_string();
     character.validate().map_err(|e| e.to_string())?;
+    let storage = lock(&state)?;
+    let kind = storage
+        .get_character(id)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("character {id} not found"))?
+        .kind;
+    if kind == storage::CharacterKind::Npc {
+        character.settle_npc();
+    }
     let data = serde_json::to_string(&character).map_err(|e| e.to_string())?;
-    if !lock(&state)?.update_character(id, &character.name, &data).map_err(|e| e.to_string())? {
+    if !storage.update_character(id, &character.name, &data).map_err(|e| e.to_string())? {
         return Err(format!("character {id} not found"));
     }
     Ok(CharacterRecord::new(id, character))
 }
 
-/// Serialises characters (`ids`, or everyone when `None`) into an export file.
+/// `name.redcompanion.json`, or `name (2).redcompanion.json` and so on when it already exists.
+fn free_export_name(dir: &std::path::Path, name: String) -> String {
+    if !dir.join(&name).exists() {
+        return name;
+    }
+    let stem = name.strip_suffix(transfer::EXPORT_SUFFIX).unwrap_or(&name).to_string();
+    (2..)
+        .map(|n| format!("{stem} ({n}){}", transfer::EXPORT_SUFFIX))
+        .find(|candidate| !dir.join(candidate).exists())
+        .expect("an unused file name exists")
+}
+
+/// Writes characters (`ids`, or everyone when `None`) into a new file in the exports folder.
 #[tauri::command]
 fn export_characters(
     state: State<'_, AppStorage>,
+    dir: State<'_, ExportsDir>,
     ids: Option<Vec<i64>>,
-) -> Result<String, String> {
+) -> Result<ExportSaved, String> {
     let storage = lock(&state)?;
     let mut items = Vec::new();
     for kind in [CharacterKind::Pc, CharacterKind::Npc] {
@@ -136,20 +180,63 @@ fn export_characters(
             items.push(ExportedCharacter { kind, character });
         }
     }
-    transfer::export(items).map_err(|e| e.to_string())
+    let count = u32::try_from(items.len()).unwrap_or(u32::MAX);
+    // One character is named after itself, several after "characters".
+    let base = match items.as_slice() {
+        [only] => only.character.name.clone(),
+        _ => String::new(),
+    };
+    let json = transfer::export(items).map_err(|e| e.to_string())?;
+    std::fs::create_dir_all(&dir.0).map_err(|e| e.to_string())?;
+    let name = free_export_name(&dir.0, transfer::export_file_name(&base));
+    let path = dir.0.join(&name);
+    std::fs::write(&path, json).map_err(|e| e.to_string())?;
+    Ok(ExportSaved { name, path: path.display().to_string(), count })
 }
 
-/// Imports an export file as new characters; the whole file is validated
-/// before anything is stored.
+/// Export files in the exports folder, the newest first.
 #[tauri::command]
-fn import_characters(
+fn list_exports(dir: State<'_, ExportsDir>) -> Result<Vec<ExportFile>, String> {
+    let Ok(entries) = std::fs::read_dir(&dir.0) else { return Ok(Vec::new()) };
+    let mut files: Vec<ExportFile> = entries
+        .filter_map(|entry| {
+            let entry = entry.ok()?;
+            let meta = entry.metadata().ok()?;
+            let name = entry.file_name().into_string().ok()?;
+            if !meta.is_file() || !transfer::is_export_file_name(&name) {
+                return None;
+            }
+            let modified_ms = meta
+                .modified()
+                .ok()
+                .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX));
+            Some(ExportFile { name, modified_ms, size: meta.len() })
+        })
+        .collect();
+    files.sort_by(|a, b| b.modified_ms.cmp(&a.modified_ms).then_with(|| a.name.cmp(&b.name)));
+    Ok(files)
+}
+
+/// Imports a file of the exports folder as new characters; the whole file is validated
+/// before anything is stored. Only a bare file name is accepted.
+#[tauri::command]
+fn import_export_file(
     state: State<'_, AppStorage>,
-    json: String,
+    dir: State<'_, ExportsDir>,
+    name: String,
 ) -> Result<Vec<CharacterRecord>, String> {
+    if !transfer::is_export_file_name(&name) {
+        return Err(format!("{name:?} is not an export file name"));
+    }
+    let json = std::fs::read_to_string(dir.0.join(&name)).map_err(|e| e.to_string())?;
     let items = transfer::parse_import(&json, &SeedDataSource).map_err(|e| e.to_string())?;
     let storage = lock(&state)?;
     let mut records = Vec::new();
-    for item in items {
+    for mut item in items {
+        if item.kind == CharacterKind::Npc {
+            item.character.settle_npc();
+        }
         let data = serde_json::to_string(&item.character).map_err(|e| e.to_string())?;
         let id = storage
             .insert_character(storage_kind(item.kind), &item.character.name, &data)
@@ -157,6 +244,13 @@ fn import_characters(
         records.push(CharacterRecord::new(id, item.character));
     }
     Ok(records)
+}
+
+/// Shows the exports folder in the system file manager.
+#[tauri::command]
+fn open_exports_folder(app: AppHandle, dir: State<'_, ExportsDir>) -> Result<(), String> {
+    std::fs::create_dir_all(&dir.0).map_err(|e| e.to_string())?;
+    app.opener().open_path(dir.0.display().to_string(), None::<&str>).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -278,7 +372,7 @@ fn set_character_cover(
 
 fn load_character(storage: &Storage, id: i64) -> Result<Option<Character>, String> {
     match storage.get_character(id).map_err(|e| e.to_string())? {
-        Some(row) => Ok(Some(serde_json::from_str(&row.data).map_err(|e| e.to_string())?)),
+        Some(row) => Ok(Some(parse_row(&row)?)),
         None => Ok(None),
     }
 }
@@ -338,9 +432,10 @@ fn with_combat(
     Ok(SceneRecord { id, scene })
 }
 
-/// Adds a character to the fight with REF + 1d10 (`manual` = the die face).
+/// Rolls a character's initiative, REF + 1d10 (`manual` = the die faces): adds them to the
+/// order, or re-rolls them if they already have one.
 #[tauri::command]
-fn combat_add(
+fn combat_roll(
     state: State<'_, AppStorage>,
     character_id: i64,
     manual: Option<Vec<u32>>,
@@ -348,32 +443,21 @@ fn combat_add(
     with_combat(&state, |scene, storage| {
         let reflex = require_character(storage, character_id)?.stats.reflex;
         let die = d10_check(manual)?;
-        scene.combat.add(character_id, reflex, die).map_err(|e| e.to_string())
+        scene.combat.roll(character_id, reflex, die).map_err(|e| e.to_string())
     })
 }
 
-#[tauri::command]
-fn combat_reroll(
-    state: State<'_, AppStorage>,
-    character_id: i64,
-    manual: Option<Vec<u32>>,
-) -> Result<SceneRecord, String> {
-    with_combat(&state, |scene, storage| {
-        let reflex = require_character(storage, character_id)?.stats.reflex;
-        let die = d10_check(manual)?;
-        scene.combat.reroll(character_id, reflex, die).map_err(|e| e.to_string())
-    })
-}
-
-/// Sets the initiative total by hand.
+/// Sets the initiative total by hand (the field on a card); adds the character to the order
+/// if they had none yet.
 #[tauri::command]
 fn combat_set_initiative(
     state: State<'_, AppStorage>,
     character_id: i64,
     initiative: i32,
 ) -> Result<SceneRecord, String> {
-    with_combat(&state, |scene, _| {
-        scene.combat.set_initiative(character_id, initiative).map_err(|e| e.to_string())
+    with_combat(&state, |scene, storage| {
+        let reflex = require_character(storage, character_id)?.stats.reflex;
+        scene.combat.set_or_add(character_id, reflex, initiative).map_err(|e| e.to_string())
     })
 }
 
@@ -398,9 +482,24 @@ fn combat_remove(state: State<'_, AppStorage>, character_id: i64) -> Result<Scen
     })
 }
 
+/// Starts the fight. Everyone in the session fights: living characters who have no initiative
+/// yet get one rolled here, so the GM only types in the ones rolled with physical dice.
 #[tauri::command]
 fn combat_start(state: State<'_, AppStorage>) -> Result<SceneRecord, String> {
     with_combat(&state, |scene, storage| {
+        for kind in [storage::CharacterKind::Pc, storage::CharacterKind::Npc] {
+            for row in storage.list_characters(kind).map_err(|e| e.to_string())? {
+                let character = parse_row(&row)?;
+                if character.dead || scene.combat.is_in_fight(row.id) {
+                    continue;
+                }
+                let die = d10_check(None)?;
+                scene
+                    .combat
+                    .add(row.id, character.stats.reflex, die)
+                    .map_err(|e| e.to_string())?;
+            }
+        }
         let skip = dead_ids(storage, scene)?;
         scene.combat.start(&skip).map_err(|e| e.to_string())?;
         refresh_death_save_due(scene, storage)
@@ -452,30 +551,40 @@ fn death_save(
     })
 }
 
-/// Stabilisation: the helper's TECH + `skill` level + d10 against the target's DV.
+/// Stabilisation against the DV of the target wound: the helper TECH + `skill` level + d10
+/// (rolled here, or `manual_total` typed in from physical dice), or `granted` when the GM just
+/// declares the target stabilised.
 #[tauri::command]
 fn stabilize(
     state: State<'_, AppStorage>,
     target_id: i64,
     helper_id: i64,
     skill: String,
-    manual: Option<Vec<u32>>,
+    manual_total: Option<i32>,
+    granted: bool,
 ) -> Result<StabilizeApplied, String> {
-    if !STABILIZE_SKILLS.contains(&skill.as_str()) {
-        return Err(vitals::VitalsError::BadSkill(skill).to_string());
-    }
     let storage = lock(&state)?;
-    let helper = require_character(&storage, helper_id)?;
-    let mut target = if helper_id == target_id {
-        helper.clone()
-    } else {
-        require_character(&storage, target_id)?
-    };
-    let bonus =
-        i32::from(helper.stats.tech) + i32::from(helper.skills.get(&skill).copied().unwrap_or(0));
+    let mut target = require_character(&storage, target_id)?;
     let base = vitals::base_death_save_penalty(&target.injuries, &injury_table()?);
-    let result = vitals::stabilize(&mut target, bonus, d10_check(manual)?, base)
-        .map_err(|e| e.to_string())?;
+    let result = if granted {
+        vitals::stabilize_granted(&mut target, base).map_err(|e| e.to_string())?
+    } else {
+        if !STABILIZE_SKILLS.contains(&skill.as_str()) {
+            return Err(vitals::VitalsError::BadSkill(skill).to_string());
+        }
+        let helper = if helper_id == target_id {
+            target.clone()
+        } else {
+            require_character(&storage, helper_id)?
+        };
+        let bonus = i32::from(helper.stats.tech)
+            + i32::from(helper.skills.get(&skill).copied().unwrap_or(0));
+        let die = match manual_total {
+            Some(total) => check_total(total).map_err(|e| e.to_string())?,
+            None => roll_check(&mut ThreadDice::new()),
+        };
+        vitals::stabilize(&mut target, bonus, die, base).map_err(|e| e.to_string())?
+    };
     store_character(&storage, target_id, &target)?;
     Ok(StabilizeApplied { character: CharacterRecord::new(target_id, target), result })
 }
@@ -541,7 +650,11 @@ fn apply_damage(
     injury_id: Option<String>,
 ) -> Result<DamageApplied, String> {
     let storage = lock(&state)?;
-    let mut character = require_character(&storage, character_id)?;
+    let row = storage
+        .get_character(character_id)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("character {character_id} not found"))?;
+    let mut character = parse_row(&row)?;
     let (scene_id, mut scene) = load_scene(&storage)?;
     damage_event::apply(
         &mut character,
@@ -552,6 +665,10 @@ fn apply_damage(
         &injury_table()?,
     )
     .map_err(|e| e.to_string())?;
+    // Filler NPCs have no death save: at 0 HP they are dead on the spot.
+    if row.kind == storage::CharacterKind::Npc {
+        damage_event::kill_downed_npc(&mut character, &mut scene);
+    }
     character.validate().map_err(|e| e.to_string())?;
     store_character(&storage, character_id, &character)?;
     save_scene_row(&storage, scene_id, &scene)?;
@@ -559,6 +676,19 @@ fn apply_damage(
         character: Some(CharacterRecord::new(character_id, character)),
         scene: SceneRecord { id: scene_id, scene },
     })
+}
+
+/// Brings a dead character (a PC or an NPC) back: 1 HP, no death save penalty, no injuries.
+#[tauri::command]
+fn revive_character(
+    state: State<'_, AppStorage>,
+    id: i64,
+) -> Result<CharacterRecord, String> {
+    let storage = lock(&state)?;
+    let mut character = require_character(&storage, id)?;
+    vitals::revive(&mut character).map_err(|e| e.to_string())?;
+    store_character(&storage, id, &character)?;
+    Ok(CharacterRecord::new(id, character))
 }
 
 /// Undoes the scene's last damage event.
@@ -588,6 +718,9 @@ pub fn run() {
             let dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&dir)?;
             let storage = Storage::open(&dir.join("red-companion.db"))?;
+            let exports = dir.join("exports");
+            std::fs::create_dir_all(&exports)?;
+            app.manage(ExportsDir(exports));
             app.manage(AppStorage(Mutex::new(storage)));
             Ok(())
         })
@@ -601,7 +734,9 @@ pub fn run() {
             save_character,
             delete_character,
             export_characters,
-            import_characters,
+            list_exports,
+            import_export_file,
+            open_exports_folder,
             get_scene,
             list_cover_presets,
             add_cover,
@@ -614,8 +749,9 @@ pub fn run() {
             preview_damage,
             apply_damage,
             undo_damage,
-            combat_add,
-            combat_reroll,
+            revive_character,
+            combat_roll,
+            preview_derived,
             combat_set_initiative,
             combat_shift,
             combat_remove,

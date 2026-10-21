@@ -235,7 +235,10 @@
     },
     "skill_specialty": "Specialty",
     "skill_specialty_add": "Add",
-    "skill_specialty_remove": "Remove specialty"
+    "skill_specialty_remove": "Remove specialty",
+    "saving": "Saving…",
+    "skills_search": "Find a skill",
+    "skills_trained_only": "Trained only"
   },
   "skill": {
     "category": {
@@ -403,7 +406,30 @@
       "critical_bonus": "Critical injury: +{{amount}} damage ignoring armor",
       "hp_lost": "HP {{before}} → {{after}}",
       "wound_state_changed": "State: {{from}} → {{to}}"
-    }
+    },
+    "dice_manual": "Enter the faces of physical dice",
+    "dice_roll": "Roll {{notation}}",
+    "armor_short": {
+      "full": "Armor",
+      "half_up": "½ armor",
+      "ignored": "No armor"
+    },
+    "aimed": {
+      "head": "Aimed",
+      "held_item": "Hand",
+      "leg": "Leg"
+    },
+    "aimed_hint": {
+      "head": "Aimed shot at the head: damage that gets through ×2",
+      "held_item": "Aimed shot at the hand: on penetration the target drops the item",
+      "leg": "Aimed shot at the leg: on penetration, Broken Leg"
+    },
+    "critical": "Crit",
+    "critical_hint": "Critical injury: +5 damage that ignores armor, and an injury. Two sixes on the dice mark it by themselves",
+    "explosive_short": "Explosion",
+    "injury_random": "Random injury (2d6)",
+    "injury_default": "None picked: a random injury will be rolled",
+    "armor": "SP"
   },
   "initiative": {
     "title": "Initiative",
@@ -434,14 +460,15 @@
     "death_save_failed": "dead"
   },
   "stabilize": {
-    "title": "Stabilization",
+    "title": "Stabilize",
     "helper": "Helper",
     "skill": "Skill",
     "formula": "TECH {{tech}} + skill {{level}} + d10 vs the wound's DV (10 / 13 / 15)",
     "roll": "Roll",
     "success": "Stabilized.",
     "failure": "Failed.",
-    "revived": "The target is back at 1 HP."
+    "revived": "The target is back at 1 HP.",
+    "formula_short": "TECH {{tech}} + skill {{level}}"
   },
   "npc": {
     "armor": {
@@ -529,5 +556,57 @@
       "weapons": "Weapons",
       "gear": "Gear"
     }
+  },
+  "card": {
+    "initiative_hint": "Initiative: type the total (REF + d10) from physical dice, or press the die",
+    "initiative_roll": "Roll initiative: REF {{reflex}} + d10",
+    "damage": "Damage",
+    "cover": "Cover",
+    "cover_on_scene": "Already on the scene",
+    "cover_hp_ask": "HP?",
+    "revive": "Revive",
+    "revive_hint": "Revive: 1 HP, no death save penalty, no injuries"
+  },
+  "rail": {
+    "start_hint": "Start the fight: anyone without initiative gets one rolled"
+  },
+  "status": {
+    "saving": "Saving…",
+    "saved": "Saved",
+    "close": "Close"
+  },
+  "transfer": {
+    "exported_one": "Exported 1 character: {{path}}",
+    "exported_many": "Exported characters: {{count}}. File: {{path}}",
+    "open_folder": "Open folder",
+    "empty": "The export folder has no files. Export at least one character first.",
+    "import_title": "Import from the app folder",
+    "import_hint": "Files of the export folder. Put a file from someone else into this folder.",
+    "import_file": "{{name}}",
+    "imported": "Characters imported: {{count}}",
+    "error": "Failed: {{error}}"
+  },
+  "validation": {
+    "amount": "Damage: a whole number, 0 or more",
+    "faces": "Dice faces: whole numbers from 1",
+    "die": "d10: a number from 1 to 10",
+    "check_total": "Die total: a number from -9 to 20",
+    "cover_hp": "Cover HP: a whole number from 1",
+    "count": "How many: a whole number from 1 to {{max}}",
+    "range": "Allowed: {{min}} to {{max}}"
+  },
+  "stabilize_dialog": {
+    "wound": "Wound",
+    "dv": "DV",
+    "skills": "Skills",
+    "nothing": "Nothing to stabilize: the character has no wound.",
+    "total_label": "Die total",
+    "total_hint": "Your own d10 as a number (10s and 1s are counted at the table)",
+    "apply_total": "Apply",
+    "declare": "Stabilized, no roll",
+    "declare_hint": "Stabilize without a roll: same as a success",
+    "result": "{{bonus}} + d10 {{die}} = {{total}} vs DV {{dv}}",
+    "declared_result": "Stabilized without a roll (DV {{dv}})",
+    "failed": "failed"
   }
 }

@@ -415,11 +415,11 @@ pub fn validate_npc_templates(
         }
         let st = &e.stats;
         for v in [st.int, st.reflex, st.dex, st.tech, st.cool, st.will, st.movement, st.body] {
-            if !(1..=10).contains(&v) {
+            if !(crate::character::STAT_MIN..=crate::character::STAT_MAX).contains(&v) {
                 return Err(bad("stat"));
             }
         }
-        if st.emp > 10 || st.luck > 10 || e.armor_head_sp > 20 || e.armor_body_sp > 20 {
+        if st.emp > crate::character::STAT_MAX || st.luck > crate::character::STAT_MAX || e.armor_head_sp > 20 || e.armor_body_sp > 20 {
             return Err(bad("emp, luck or armor"));
         }
         for w in &e.weapons {

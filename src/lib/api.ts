@@ -8,6 +8,9 @@ import type { CriticalInjury } from "@/bindings/CriticalInjury";
 import type { DamageApplied } from "@/bindings/DamageApplied";
 import type { DamageOutcome } from "@/bindings/DamageOutcome";
 import type { DamageRequest } from "@/bindings/DamageRequest";
+import type { Derived } from "@/bindings/Derived";
+import type { ExportFile } from "@/bindings/ExportFile";
+import type { ExportSaved } from "@/bindings/ExportSaved";
 import type { DeathSaveApplied } from "@/bindings/DeathSaveApplied";
 import type { InjuryRoll } from "@/bindings/InjuryRoll";
 import type { RollResult } from "@/bindings/RollResult";
@@ -31,10 +34,13 @@ export const api = {
   saveCharacter: (id: number, character: Character) =>
     invoke<CharacterRecord>("save_character", { id, character }),
   deleteCharacter: (id: number) => invoke<void>("delete_character", { id }),
-  /** Export file text for `ids`, or for everyone when `null`. */
-  exportCharacters: (ids: number[] | null) => invoke<string>("export_characters", { ids }),
-  /** Imports a file's text as new characters; rejects the whole file if anything is invalid. */
-  importCharacters: (json: string) => invoke<CharacterRecord[]>("import_characters", { json }),
+  /** Writes `ids` (or everyone when `null`) into a new file in the exports folder. */
+  exportCharacters: (ids: number[] | null) => invoke<ExportSaved>("export_characters", { ids }),
+  /** Export files in the exports folder, the newest first. */
+  listExports: () => invoke<ExportFile[]>("list_exports"),
+  /** Imports one file of the exports folder as new characters; rejects the whole file if anything is invalid. */
+  importExportFile: (name: string) => invoke<CharacterRecord[]>("import_export_file", { name }),
+  openExportsFolder: () => invoke<void>("open_exports_folder"),
   getScene: () => invoke<SceneRecord>("get_scene"),
   listCoverPresets: () => invoke<CoverPreset[]>("list_cover_presets"),
   addCover: (preset: string | null, name: string, hp: number | null) =>
@@ -54,12 +60,14 @@ export const api = {
     invoke<DamageOutcome>("preview_damage", { characterId, request }),
   applyDamage: (characterId: number, request: DamageRequest, injuryId: string | null) =>
     invoke<DamageApplied>("apply_damage", { characterId, request, injuryId }),
+  /** Brings a dead character back: 1 HP, no death save penalty, no injuries. */
+  reviveCharacter: (id: number) => invoke<CharacterRecord>("revive_character", { id }),
   undoDamage: () => invoke<DamageApplied>("undo_damage"),
-  /** Adds to the fight with REF + 1d10; `manual` = faces of physical dice (a second one after 10 or 1). */
-  combatAdd: (characterId: number, manual: number[] | null) =>
-    invoke<SceneRecord>("combat_add", { characterId, manual }),
-  combatReroll: (characterId: number, manual: number[] | null) =>
-    invoke<SceneRecord>("combat_reroll", { characterId, manual }),
+  /** Rolls REF + 1d10: adds to the order, or re-rolls; `manual` = faces of physical dice. */
+  combatRoll: (characterId: number, manual: number[] | null) =>
+    invoke<SceneRecord>("combat_roll", { characterId, manual }),
+  /** Derived numbers of an unsaved sheet; the formulas live in Rust. */
+  previewDerived: (character: Character) => invoke<Derived>("preview_derived", { character }),
   combatSetInitiative: (characterId: number, initiative: number) =>
     invoke<SceneRecord>("combat_set_initiative", { characterId, initiative }),
   combatShift: (characterId: number, delta: number) =>
@@ -70,6 +78,15 @@ export const api = {
   combatEnd: () => invoke<SceneRecord>("combat_end"),
   deathSave: (characterId: number, manual: number | null) =>
     invoke<DeathSaveApplied>("death_save", { characterId, manual }),
-  stabilize: (targetId: number, helperId: number, skill: string, manual: number[] | null) =>
-    invoke<StabilizeApplied>("stabilize", { targetId, helperId, skill, manual }),
+  /**
+   * Stabilisation: the helper's TECH + skill + d10 against the wound's DV. `manualTotal` is the
+   * die typed in from physical dice, `granted` skips the roll (the GM declares success).
+   */
+  stabilize: (
+    targetId: number,
+    helperId: number,
+    skill: string,
+    manualTotal: number | null,
+    granted: boolean,
+  ) => invoke<StabilizeApplied>("stabilize", { targetId, helperId, skill, manualTotal, granted }),
 };

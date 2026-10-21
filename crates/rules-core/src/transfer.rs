@@ -8,6 +8,7 @@
 use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 use thiserror::Error;
 
 use crate::character::{skill_base_id, Character, CharacterError, CharacterKind};
@@ -55,6 +56,55 @@ pub enum TransferError {
 pub fn export(items: Vec<ExportedCharacter>) -> Result<String, TransferError> {
     let file = CharacterFile { format: FORMAT.to_string(), schema_version: FILE_VERSION, characters: items };
     Ok(serde_json::to_string_pretty(&file)?)
+}
+
+/// An export file found in the exports folder.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct ExportFile {
+    pub name: String,
+    /// Last modification, milliseconds since the Unix epoch.
+    #[ts(type = "number")]
+    pub modified_ms: u64,
+    #[ts(type = "number")]
+    pub size: u64,
+}
+
+/// Where an export went.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct ExportSaved {
+    pub name: String,
+    /// Full path of the new file, for the message.
+    pub path: String,
+    pub count: u32,
+}
+
+/// Suffix of every export file the app writes.
+pub const EXPORT_SUFFIX: &str = ".redcompanion.json";
+
+/// Characters no export file name may contain (folders, drives, Windows reserved ones).
+const BAD_FILE_NAME_CHARS: &str = "\\/:*?\"<>|";
+
+/// File name for an export: the name made safe for any file system, plus the suffix.
+pub fn export_file_name(base: &str) -> String {
+    let cleaned: String = base
+        .chars()
+        .map(|c| if c.is_control() || BAD_FILE_NAME_CHARS.contains(c) { '_' } else { c })
+        .collect();
+    let cleaned = cleaned.trim().trim_matches('.');
+    let cleaned = if cleaned.is_empty() { "characters" } else { cleaned };
+    format!("{cleaned}{EXPORT_SUFFIX}")
+}
+
+/// A name taken from the UI is only accepted as a bare file name of an export: no folders,
+/// no `..`, nothing but the app's own suffix.
+pub fn is_export_file_name(name: &str) -> bool {
+    !name.is_empty()
+        && name.ends_with(EXPORT_SUFFIX)
+        && !name.chars().any(|c| c == '\0' || BAD_FILE_NAME_CHARS.contains(c))
+        && !name.starts_with('.')
+        && !name.contains("..")
 }
 
 /// Parses and fully validates an export file. Names are trimmed; skill and
@@ -138,7 +188,7 @@ mod tests {
     #[test]
     fn rejects_invalid_characters_with_their_position() {
         let mut items = sample();
-        items[1].character.stats.body = 11;
+        items[1].character.stats.body = 100;
         let json = export(items).unwrap();
         match parse_import(&json, &SeedDataSource) {
             Err(TransferError::Invalid { index: 2, name, .. }) => assert_eq!(name, "Boosterganger"),
@@ -186,5 +236,28 @@ mod tests {
         items[0].character.skills.insert("no_such_skill:x".into(), 1);
         let json = export(items).unwrap();
         assert!(matches!(parse_import(&json, &SeedDataSource), Err(TransferError::UnknownSkill { .. })));
+    }
+
+    #[test]
+    fn export_file_names_are_safe_and_imports_accept_only_bare_names() {
+        assert_eq!(export_file_name("Джонни"), "Джонни.redcompanion.json");
+        assert_eq!(export_file_name("a/b:c*"), "a_b_c_.redcompanion.json");
+        assert_eq!(export_file_name("  .. "), "characters.redcompanion.json");
+        assert_eq!(export_file_name(""), "characters.redcompanion.json");
+
+        assert!(is_export_file_name("Джонни.redcompanion.json"));
+        assert!(is_export_file_name("Johnny (2).redcompanion.json"));
+        for bad in [
+            "",
+            "x.json",
+            "../x.redcompanion.json",
+            "a/x.redcompanion.json",
+            "a\\x.redcompanion.json",
+            "C:x.redcompanion.json",
+            ".hidden.redcompanion.json",
+            "a..b.redcompanion.json",
+        ] {
+            assert!(!is_export_file_name(bad), "{bad}");
+        }
     }
 }

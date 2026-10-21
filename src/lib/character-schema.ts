@@ -4,7 +4,8 @@ import type { Character } from "@/bindings/Character";
 // Mirrors the limits in `rules-core::character`; Rust stays the final judge.
 // EMP and LUCK may be 0 (cyberware burns EMP, the book's filler NPCs have no luck).
 export const STAT_MIN = 1;
-export const STAT_MAX = 10;
+// Stats may legitimately exceed the usual 1..10 (gear, cyberware); 99 only catches typos.
+export const STAT_MAX = 99;
 export const SP_MAX = 20;
 export const SKILL_MAX = 10;
 

@@ -298,4 +298,19 @@ mod tests {
         let officer = npcs.entries.iter().find(|e| e.id == "security_officer").unwrap();
         assert_eq!((officer.stats.reflex, officer.armor_body_sp), (8, 12));
     }
+
+    /// Every critical injury has a glyph in the UI (`injury-icons.tsx`), and no glyph is orphaned.
+    #[test]
+    fn every_injury_has_an_icon() {
+        let path = format!("{}/../../src/components/combat/injury-icons.tsx", env!("CARGO_MANIFEST_DIR"));
+        let source = std::fs::read_to_string(path).unwrap();
+        let ids: Vec<String> =
+            SeedDataSource.critical_injuries().unwrap().entries.into_iter().map(|e| e.id).collect();
+        for id in &ids {
+            assert!(source.contains(&format!("
+  {id}: ")), "no icon for {id}");
+        }
+        let glyphs = source.lines().filter(|l| l.starts_with("  ") && !l.starts_with("   ") && l.contains(": ") && l.trim_end().trim_end_matches(',').ends_with(['(', '>'])).count();
+        assert_eq!(glyphs, ids.len(), "icons and injuries differ in number");
+    }
 }

@@ -11,4 +11,8 @@ export type DamageEvent = { character_id: number, character_name: string, reques
 /**
  * Injuries this hit added (aimed-leg one first, then the critical one).
  */
-added_injuries: Array<string>, cover: CoverUndo | null, outcome: DamageOutcome, };
+added_injuries: Array<string>, cover: CoverUndo | null, 
+/**
+ * This hit killed a filler NPC (0 HP); undo brings them back.
+ */
+died: boolean, outcome: DamageOutcome, };

@@ -3,6 +3,7 @@ import type { CoverPreset } from "@/bindings/CoverPreset";
 import type { Scene } from "@/bindings/Scene";
 import type { SceneRecord } from "@/bindings/SceneRecord";
 import { api, hasBackend } from "@/lib/api";
+import { status } from "@/store/status-store";
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
@@ -28,8 +29,11 @@ export function useScene() {
       const record = await command;
       setScene(record.scene);
       setError(null);
+      return record;
     } catch (e) {
       setError(message(e));
+      status.error(message(e), "scene");
+      return null;
     }
   }, []);
 
@@ -46,8 +50,15 @@ export function useScene() {
     removeCover: (id: number) => run(api.removeCover(id)),
     setCharacterCover: (characterId: number, coverId: number | null) =>
       run(api.setCharacterCover(characterId, coverId)),
-    combatAdd: (id: number, manual: number[] | null) => run(api.combatAdd(id, manual)),
-    combatReroll: (id: number, manual: number[] | null) => run(api.combatReroll(id, manual)),
+    /** Creates a cover and puts the character behind it. */
+    addCoverFor: async (characterId: number, preset: string | null, name: string, hp: number | null) => {
+      const created = await run(api.addCover(preset, name, hp));
+      // Ids are never reused, so the new cover has the highest one.
+      const id = created ? Math.max(...created.scene.covers.map((c) => c.id)) : null;
+      if (id !== null) await run(api.setCharacterCover(characterId, id));
+    },
+    /** Rolls REF + 1d10 for a character (adds them to the order, or re-rolls). */
+    combatRoll: (id: number) => run(api.combatRoll(id, null)),
     combatSetInitiative: (id: number, initiative: number) =>
       run(api.combatSetInitiative(id, initiative)),
     combatShift: (id: number, delta: number) => run(api.combatShift(id, delta)),

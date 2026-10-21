@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { FieldBadge } from "@/components/ui/field-badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -25,7 +26,6 @@ export type CloneRequest = {
   names: string[];
   /** Localized weapons and gear text for the sheet's notes. */
   notes: string;
-  intoCombat: boolean;
 };
 
 type NpcTemplateDialogProps = {
@@ -83,7 +83,7 @@ export function NpcTemplateDialog({
       .filter(Boolean)
       .join("\n");
 
-  const clone = async (intoCombat: boolean) => {
+  const clone = async () => {
     if (!selected || !countValid) return;
     setBusy(true);
     setError(null);
@@ -92,7 +92,6 @@ export function NpcTemplateDialog({
         templateId: selected.id,
         names: cloneNames(t(selected.name_key), countValue, existingNames),
         notes: notesOf(selected),
-        intoCombat,
       });
       onClose();
     } catch (e) {
@@ -149,34 +148,33 @@ export function NpcTemplateDialog({
         <DialogFooter className="items-center">
           <Label htmlFor="npc-clone-count" className="mr-auto font-normal">
             {t("npc.count")}
-            <Input
-              id="npc-clone-count"
-              type="number"
-              min={COUNT_MIN}
-              max={COUNT_MAX}
-              value={count}
-              onChange={(e) => setCount(e.target.value)}
-              aria-invalid={!countValid}
-              className="num ml-2 inline-block h-8 w-16"
-            />
+            <FieldBadge
+              className="ml-2 inline-block"
+              error={countValid ? null : t("validation.count", { max: COUNT_MAX })}
+            >
+              {(invalid) => (
+                <Input
+                  id="npc-clone-count"
+                  type="number"
+                  min={COUNT_MIN}
+                  max={COUNT_MAX}
+                  value={count}
+                  onChange={(e) => setCount(e.target.value)}
+                  aria-invalid={invalid}
+                  className="num inline-block h-8 w-16"
+                />
+              )}
+            </FieldBadge>
           </Label>
           <Button type="button" variant="outline" onClick={onClose}>
             {t("characters.cancel")}
           </Button>
           <Button
             type="button"
-            variant="outline"
             disabled={!selected || !countValid || busy}
-            onClick={() => void clone(false)}
+            onClick={() => void clone()}
           >
             {t("npc.clone")}
-          </Button>
-          <Button
-            type="button"
-            disabled={!selected || !countValid || busy}
-            onClick={() => void clone(true)}
-          >
-            {t("npc.clone_to_combat")}
           </Button>
         </DialogFooter>
       </DialogContent>

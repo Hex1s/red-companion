@@ -26,6 +26,10 @@ pub enum CharacterKind {
 }
 
 impl CharacterKind {
+    fn parse(text: &str) -> Self {
+        if text == "npc" { Self::Npc } else { Self::Pc }
+    }
+
     fn as_str(self) -> &'static str {
         match self {
             Self::Pc => "pc",
@@ -39,6 +43,7 @@ pub struct CharacterRow {
     pub id: i64,
     pub name: String,
     pub data: String,
+    pub kind: CharacterKind,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -88,14 +93,14 @@ impl Storage {
     pub fn get_character(&self, id: i64) -> Result<Option<CharacterRow>> {
         Ok(self
             .conn
-            .query_row("SELECT id, name, data FROM characters WHERE id = ?1", [id], character_row)
+            .query_row("SELECT id, name, data, kind FROM characters WHERE id = ?1", [id], character_row)
             .optional()?)
     }
 
     pub fn list_characters(&self, kind: CharacterKind) -> Result<Vec<CharacterRow>> {
         let mut stmt = self
             .conn
-            .prepare("SELECT id, name, data FROM characters WHERE kind = ?1 ORDER BY name, id")?;
+            .prepare("SELECT id, name, data, kind FROM characters WHERE kind = ?1 ORDER BY name, id")?;
         let rows = stmt.query_map([kind.as_str()], character_row)?;
         Ok(rows.collect::<std::result::Result<_, _>>()?)
     }
@@ -172,7 +177,12 @@ impl Storage {
 }
 
 fn character_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<CharacterRow> {
-    Ok(CharacterRow { id: r.get(0)?, name: r.get(1)?, data: r.get(2)? })
+    Ok(CharacterRow {
+        id: r.get(0)?,
+        name: r.get(1)?,
+        data: r.get(2)?,
+        kind: CharacterKind::parse(&r.get::<_, String>(3)?),
+    })
 }
 
 #[cfg(test)]

@@ -15,10 +15,12 @@ use crate::damage::{max_hp, wound_state, TargetState, WoundState};
 
 /// Current version of the character document.
 pub const SCHEMA_VERSION: u32 = 1;
-/// Stat range on the sheet (p. 79); EMP may drop to 0 from cyberware, and
+/// Stat range on the sheet. The book's 1..=10 is the usual scale, but stats may
+/// legitimately go above 10 (gear, cyberware, other effects), so the upper bound
+/// only catches typos. See p. 79; EMP may drop to 0 from cyberware, and
 /// LUCK is 0 for the book's filler NPCs ("—" in their stat blocks, p. 412).
 pub const STAT_MIN: u8 = 1;
-pub const STAT_MAX: u8 = 10;
+pub const STAT_MAX: u8 = 99;
 /// Armor SP range accepted on the sheet (best armor in the book is 18).
 pub const SP_MAX: u8 = 20;
 /// Humanity per point of EMP (p. 79).
@@ -124,6 +126,9 @@ pub struct Derived {
     /// Death save succeeds on d10 + penalty <= this (= BODY).
     pub death_save: u8,
     pub max_humanity: u32,
+    /// DV of stabilising the character in their current wound state (p. 186); `None` when
+    /// there is nothing to stabilise (healthy, dead).
+    pub stabilization_dv: Option<u8>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -191,6 +196,14 @@ impl Character {
         max_hp(self.stats.body, self.stats.will)
     }
 
+    /// A filler NPC has no mortal wound and no death save: at 0 HP they are simply dead. PCs are
+    /// not touched.
+    pub fn settle_npc(&mut self) {
+        if self.hp == 0 {
+            self.dead = true;
+        }
+    }
+
     pub fn wound_state(&self) -> WoundState {
         wound_state(self.hp, self.max_hp(), self.dead)
     }
@@ -203,6 +216,7 @@ impl Character {
             wound_state: self.wound_state(),
             death_save: self.stats.body,
             max_humanity: u32::from(self.stats.emp) * HUMANITY_PER_EMP,
+            stabilization_dv: self.wound_state().stabilization_dv(),
         }
     }
 
@@ -289,6 +303,19 @@ mod tests {
         assert_eq!(d.wound_state, WoundState::Serious);
         assert_eq!(d.death_save, 7);
         assert_eq!(d.max_humanity, 40);
+        assert_eq!(d.stabilization_dv, Some(13)); // seriously wounded
+    }
+
+    #[test]
+    fn an_npc_at_zero_hp_is_dead_and_one_with_hp_is_not() {
+        let mut npc = Character::quick("Boosterganger");
+        npc.hp = 3;
+        npc.settle_npc();
+        assert!(!npc.dead);
+        npc.hp = 0;
+        npc.settle_npc();
+        assert!(npc.dead);
+        assert_eq!(npc.wound_state(), WoundState::Dead);
     }
 
     #[test]
@@ -318,8 +345,12 @@ mod tests {
         assert_eq!(c.validate(), Err(CharacterError::EmptyName));
 
         let mut c = Character::quick("V");
-        c.stats.body = 11;
+        c.stats.body = 100;
         assert!(matches!(c.validate(), Err(CharacterError::StatOutOfRange { stat: "body", .. })));
+
+        let mut c = Character::quick("V");
+        c.stats.body = 14; // above the usual scale, not an error
+        assert_eq!(c.validate(), Ok(()));
 
         let mut c = Character::quick("V");
         c.stats.int = 0;
@@ -332,7 +363,7 @@ mod tests {
         let mut c = Character::quick("V");
         c.stats.luck = 0; // allowed: filler NPCs have no luck
         assert_eq!(c.validate(), Ok(()));
-        c.stats.luck = 11;
+        c.stats.luck = 100;
         assert!(matches!(c.validate(), Err(CharacterError::StatOutOfRange { stat: "luck", .. })));
 
         let mut c = Character::quick("V");

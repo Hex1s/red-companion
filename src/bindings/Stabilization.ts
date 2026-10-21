@@ -4,11 +4,19 @@ import type { CheckRoll } from "./CheckRoll";
 /**
  * Result of a stabilisation attempt.
  */
-export type Stabilization = { dv: number, roll: CheckRoll, 
+export type Stabilization = { dv: number, 
+/**
+ * `None` when the GM declared the target stabilised without a roll.
+ */
+roll: CheckRoll | null, 
 /**
  * TECH + skill level of the one who helps.
  */
-bonus: number, total: number, success: boolean, 
+bonus: number, 
+/**
+ * Bonus plus the die; for a declared success, the DV itself.
+ */
+total: number, success: boolean, 
 /**
  * A mortally wounded target came back to 1 HP and the death save penalty
  * dropped to its base value.
