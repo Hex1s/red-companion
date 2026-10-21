@@ -1,5 +1,78 @@
 {
   "name": "armor",
-  "version": 0,
-  "entries": []
+  "version": 1,
+  "entries": [
+    {
+      "id": "leather",
+      "name_key": "armor.items.leather",
+      "sp": 4,
+      "penalty": 0,
+      "source": {
+        "page": 185
+      }
+    },
+    {
+      "id": "kevlar",
+      "name_key": "armor.items.kevlar",
+      "sp": 7,
+      "penalty": 0,
+      "source": {
+        "page": 185
+      }
+    },
+    {
+      "id": "light_armorjack",
+      "name_key": "armor.items.light_armorjack",
+      "sp": 11,
+      "penalty": 0,
+      "source": {
+        "page": 185
+      }
+    },
+    {
+      "id": "bodyweight_suit",
+      "name_key": "armor.items.bodyweight_suit",
+      "sp": 11,
+      "penalty": 0,
+      "source": {
+        "page": 185
+      }
+    },
+    {
+      "id": "medium_armorjack",
+      "name_key": "armor.items.medium_armorjack",
+      "sp": 12,
+      "penalty": 2,
+      "source": {
+        "page": 185
+      }
+    },
+    {
+      "id": "heavy_armorjack",
+      "name_key": "armor.items.heavy_armorjack",
+      "sp": 13,
+      "penalty": 2,
+      "source": {
+        "page": 185
+      }
+    },
+    {
+      "id": "flak",
+      "name_key": "armor.items.flak",
+      "sp": 15,
+      "penalty": 4,
+      "source": {
+        "page": 185
+      }
+    },
+    {
+      "id": "metalgear",
+      "name_key": "armor.items.metalgear",
+      "sp": 18,
+      "penalty": 4,
+      "source": {
+        "page": 185
+      }
+    }
+  ]
 }

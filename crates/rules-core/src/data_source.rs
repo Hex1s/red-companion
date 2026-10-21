@@ -88,4 +88,66 @@ mod tests {
         let err = parse::<Armor>("armor", "{").unwrap_err();
         assert!(err.to_string().contains("armor"));
     }
+
+    /// Every i18n key referenced by seed data exists in both locale files.
+    #[test]
+    fn seed_keys_exist_in_both_locales() {
+        let ds = SeedDataSource;
+        let mut keys = vec![];
+        for e in ds.critical_injuries().unwrap().entries {
+            keys.push(e.name_key);
+            keys.push(e.effect_key);
+        }
+        keys.extend(ds.cover_materials().unwrap().entries.into_iter().map(|e| e.name_key));
+        keys.extend(ds.armor().unwrap().entries.into_iter().map(|e| e.name_key));
+        keys.extend(ds.shields().unwrap().entries.into_iter().map(|e| e.name_key));
+
+        for lang in ["ru", "en"] {
+            let path = format!("{}/../../src/i18n/locales/{lang}.json", env!("CARGO_MANIFEST_DIR"));
+            let root: serde_json::Value =
+                serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+            for key in &keys {
+                let found = key.split('.').try_fold(&root, |v, part| v.get(part));
+                assert!(found.is_some_and(|v| v.is_string()), "{lang}: missing {key}");
+            }
+        }
+    }
+
+    #[test]
+    fn seed_data_passes_invariants() {
+        use crate::catalog::*;
+        let ds = SeedDataSource;
+        assert_eq!(validate_critical_injuries(&ds.critical_injuries().unwrap()), Ok(()));
+        assert_eq!(validate_cover_materials(&ds.cover_materials().unwrap()), Ok(()));
+        assert_eq!(validate_armor(&ds.armor().unwrap()), Ok(()));
+        assert_eq!(validate_shields(&ds.shields().unwrap()), Ok(()));
+    }
+
+    /// Spot checks against the book tables (p. 182, 184-185, 187-188).
+    #[test]
+    fn seed_values_match_book() {
+        use crate::catalog::*;
+        let ds = SeedDataSource;
+        let cover = ds.cover_materials().unwrap();
+        let hp = |id: &str| cover.entries.iter().find(|e| e.id == id).unwrap().hp;
+        assert_eq!((hp("concrete_thick"), hp("wood_thin"), hp("metal_thick")), (25, 5, 50));
+        assert!(cover.entries.iter().all(|e| e.id != "drywall_thin"));
+
+        let armor = ds.armor().unwrap();
+        let a = |id: &str| armor.entries.iter().find(|e| e.id == id).unwrap().clone();
+        assert_eq!((a("kevlar").sp, a("kevlar").penalty), (7, 0));
+        assert_eq!((a("metalgear").sp, a("metalgear").penalty), (18, 4));
+
+        let shields = ds.shields().unwrap();
+        assert_eq!(shields.entries[0].hp, Some(10));
+        assert_eq!(shields.entries[1].hp, None);
+
+        let inj = ds.critical_injuries().unwrap();
+        let broken_leg = inj.entries.iter().find(|e| e.id == "broken_leg").unwrap();
+        assert_eq!((broken_leg.area, broken_leg.roll), (BodyArea::Body, 8));
+        assert_eq!(broken_leg.first_aid, [TreatmentOption { skill: TreatmentSkill::Paramedic, dv: 13 }]);
+        assert_eq!(broken_leg.treatment.len(), 2);
+        let dsp = inj.entries.iter().filter(|e| e.death_save_penalty).count();
+        assert_eq!(dsp, 11); // 5 body + 6 head rows
+    }
 }

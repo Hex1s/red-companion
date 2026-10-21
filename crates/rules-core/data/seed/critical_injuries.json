@@ -1,5 +1,519 @@
 {
   "name": "critical_injuries",
-  "version": 0,
-  "entries": []
+  "version": 1,
+  "entries": [
+    {
+      "id": "dismembered_arm",
+      "area": "body",
+      "roll": 2,
+      "name_key": "injury.dismembered_arm.name",
+      "effect_key": "injury.dismembered_arm.effect",
+      "first_aid": [],
+      "treatment": [
+        {
+          "skill": "surgery",
+          "dv": 17
+        }
+      ],
+      "quick_fix_removes_effect": false,
+      "death_save_penalty": true,
+      "source": {
+        "page": 187
+      }
+    },
+    {
+      "id": "dismembered_hand",
+      "area": "body",
+      "roll": 3,
+      "name_key": "injury.dismembered_hand.name",
+      "effect_key": "injury.dismembered_hand.effect",
+      "first_aid": [],
+      "treatment": [
+        {
+          "skill": "surgery",
+          "dv": 17
+        }
+      ],
+      "quick_fix_removes_effect": false,
+      "death_save_penalty": true,
+      "source": {
+        "page": 187
+      }
+    },
+    {
+      "id": "collapsed_lung",
+      "area": "body",
+      "roll": 4,
+      "name_key": "injury.collapsed_lung.name",
+      "effect_key": "injury.collapsed_lung.effect",
+      "first_aid": [
+        {
+          "skill": "paramedic",
+          "dv": 15
+        }
+      ],
+      "treatment": [
+        {
+          "skill": "surgery",
+          "dv": 15
+        }
+      ],
+      "quick_fix_removes_effect": false,
+      "death_save_penalty": true,
+      "source": {
+        "page": 187
+      }
+    },
+    {
+      "id": "broken_ribs",
+      "area": "body",
+      "roll": 5,
+      "name_key": "injury.broken_ribs.name",
+      "effect_key": "injury.broken_ribs.effect",
+      "first_aid": [
+        {
+          "skill": "paramedic",
+          "dv": 13
+        }
+      ],
+      "treatment": [
+        {
+          "skill": "paramedic",
+          "dv": 15
+        },
+        {
+          "skill": "surgery",
+          "dv": 13
+        }
+      ],
+      "quick_fix_removes_effect": false,
+      "death_save_penalty": false,
+      "source": {
+        "page": 187
+      }
+    },
+    {
+      "id": "broken_arm",
+      "area": "body",
+      "roll": 6,
+      "name_key": "injury.broken_arm.name",
+      "effect_key": "injury.broken_arm.effect",
+      "first_aid": [
+        {
+          "skill": "paramedic",
+          "dv": 13
+        }
+      ],
+      "treatment": [
+        {
+          "skill": "paramedic",
+          "dv": 15
+        },
+        {
+          "skill": "surgery",
+          "dv": 13
+        }
+      ],
+      "quick_fix_removes_effect": false,
+      "death_save_penalty": false,
+      "source": {
+        "page": 187
+      }
+    },
+    {
+      "id": "foreign_object_body",
+      "area": "body",
+      "roll": 7,
+      "name_key": "injury.foreign_object_body.name",
+      "effect_key": "injury.foreign_object_body.effect",
+      "first_aid": [
+        {
+          "skill": "first_aid",
+          "dv": 13
+        },
+        {
+          "skill": "paramedic",
+          "dv": 13
+        }
+      ],
+      "treatment": [],
+      "quick_fix_removes_effect": true,
+      "death_save_penalty": false,
+      "source": {
+        "page": 187
+      }
+    },
+    {
+      "id": "broken_leg",
+      "area": "body",
+      "roll": 8,
+      "name_key": "injury.broken_leg.name",
+      "effect_key": "injury.broken_leg.effect",
+      "first_aid": [
+        {
+          "skill": "paramedic",
+          "dv": 13
+        }
+      ],
+      "treatment": [
+        {
+          "skill": "paramedic",
+          "dv": 15
+        },
+        {
+          "skill": "surgery",
+          "dv": 13
+        }
+      ],
+      "quick_fix_removes_effect": false,
+      "death_save_penalty": false,
+      "source": {
+        "page": 187
+      }
+    },
+    {
+      "id": "torn_muscle",
+      "area": "body",
+      "roll": 9,
+      "name_key": "injury.torn_muscle.name",
+      "effect_key": "injury.torn_muscle.effect",
+      "first_aid": [
+        {
+          "skill": "first_aid",
+          "dv": 13
+        },
+        {
+          "skill": "paramedic",
+          "dv": 13
+        }
+      ],
+      "treatment": [],
+      "quick_fix_removes_effect": true,
+      "death_save_penalty": false,
+      "source": {
+        "page": 187
+      }
+    },
+    {
+      "id": "spinal_injury",
+      "area": "body",
+      "roll": 10,
+      "name_key": "injury.spinal_injury.name",
+      "effect_key": "injury.spinal_injury.effect",
+      "first_aid": [
+        {
+          "skill": "paramedic",
+          "dv": 15
+        }
+      ],
+      "treatment": [
+        {
+          "skill": "surgery",
+          "dv": 15
+        }
+      ],
+      "quick_fix_removes_effect": false,
+      "death_save_penalty": true,
+      "source": {
+        "page": 187
+      }
+    },
+    {
+      "id": "crushed_fingers",
+      "area": "body",
+      "roll": 11,
+      "name_key": "injury.crushed_fingers.name",
+      "effect_key": "injury.crushed_fingers.effect",
+      "first_aid": [
+        {
+          "skill": "paramedic",
+          "dv": 13
+        }
+      ],
+      "treatment": [
+        {
+          "skill": "surgery",
+          "dv": 15
+        }
+      ],
+      "quick_fix_removes_effect": false,
+      "death_save_penalty": false,
+      "source": {
+        "page": 187
+      }
+    },
+    {
+      "id": "dismembered_leg",
+      "area": "body",
+      "roll": 12,
+      "name_key": "injury.dismembered_leg.name",
+      "effect_key": "injury.dismembered_leg.effect",
+      "first_aid": [],
+      "treatment": [
+        {
+          "skill": "surgery",
+          "dv": 15
+        }
+      ],
+      "quick_fix_removes_effect": false,
+      "death_save_penalty": true,
+      "source": {
+        "page": 187
+      }
+    },
+    {
+      "id": "lost_eye",
+      "area": "head",
+      "roll": 2,
+      "name_key": "injury.lost_eye.name",
+      "effect_key": "injury.lost_eye.effect",
+      "first_aid": [],
+      "treatment": [
+        {
+          "skill": "surgery",
+          "dv": 17
+        }
+      ],
+      "quick_fix_removes_effect": false,
+      "death_save_penalty": true,
+      "source": {
+        "page": 188
+      }
+    },
+    {
+      "id": "brain_injury",
+      "area": "head",
+      "roll": 3,
+      "name_key": "injury.brain_injury.name",
+      "effect_key": "injury.brain_injury.effect",
+      "first_aid": [],
+      "treatment": [
+        {
+          "skill": "surgery",
+          "dv": 17
+        }
+      ],
+      "quick_fix_removes_effect": false,
+      "death_save_penalty": true,
+      "source": {
+        "page": 188
+      }
+    },
+    {
+      "id": "damaged_eye",
+      "area": "head",
+      "roll": 4,
+      "name_key": "injury.damaged_eye.name",
+      "effect_key": "injury.damaged_eye.effect",
+      "first_aid": [
+        {
+          "skill": "paramedic",
+          "dv": 15
+        }
+      ],
+      "treatment": [
+        {
+          "skill": "surgery",
+          "dv": 13
+        }
+      ],
+      "quick_fix_removes_effect": false,
+      "death_save_penalty": false,
+      "source": {
+        "page": 188
+      }
+    },
+    {
+      "id": "concussion",
+      "area": "head",
+      "roll": 5,
+      "name_key": "injury.concussion.name",
+      "effect_key": "injury.concussion.effect",
+      "first_aid": [
+        {
+          "skill": "first_aid",
+          "dv": 13
+        },
+        {
+          "skill": "paramedic",
+          "dv": 13
+        }
+      ],
+      "treatment": [],
+      "quick_fix_removes_effect": true,
+      "death_save_penalty": false,
+      "source": {
+        "page": 188
+      }
+    },
+    {
+      "id": "broken_jaw",
+      "area": "head",
+      "roll": 6,
+      "name_key": "injury.broken_jaw.name",
+      "effect_key": "injury.broken_jaw.effect",
+      "first_aid": [
+        {
+          "skill": "paramedic",
+          "dv": 13
+        }
+      ],
+      "treatment": [
+        {
+          "skill": "paramedic",
+          "dv": 13
+        },
+        {
+          "skill": "surgery",
+          "dv": 13
+        }
+      ],
+      "quick_fix_removes_effect": false,
+      "death_save_penalty": false,
+      "source": {
+        "page": 188
+      }
+    },
+    {
+      "id": "foreign_object_head",
+      "area": "head",
+      "roll": 7,
+      "name_key": "injury.foreign_object_head.name",
+      "effect_key": "injury.foreign_object_head.effect",
+      "first_aid": [
+        {
+          "skill": "first_aid",
+          "dv": 13
+        },
+        {
+          "skill": "paramedic",
+          "dv": 13
+        }
+      ],
+      "treatment": [],
+      "quick_fix_removes_effect": true,
+      "death_save_penalty": false,
+      "source": {
+        "page": 188
+      }
+    },
+    {
+      "id": "broken_neck",
+      "area": "head",
+      "roll": 8,
+      "name_key": "injury.broken_neck.name",
+      "effect_key": "injury.broken_neck.effect",
+      "first_aid": [
+        {
+          "skill": "paramedic",
+          "dv": 13
+        }
+      ],
+      "treatment": [
+        {
+          "skill": "paramedic",
+          "dv": 15
+        },
+        {
+          "skill": "surgery",
+          "dv": 15
+        }
+      ],
+      "quick_fix_removes_effect": false,
+      "death_save_penalty": true,
+      "source": {
+        "page": 188
+      }
+    },
+    {
+      "id": "cracked_skull",
+      "area": "head",
+      "roll": 9,
+      "name_key": "injury.cracked_skull.name",
+      "effect_key": "injury.cracked_skull.effect",
+      "first_aid": [
+        {
+          "skill": "paramedic",
+          "dv": 15
+        }
+      ],
+      "treatment": [
+        {
+          "skill": "paramedic",
+          "dv": 15
+        },
+        {
+          "skill": "surgery",
+          "dv": 15
+        }
+      ],
+      "quick_fix_removes_effect": false,
+      "death_save_penalty": true,
+      "source": {
+        "page": 188
+      }
+    },
+    {
+      "id": "damaged_ear",
+      "area": "head",
+      "roll": 10,
+      "name_key": "injury.damaged_ear.name",
+      "effect_key": "injury.damaged_ear.effect",
+      "first_aid": [
+        {
+          "skill": "paramedic",
+          "dv": 13
+        }
+      ],
+      "treatment": [
+        {
+          "skill": "surgery",
+          "dv": 13
+        }
+      ],
+      "quick_fix_removes_effect": false,
+      "death_save_penalty": false,
+      "source": {
+        "page": 188
+      }
+    },
+    {
+      "id": "crushed_windpipe",
+      "area": "head",
+      "roll": 11,
+      "name_key": "injury.crushed_windpipe.name",
+      "effect_key": "injury.crushed_windpipe.effect",
+      "first_aid": [],
+      "treatment": [
+        {
+          "skill": "surgery",
+          "dv": 15
+        }
+      ],
+      "quick_fix_removes_effect": false,
+      "death_save_penalty": true,
+      "source": {
+        "page": 188
+      }
+    },
+    {
+      "id": "lost_ear",
+      "area": "head",
+      "roll": 12,
+      "name_key": "injury.lost_ear.name",
+      "effect_key": "injury.lost_ear.effect",
+      "first_aid": [],
+      "treatment": [
+        {
+          "skill": "surgery",
+          "dv": 17
+        }
+      ],
+      "quick_fix_removes_effect": false,
+      "death_save_penalty": true,
+      "source": {
+        "page": 188
+      }
+    }
+  ]
 }

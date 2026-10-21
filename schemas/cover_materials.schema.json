@@ -28,7 +28,7 @@
   ],
   "$defs": {
     "CoverMaterial": {
-      "description": "Cover material at a given thickness (book p. 182-183).",
+      "description": "Cover material at a given thickness (book p. 182). Combinations with 0 HP\n(thin drywall) are not cover and are not stored.",
       "type": "object",
       "properties": {
         "hp": {
@@ -37,6 +37,7 @@
           "minimum": 0
         },
         "id": {
+          "description": "Unique per material and thickness (e.g. `metal_thick`).",
           "type": "string"
         },
         "name_key": {
@@ -44,13 +45,24 @@
         },
         "source": {
           "$ref": "#/$defs/Source"
+        },
+        "thickness": {
+          "$ref": "#/$defs/CoverThickness"
         }
       },
       "required": [
         "id",
         "name_key",
+        "thickness",
         "hp",
         "source"
+      ]
+    },
+    "CoverThickness": {
+      "type": "string",
+      "enum": [
+        "thick",
+        "thin"
       ]
     },
     "Source": {

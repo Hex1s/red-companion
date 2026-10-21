@@ -32,7 +32,11 @@
       "type": "object",
       "properties": {
         "hp": {
-          "type": "integer",
+          "description": "`None` for a body used as a shield: its HP equal the BODY stat the\nperson had while alive.",
+          "type": [
+            "integer",
+            "null"
+          ],
           "format": "uint32",
           "minimum": 0
         },
@@ -49,7 +53,6 @@
       "required": [
         "id",
         "name_key",
-        "hp",
         "source"
       ]
     },

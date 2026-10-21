@@ -1,5 +1,22 @@
 {
   "name": "shields",
-  "version": 0,
-  "entries": []
+  "version": 1,
+  "entries": [
+    {
+      "id": "bulletproof_shield",
+      "name_key": "shield.bulletproof_shield",
+      "hp": 10,
+      "source": {
+        "page": 184
+      }
+    },
+    {
+      "id": "corpse",
+      "name_key": "shield.corpse",
+      "hp": null,
+      "source": {
+        "page": 184
+      }
+    }
+  ]
 }

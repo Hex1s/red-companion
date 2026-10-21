@@ -38,30 +38,70 @@ pub struct CriticalInjury {
     pub roll: u8,
     pub name_key: String,
     pub effect_key: String,
-    /// First-aid DV; `None` when it cannot be treated that way.
-    pub first_aid_dv: Option<u8>,
-    pub treatment_dv: Option<u8>,
+    /// Ways to stabilise the injury until the end of the day; any one option
+    /// works. Empty when first aid is impossible ("НЕТ" in the table).
+    pub first_aid: Vec<TreatmentOption>,
+    /// Ways to heal the injury for good; any one option works. Empty when the
+    /// table only offers a quick fix (see `quick_fix_removes_effect`).
+    pub treatment: Vec<TreatmentOption>,
+    /// "Quick Fix removes the effect" instead of a regular treatment.
+    pub quick_fix_removes_effect: bool,
+    /// The injury raises the death-save penalty by 1 ("Штраф Спасброска
+    /// увеличивается на 1").
+    pub death_save_penalty: bool,
     pub source: Source,
 }
 
-/// Cover material at a given thickness (book p. 182-183).
+/// Medical skill that can treat an injury.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+#[serde(rename_all = "snake_case")]
+pub enum TreatmentSkill {
+    FirstAid,
+    Paramedic,
+    Surgery,
+}
+
+/// One way to treat an injury: skill check against a DV.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+pub struct TreatmentOption {
+    pub skill: TreatmentSkill,
+    pub dv: u8,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+#[serde(rename_all = "snake_case")]
+pub enum CoverThickness {
+    Thick,
+    Thin,
+}
+
+/// Cover material at a given thickness (book p. 182). Combinations with 0 HP
+/// (thin drywall) are not cover and are not stored.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
 #[ts(export)]
 pub struct CoverMaterial {
+    /// Unique per material and thickness (e.g. `metal_thick`).
     pub id: String,
     pub name_key: String,
+    pub thickness: CoverThickness,
     pub hp: u32,
     pub source: Source,
 }
 
-/// Body armor or helmet. Armor does not stack: only the best SP counts.
+/// Armor type (book p. 184-185). Any type can be worn on the head or on the
+    /// body; armor does not stack: only the best SP of an area counts.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
 #[ts(export)]
 pub struct Armor {
     pub id: String,
     pub name_key: String,
-    pub area: BodyArea,
     pub sp: u8,
+    /// Penalty to REF, DEX and MOVE (0, 2 or 4); applied once, the highest
+    /// of the worn armor.
+    pub penalty: u8,
     pub source: Source,
 }
 
@@ -71,7 +111,9 @@ pub struct Armor {
 pub struct Shield {
     pub id: String,
     pub name_key: String,
-    pub hp: u32,
+    /// `None` for a body used as a shield: its HP equal the BODY stat the
+    /// person had while alive.
+    pub hp: Option<u32>,
     pub source: Source,
 }
 
@@ -151,6 +193,13 @@ pub fn validate_critical_injuries(c: &Collection<CriticalInjury>) -> Result<(), 
         if !(2..=12).contains(&e.roll) {
             return Err(CatalogError::OutOfRange(e.id.clone()));
         }
+        if e.first_aid.iter().chain(&e.treatment).any(|o| !(1..=30).contains(&o.dv)) {
+            return Err(CatalogError::OutOfRange(e.id.clone()));
+        }
+        // Every injury must be curable one way or another.
+        if e.treatment.is_empty() && !e.quick_fix_removes_effect {
+            return Err(CatalogError::OutOfRange(e.id.clone()));
+        }
     }
     for area in [BodyArea::Body, BodyArea::Head] {
         let mut rolls: Vec<u8> =
@@ -173,7 +222,7 @@ pub fn validate_cover_materials(c: &Collection<CoverMaterial>) -> Result<(), Cat
 
 pub fn validate_armor(c: &Collection<Armor>) -> Result<(), CatalogError> {
     check_ids(c.entries.iter().map(|e| (e.id.as_str(), e.name_key.as_str(), e.source.page)))?;
-    match c.entries.iter().find(|e| e.sp == 0 || e.sp > 30) {
+    match c.entries.iter().find(|e| e.sp == 0 || e.sp > 30 || e.penalty > 4) {
         Some(e) => Err(CatalogError::OutOfRange(e.id.clone())),
         None => Ok(()),
     }
@@ -181,7 +230,7 @@ pub fn validate_armor(c: &Collection<Armor>) -> Result<(), CatalogError> {
 
 pub fn validate_shields(c: &Collection<Shield>) -> Result<(), CatalogError> {
     check_ids(c.entries.iter().map(|e| (e.id.as_str(), e.name_key.as_str(), e.source.page)))?;
-    match c.entries.iter().find(|e| e.hp == 0) {
+    match c.entries.iter().find(|e| e.hp == Some(0)) {
         Some(e) => Err(CatalogError::OutOfRange(e.id.clone())),
         None => Ok(()),
     }
@@ -210,8 +259,10 @@ mod tests {
             roll,
             name_key: format!("injury.{id}"),
             effect_key: format!("injury.{id}.effect"),
-            first_aid_dv: Some(13),
-            treatment_dv: Some(15),
+            first_aid: vec![TreatmentOption { skill: TreatmentSkill::Paramedic, dv: 13 }],
+            treatment: vec![TreatmentOption { skill: TreatmentSkill::Surgery, dv: 15 }],
+            quick_fix_removes_effect: false,
+            death_save_penalty: false,
             source: Source { page: 187 },
         }
     }
@@ -258,7 +309,7 @@ mod tests {
         assert_eq!(a.content_hash(), b.content_hash());
         assert_eq!(a.content_hash().len(), 64);
 
-        b.entries[0].first_aid_dv = Some(15);
+        b.entries[0].first_aid[0].dv = 15;
         assert_ne!(a.content_hash(), b.content_hash());
 
         let (va, vb) = (a.version_info(), b.version_info());
@@ -279,6 +330,7 @@ mod tests {
             entries: vec![CoverMaterial {
                 id: "concrete".into(),
                 name_key: "cover.concrete".into(),
+                thickness: CoverThickness::Thick,
                 hp: 0,
                 source: src.clone(),
             }],
@@ -291,8 +343,8 @@ mod tests {
             entries: vec![Armor {
                 id: "kevlar".into(),
                 name_key: "armor.kevlar".into(),
-                area: BodyArea::Body,
                 sp: 7,
+                penalty: 0,
                 source: src,
             }],
         };

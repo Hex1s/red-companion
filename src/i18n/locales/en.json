@@ -30,7 +30,17 @@
   },
   "armor": {
     "head": "HEAD",
-    "body": "BODY"
+    "body": "BODY",
+    "items": {
+      "leather": "Leathers",
+      "kevlar": "Kevlar",
+      "light_armorjack": "Light Armorjack",
+      "bodyweight_suit": "Bodyweight Suit",
+      "medium_armorjack": "Medium Armorjack",
+      "heavy_armorjack": "Heavy Armorjack",
+      "flak": "Flak",
+      "metalgear": "Metalgear"
+    }
   },
   "glossary": {
     "hp": "HP",
@@ -60,5 +70,107 @@
     "critical_injury": "Critical injury",
     "cover": "Cover",
     "ablation": "Ablation"
+  },
+  "injury": {
+    "dismembered_arm": {
+      "name": "Dismembered Arm",
+      "effect": "Arm lost; anything held in it is dropped."
+    },
+    "dismembered_hand": {
+      "name": "Dismembered Hand",
+      "effect": "Hand lost; anything held in it is dropped."
+    },
+    "collapsed_lung": {
+      "name": "Collapsed Lung",
+      "effect": "−2 to MOVE (minimum 1)."
+    },
+    "broken_ribs": {
+      "name": "Broken Ribs",
+      "effect": "At the end of each turn in which you moved more than 4 m on foot, you take bonus damage to HP."
+    },
+    "broken_arm": {
+      "name": "Broken Arm",
+      "effect": "The arm is unusable; anything held in it is dropped."
+    },
+    "foreign_object_body": {
+      "name": "Foreign Object",
+      "effect": "At the end of each turn in which you moved more than 4 m on foot, you take bonus damage to HP."
+    },
+    "broken_leg": {
+      "name": "Broken Leg",
+      "effect": "−4 to MOVE (minimum 1)."
+    },
+    "torn_muscle": {
+      "name": "Torn Muscle",
+      "effect": "−2 to melee attacks."
+    },
+    "spinal_injury": {
+      "name": "Spinal Injury",
+      "effect": "On your next turn you can only move."
+    },
+    "crushed_fingers": {
+      "name": "Crushed Fingers",
+      "effect": "−4 to all actions involving that hand."
+    },
+    "dismembered_leg": {
+      "name": "Dismembered Leg",
+      "effect": "−6 to MOVE (minimum 1); you cannot dodge attacks."
+    },
+    "lost_eye": {
+      "name": "Lost Eye",
+      "effect": "−4 to ranged attacks and Perception checks that rely on sight."
+    },
+    "brain_injury": {
+      "name": "Brain Injury",
+      "effect": "−2 to all actions."
+    },
+    "damaged_eye": {
+      "name": "Damaged Eye",
+      "effect": "−2 to ranged attacks and Perception checks that rely on sight."
+    },
+    "concussion": {
+      "name": "Concussion",
+      "effect": "−2 to all actions."
+    },
+    "broken_jaw": {
+      "name": "Broken Jaw",
+      "effect": "−4 to all actions involving speech."
+    },
+    "foreign_object_head": {
+      "name": "Foreign Object",
+      "effect": "At the end of each turn in which you moved more than 4 m on foot, you take bonus damage to HP."
+    },
+    "broken_neck": {
+      "name": "Whiplash",
+      "effect": "Death-save penalty only."
+    },
+    "cracked_skull": {
+      "name": "Cracked Skull",
+      "effect": "Aimed head shots multiply the damage that gets through by 3 instead of 2."
+    },
+    "damaged_ear": {
+      "name": "Damaged Ear",
+      "effect": "If you moved more than 4 m on foot in your turn, you cannot move next turn; −2 to Perception checks that rely on hearing."
+    },
+    "crushed_windpipe": {
+      "name": "Crushed Windpipe",
+      "effect": "You cannot speak."
+    },
+    "lost_ear": {
+      "name": "Lost Ear",
+      "effect": "As Damaged Ear, but −4 to Perception checks that rely on hearing."
+    }
+  },
+  "cover": {
+    "metal": "Metal",
+    "stone": "Stone",
+    "bulletproof_glass": "Bulletproof glass",
+    "concrete": "Concrete",
+    "wood": "Wood",
+    "drywall": "Drywall / foam / polymers"
+  },
+  "shield": {
+    "bulletproof_shield": "Bulletproof shield",
+    "corpse": "Corpse"
   }
 }

@@ -28,17 +28,21 @@
   ],
   "$defs": {
     "Armor": {
-      "description": "Body armor or helmet. Armor does not stack: only the best SP counts.",
+      "description": "Armor type (book p. 184-185). Any type can be worn on the head or on the\nbody; armor does not stack: only the best SP of an area counts.",
       "type": "object",
       "properties": {
-        "area": {
-          "$ref": "#/$defs/BodyArea"
-        },
         "id": {
           "type": "string"
         },
         "name_key": {
           "type": "string"
+        },
+        "penalty": {
+          "description": "Penalty to REF, DEX and MOVE (0, 2 or 4); applied once, the highest\nof the worn armor.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
         },
         "source": {
           "$ref": "#/$defs/Source"
@@ -53,16 +57,9 @@
       "required": [
         "id",
         "name_key",
-        "area",
         "sp",
+        "penalty",
         "source"
-      ]
-    },
-    "BodyArea": {
-      "type": "string",
-      "enum": [
-        "body",
-        "head"
       ]
     },
     "Source": {

@@ -41,18 +41,19 @@
         "area": {
           "$ref": "#/$defs/BodyArea"
         },
+        "death_save_penalty": {
+          "description": "The injury raises the death-save penalty by 1 (\"Штраф Спасброска\nувеличивается на 1\").",
+          "type": "boolean"
+        },
         "effect_key": {
           "type": "string"
         },
-        "first_aid_dv": {
-          "description": "First-aid DV; `None` when it cannot be treated that way.",
-          "type": [
-            "integer",
-            "null"
-          ],
-          "format": "uint8",
-          "maximum": 255,
-          "minimum": 0
+        "first_aid": {
+          "description": "Ways to stabilise the injury until the end of the day; any one option\nworks. Empty when first aid is impossible (\"НЕТ\" in the table).",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TreatmentOption"
+          }
         },
         "id": {
           "description": "Stable id, never translated (e.g. `broken_leg`).",
@@ -60,6 +61,10 @@
         },
         "name_key": {
           "type": "string"
+        },
+        "quick_fix_removes_effect": {
+          "description": "\"Quick Fix removes the effect\" instead of a regular treatment.",
+          "type": "boolean"
         },
         "roll": {
           "description": "2d6 result, 2..=12.",
@@ -71,14 +76,12 @@
         "source": {
           "$ref": "#/$defs/Source"
         },
-        "treatment_dv": {
-          "type": [
-            "integer",
-            "null"
-          ],
-          "format": "uint8",
-          "maximum": 255,
-          "minimum": 0
+        "treatment": {
+          "description": "Ways to heal the injury for good; any one option works. Empty when the\ntable only offers a quick fix (see `quick_fix_removes_effect`).",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TreatmentOption"
+          }
         }
       },
       "required": [
@@ -87,6 +90,10 @@
         "roll",
         "name_key",
         "effect_key",
+        "first_aid",
+        "treatment",
+        "quick_fix_removes_effect",
+        "death_save_penalty",
         "source"
       ]
     },
@@ -103,6 +110,34 @@
       },
       "required": [
         "page"
+      ]
+    },
+    "TreatmentOption": {
+      "description": "One way to treat an injury: skill check against a DV.",
+      "type": "object",
+      "properties": {
+        "dv": {
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "skill": {
+          "$ref": "#/$defs/TreatmentSkill"
+        }
+      },
+      "required": [
+        "skill",
+        "dv"
+      ]
+    },
+    "TreatmentSkill": {
+      "description": "Medical skill that can treat an injury.",
+      "type": "string",
+      "enum": [
+        "first_aid",
+        "paramedic",
+        "surgery"
       ]
     }
   }
