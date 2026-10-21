@@ -1,0 +1,35 @@
+{
+  "app": {
+    "title": "Red Companion",
+    "subtitle": "Cyberpunk RED GM companion"
+  },
+  "nav": {
+    "combat": "Combat",
+    "rules": "Rules",
+    "map": "Night City",
+    "characters": "Characters"
+  },
+  "common": {
+    "language": "Language",
+    "roll": "Roll"
+  },
+  "stats": {
+    "INT": "INT",
+    "REF": "REF",
+    "DEX": "DEX",
+    "TECH": "TECH",
+    "COOL": "COOL",
+    "WILL": "WILL",
+    "LUCK": "LUCK",
+    "MOVE": "MOVE",
+    "BODY": "BODY",
+    "EMP": "EMP"
+  },
+  "combat": {
+    "damage": "Damage taken"
+  },
+  "armor": {
+    "head": "HEAD",
+    "body": "BODY"
+  }
+}

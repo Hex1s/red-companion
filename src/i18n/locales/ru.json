@@ -1,0 +1,35 @@
+{
+  "app": {
+    "title": "Red Companion",
+    "subtitle": "Помощник мастера Cyberpunk RED"
+  },
+  "nav": {
+    "combat": "Бой",
+    "rules": "Правила",
+    "map": "Найт-Сити",
+    "characters": "Персонажи"
+  },
+  "common": {
+    "language": "Язык",
+    "roll": "Бросок"
+  },
+  "stats": {
+    "INT": "ИНТ",
+    "REF": "РЕА",
+    "DEX": "ЛВК",
+    "TECH": "ТЕХ",
+    "COOL": "ХАР",
+    "WILL": "ВОЛЯ",
+    "LUCK": "УДЧ",
+    "MOVE": "СКО",
+    "BODY": "ТЕЛ",
+    "EMP": "ЭМП"
+  },
+  "combat": {
+    "damage": "Урон получен"
+  },
+  "armor": {
+    "head": "ГОЛ",
+    "body": "ТЕЛО"
+  }
+}
