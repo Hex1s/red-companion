@@ -1,29 +1,32 @@
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CharacterCard, type CharacterCardData } from "@/components/character/character-card";
+import type { CharacterKind } from "@/bindings/CharacterKind";
+import { CharacterCard } from "@/components/character/character-card";
+import { CharacterSheet } from "@/components/character/character-sheet";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { errorMessage, useCharacters } from "@/hooks/use-characters";
+import { hasBackend } from "@/lib/api";
 import { SUPPORTED_LANGUAGES } from "@/i18n";
-
-// Placeholder data for checking the design; will be replaced by data from the Rust core.
-const DEMO: CharacterCardData[] = [
-  { id: "1", name: "Джонни", initiative: 18, hp: 24, maxHp: 40, spHead: 11, spBody: 7 },
-  { id: "2", name: "Ви", initiative: 15, hp: 40, maxHp: 40, spHead: 7, spBody: 11 },
-  { id: "3", name: "Бустер", initiative: 12, hp: 0, maxHp: 20, spHead: 4, spBody: 4 },
-];
+import { useUiStore, type AppTab } from "@/store/ui-store";
 
 export default function App() {
   const { t, i18n } = useTranslation();
-  const [selected, setSelected] = useState(DEMO[0].id);
-  const character = DEMO.find((c) => c.id === selected) ?? DEMO[0];
+  const { tab, setTab, selectedCharacterId, selectCharacter } = useUiStore();
+  const { entries, error, create, save, remove } = useCharacters();
+  const selected = entries.find((e) => e.id === selectedCharacterId) ?? null;
+
+  const createCharacter = async (kind: CharacterKind) => {
+    const record = await create(kind, t(`characters.default_name_${kind}`));
+    selectCharacter(record.id);
+  };
 
   return (
     <AppShell
       header={
         <>
           <h1 className="text-lg font-bold text-primary">{t("app.title")}</h1>
-          <Tabs defaultValue="combat" className="flex-1">
+          <Tabs value={tab} onValueChange={(v) => setTab(v as AppTab)} className="flex-1">
             <TabsList>
               <TabsTrigger value="combat">{t("nav.combat")}</TabsTrigger>
               <TabsTrigger value="characters">{t("nav.characters")}</TabsTrigger>
@@ -45,26 +48,63 @@ export default function App() {
         </>
       }
       main={
-        <article className="max-w-3xl space-y-4">
-          <h2 className="text-2xl font-bold">{character.name}</h2>
-          <p className="text-muted-foreground">{t("app.subtitle")}</p>
-          <div className="num grid grid-cols-5 gap-2">
-            {(["INT", "REF", "DEX", "TECH", "COOL"] as const).map((stat) => (
-              <div key={stat} className="cut [--cut:6px] p-2 text-center">
-                <div className="text-xs text-muted-foreground">{t(`stats.${stat}`)}</div>
-                <div className="text-xl font-bold">6</div>
-              </div>
-            ))}
+        tab === "characters" ? (
+          <div className="space-y-6">
+            <div className="flex items-center gap-2">
+              <h2 className="mr-auto text-2xl font-bold">{t("characters.title")}</h2>
+              <Button disabled={!hasBackend} onClick={() => createCharacter("pc")}>
+                {t("characters.new_pc")}
+              </Button>
+              <Button variant="outline" disabled={!hasBackend} onClick={() => createCharacter("npc")}>
+                {t("characters.new_npc")}
+              </Button>
+            </div>
+            {!hasBackend && <p className="text-muted-foreground">{t("characters.no_backend")}</p>}
+            {error && (
+              <p className="text-destructive">{t("characters.load_error", { error })}</p>
+            )}
+            {selected ? (
+              <CharacterSheet
+                key={selected.id}
+                entry={selected}
+                onSave={(character) => save(selected.id, character)}
+                onDelete={async () => {
+                  try {
+                    await remove(selected.id);
+                    selectCharacter(null);
+                  } catch (e) {
+                    window.alert(errorMessage(e));
+                  }
+                }}
+              />
+            ) : (
+              hasBackend && (
+                <p className="text-muted-foreground">
+                  {entries.length === 0 ? t("characters.empty") : t("characters.select_hint")}
+                </p>
+              )
+            )}
           </div>
-        </article>
+        ) : (
+          <p className="text-muted-foreground">{t("app.subtitle")}</p>
+        )
       }
-      rail={DEMO.map((c) => (
+      rail={entries.map((e) => (
         <CharacterCard
-          key={c.id}
-          character={c}
-          active={c.id === DEMO[0].id}
-          selected={c.id === selected}
-          onSelect={() => setSelected(c.id)}
+          key={e.id}
+          character={{
+            id: String(e.id),
+            name: e.character.name,
+            hp: e.character.hp,
+            maxHp: e.derived.max_hp,
+            spHead: e.character.armor_head.sp,
+            spBody: e.character.armor_body.sp,
+          }}
+          selected={e.id === selectedCharacterId}
+          onSelect={() => {
+            selectCharacter(e.id);
+            setTab("characters");
+          }}
         />
       ))}
     />

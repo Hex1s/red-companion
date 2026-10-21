@@ -52,6 +52,7 @@
     "humanity": "HUM",
     "humanity_full": "Humanity",
     "wound": {
+      "healthy": "Healthy",
       "light": "Lightly wounded",
       "serious": "Seriously wounded",
       "mortal": "Mortally wounded",
@@ -172,5 +173,51 @@
   "shield": {
     "bulletproof_shield": "Bulletproof shield",
     "corpse": "Corpse"
+  },
+  "characters": {
+    "title": "Characters",
+    "new_pc": "New player",
+    "new_npc": "New NPC",
+    "default_name_pc": "New character",
+    "default_name_npc": "New NPC",
+    "empty": "No characters yet. Create the first one with the button above.",
+    "select_hint": "Pick a character on the right or create a new one.",
+    "kind": {
+      "pc": "Player",
+      "npc": "NPC"
+    },
+    "name": "Name",
+    "notes": "Notes",
+    "save": "Save",
+    "saved": "Saved",
+    "delete": "Delete",
+    "delete_title": "Delete character?",
+    "delete_body": "“{{name}}” will be deleted permanently.",
+    "cancel": "Cancel",
+    "section": {
+      "stats": "Stats",
+      "derived": "Derived",
+      "armor": "Armor",
+      "injuries": "Critical injuries"
+    },
+    "hp": "HP",
+    "max_hp": "Max HP",
+    "serious_threshold": "Seriously wounded below",
+    "death_save": "Death save",
+    "death_save_penalty": "Death save penalty",
+    "humanity": "Max humanity",
+    "wound": "Condition",
+    "sp": "SP",
+    "sp_max": "Max SP",
+    "no_injuries": "No critical injuries.",
+    "derived_hint": "Derived values update after saving.",
+    "load_error": "Could not load characters: {{error}}",
+    "save_error": "Could not save: {{error}}",
+    "no_backend": "Storage is only available in the app (npm run tauri dev).",
+    "validation": {
+      "name": "Enter a name",
+      "range": "From {{min}} to {{max}}",
+      "sp_over_max": "SP is above max"
+    }
   }
 }

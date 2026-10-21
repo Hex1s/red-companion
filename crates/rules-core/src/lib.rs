@@ -4,6 +4,7 @@
 //! later reused in WASM or on the server.
 
 pub mod catalog;
+pub mod character;
 pub mod damage;
 pub mod data_source;
 pub mod dice;

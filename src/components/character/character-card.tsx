@@ -6,7 +6,8 @@ import { HpBar } from "./hp-bar";
 export type CharacterCardData = {
   id: string;
   name: string;
-  initiative: number;
+  /** Set by the initiative tracker (1.6); absent outside combat. */
+  initiative?: number;
   hp: number;
   maxHp: number;
   spHead: number;
@@ -43,7 +44,9 @@ export function CharacterCard({
         <span className="truncate font-display text-sm font-semibold uppercase">
           {character.name}
         </span>
-        <span className="num text-lg font-bold text-primary">{character.initiative}</span>
+        {character.initiative !== undefined && (
+          <span className="num text-lg font-bold text-primary">{character.initiative}</span>
+        )}
       </div>
       <HpBar current={character.hp} max={character.maxHp} />
       <div className="num flex gap-3 text-xs text-muted-foreground">
