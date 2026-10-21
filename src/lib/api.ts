@@ -8,9 +8,11 @@ import type { CriticalInjury } from "@/bindings/CriticalInjury";
 import type { DamageApplied } from "@/bindings/DamageApplied";
 import type { DamageOutcome } from "@/bindings/DamageOutcome";
 import type { DamageRequest } from "@/bindings/DamageRequest";
+import type { DeathSaveApplied } from "@/bindings/DeathSaveApplied";
 import type { InjuryRoll } from "@/bindings/InjuryRoll";
 import type { RollResult } from "@/bindings/RollResult";
 import type { SceneRecord } from "@/bindings/SceneRecord";
+import type { StabilizeApplied } from "@/bindings/StabilizeApplied";
 import type { Skill } from "@/bindings/Skill";
 
 /** True inside the Tauri window; false in plain `npm run dev` in a browser. */
@@ -44,10 +46,10 @@ export const api = {
   applyDamage: (characterId: number, request: DamageRequest, injuryId: string | null) =>
     invoke<DamageApplied>("apply_damage", { characterId, request, injuryId }),
   undoDamage: () => invoke<DamageApplied>("undo_damage"),
-  /** Adds to the fight with REF + 1d10; `manual` is the face of a physical die. */
-  combatAdd: (characterId: number, manual: number | null) =>
+  /** Adds to the fight with REF + 1d10; `manual` = faces of physical dice (a second one after 10 or 1). */
+  combatAdd: (characterId: number, manual: number[] | null) =>
     invoke<SceneRecord>("combat_add", { characterId, manual }),
-  combatReroll: (characterId: number, manual: number | null) =>
+  combatReroll: (characterId: number, manual: number[] | null) =>
     invoke<SceneRecord>("combat_reroll", { characterId, manual }),
   combatSetInitiative: (characterId: number, initiative: number) =>
     invoke<SceneRecord>("combat_set_initiative", { characterId, initiative }),
@@ -57,4 +59,8 @@ export const api = {
   combatStart: () => invoke<SceneRecord>("combat_start"),
   combatNextTurn: () => invoke<SceneRecord>("combat_next_turn"),
   combatEnd: () => invoke<SceneRecord>("combat_end"),
+  deathSave: (characterId: number, manual: number | null) =>
+    invoke<DeathSaveApplied>("death_save", { characterId, manual }),
+  stabilize: (targetId: number, helperId: number, skill: string, manual: number[] | null) =>
+    invoke<StabilizeApplied>("stabilize", { targetId, helperId, skill, manual }),
 };

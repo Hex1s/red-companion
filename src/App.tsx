@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { CharacterKind } from "@/bindings/CharacterKind";
 import { CharacterCard } from "@/components/character/character-card";
 import { CharacterSheet } from "@/components/character/character-sheet";
 import { InitiativeTracker } from "@/components/combat/initiative-tracker";
+import { StabilizeDialog } from "@/components/combat/stabilize-dialog";
 import { DamageDialog } from "@/components/combat/damage-dialog";
 import { LastDamage } from "@/components/combat/last-damage";
 import { CoverPanel } from "@/components/scene/cover-panel";
@@ -23,6 +25,7 @@ export default function App() {
   const { entries, error, create, save, remove, reload } = useCharacters();
   const sceneState = useScene();
   const injuries = useInjuries();
+  const [stabilizeTargetId, setStabilizeTargetId] = useState<number | null>(null);
   const damageTarget = entries.find((e) => e.id === damageTargetId) ?? null;
   const selected = entries.find((e) => e.id === selectedCharacterId) ?? null;
 
@@ -132,6 +135,8 @@ export default function App() {
                   id: e.id,
                   name: e.character.name,
                   wound: e.derived.wound_state,
+                  body: e.character.stats.body,
+                  deathSavePenalty: e.character.death_save_penalty,
                 }))}
                 onAdd={sceneState.combatAdd}
                 onReroll={sceneState.combatReroll}
@@ -141,6 +146,18 @@ export default function App() {
                 onStart={sceneState.combatStart}
                 onNextTurn={sceneState.combatNextTurn}
                 onEnd={sceneState.combatEnd}
+                onDeathSave={async (id, manual) => {
+                  try {
+                    const applied = await api.deathSave(id, manual);
+                    sceneState.replaceScene(applied.scene);
+                    await reload();
+                    return applied.save;
+                  } catch (e) {
+                    window.alert(errorMessage(e));
+                    return null;
+                  }
+                }}
+                onStabilize={setStabilizeTargetId}
               />
             )}
             {sceneState.scene && (
@@ -182,6 +199,12 @@ export default function App() {
               onDamage={() => openDamage(e.id)}
             />
           ))}
+          <StabilizeDialog
+            target={entries.find((e) => e.id === stabilizeTargetId) ?? null}
+            helpers={entries}
+            onDone={() => void reload()}
+            onClose={() => setStabilizeTargetId(null)}
+          />
           {sceneState.scene && (
             <DamageDialog
               target={damageTarget}

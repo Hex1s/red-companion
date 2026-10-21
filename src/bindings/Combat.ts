@@ -13,4 +13,9 @@ combatants: Array<Combatant>, round: number,
 /**
  * Whose turn it is; `None` before the start.
  */
-active: number | null, };
+active: number | null, 
+/**
+ * The active fighter is mortally wounded and has not made this turn's
+ * death save yet (set by the app when a turn begins).
+ */
+death_save_due: boolean, };

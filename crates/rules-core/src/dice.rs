@@ -44,11 +44,8 @@ impl FromStr for DiceNotation {
 
         let (count_str, rest) = s.split_once('d').ok_or_else(err)?;
         // A bare `d6` means one die.
-        let count: u32 = if count_str.is_empty() {
-            1
-        } else {
-            count_str.parse().map_err(|_| err())?
-        };
+        let count: u32 =
+            if count_str.is_empty() { 1 } else { count_str.parse().map_err(|_| err())? };
 
         let (sides_str, modifier) = match rest.find(['+', '-']) {
             Some(i) => {
@@ -163,6 +160,70 @@ pub fn roll_manual(notation: DiceNotation, values: &[u32]) -> Result<RollResult,
     Ok(RollResult::new(notation, values.to_vec(), RollSource::Manual))
 }
 
+/// How a d10 check turned out (p. 130).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+#[serde(rename_all = "snake_case")]
+pub enum CheckKind {
+    Normal,
+    /// Natural 10: one more d10 is added.
+    CriticalSuccess,
+    /// Natural 1: one more d10 is subtracted.
+    CriticalFailure,
+}
+
+/// A single d10 of a check (initiative, skill check) with the "exploding" rule
+/// of the book: a natural 10 adds another d10, a natural 1 subtracts one. The
+/// extra die never explodes again (p. 130). Not for d10 saves or d6 damage.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct CheckRoll {
+    /// The first die, then the extra one after a natural 10 or 1.
+    pub dice: Vec<u32>,
+    pub kind: CheckKind,
+    /// First die, plus or minus the extra one.
+    pub total: i32,
+    pub source: RollSource,
+}
+
+impl CheckRoll {
+    fn new(dice: Vec<u32>, source: RollSource) -> Self {
+        let first = dice[0] as i32;
+        let (kind, total) = match (first, dice.get(1)) {
+            (10, Some(&extra)) => (CheckKind::CriticalSuccess, first + extra as i32),
+            (1, Some(&extra)) => (CheckKind::CriticalFailure, first - extra as i32),
+            _ => (CheckKind::Normal, first),
+        };
+        Self { dice, kind, total, source }
+    }
+}
+
+const CHECK_SIDES: u32 = 10;
+
+pub fn roll_check(rng: &mut impl DiceRng) -> CheckRoll {
+    let mut dice = vec![rng.roll(CHECK_SIDES)];
+    if matches!(dice[0], 1 | 10) {
+        dice.push(rng.roll(CHECK_SIDES));
+    }
+    CheckRoll::new(dice, RollSource::Random)
+}
+
+/// Check from faces read off physical dice: the first die, and a second one
+/// exactly when the first shows 10 or 1.
+pub fn check_manual(values: &[u32]) -> Result<CheckRoll, DiceError> {
+    let expected = match values.first() {
+        Some(1 | 10) => 2,
+        _ => 1,
+    };
+    if values.len() != expected as usize {
+        return Err(DiceError::WrongManualCount { expected, got: values.len() });
+    }
+    if let Some(&value) = values.iter().find(|&&v| v == 0 || v > CHECK_SIDES) {
+        return Err(DiceError::ManualValueOutOfRange { value, sides: CHECK_SIDES });
+    }
+    Ok(CheckRoll::new(values.to_vec(), RollSource::Manual))
+}
+
 /// Chronological log of rolls for a session or a single resolution.
 #[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[ts(export)]
@@ -243,5 +304,39 @@ mod tests {
         log.push(roll_manual(n("1d10"), &[4]).unwrap());
         log.push(roll_manual(n("1d10"), &[9]).unwrap());
         assert_eq!(log.entries.iter().map(|e| e.total).collect::<Vec<_>>(), [4, 9]);
+    }
+    #[test]
+    fn check_explodes_on_ten_and_implodes_on_one() {
+        let r = roll_check(&mut ScriptedDice::new([10, 4]));
+        assert_eq!(
+            (r.total, r.kind, r.dice.clone()),
+            (14, CheckKind::CriticalSuccess, vec![10, 4])
+        );
+        let r = roll_check(&mut ScriptedDice::new([1, 4]));
+        assert_eq!((r.total, r.kind), (-3, CheckKind::CriticalFailure));
+        let r = roll_check(&mut ScriptedDice::new([7]));
+        assert_eq!((r.total, r.kind, r.dice.len()), (7, CheckKind::Normal, 1));
+    }
+
+    #[test]
+    fn extra_die_does_not_explode_again() {
+        let r = roll_check(&mut ScriptedDice::new([10, 10]));
+        assert_eq!((r.total, r.dice.len()), (20, 2));
+        let r = roll_check(&mut ScriptedDice::new([1, 1]));
+        assert_eq!((r.total, r.dice.len()), (0, 2));
+    }
+
+    #[test]
+    fn manual_check_needs_the_extra_die_exactly_when_the_book_does() {
+        assert_eq!(check_manual(&[6]).unwrap().total, 6);
+        assert_eq!(check_manual(&[10, 3]).unwrap().total, 13);
+        assert_eq!(check_manual(&[1, 3]).unwrap().total, -2);
+        assert_eq!(check_manual(&[10]), Err(DiceError::WrongManualCount { expected: 2, got: 1 }));
+        assert_eq!(check_manual(&[1]), Err(DiceError::WrongManualCount { expected: 2, got: 1 }));
+        assert_eq!(check_manual(&[6, 2]), Err(DiceError::WrongManualCount { expected: 1, got: 2 }));
+        assert_eq!(check_manual(&[]), Err(DiceError::WrongManualCount { expected: 1, got: 0 }));
+        assert!(check_manual(&[11]).is_err());
+        assert!(check_manual(&[10, 0]).is_err());
+        assert_eq!(check_manual(&[10, 3]).unwrap().source, RollSource::Manual);
     }
 }

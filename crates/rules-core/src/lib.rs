@@ -11,6 +11,7 @@ pub mod data_source;
 pub mod dice;
 pub mod initiative;
 pub mod scene;
+pub mod vitals;
 
 use serde::Serialize;
 use ts_rs::TS;

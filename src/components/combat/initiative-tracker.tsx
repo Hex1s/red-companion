@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Combat } from "@/bindings/Combat";
 import type { Combatant } from "@/bindings/Combatant";
+import type { DeathSave } from "@/bindings/DeathSave";
 import type { WoundState } from "@/bindings/WoundState";
 import { WoundBadge } from "@/components/character/wound-badge";
 import { Button } from "@/components/ui/button";
@@ -13,31 +14,49 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { formatCheck, parseFaces, validD10Faces } from "@/lib/dice";
 import { cn } from "@/lib/utils";
 
 const INITIATIVE_MAX = 99;
-const DIE_SIDES = 10;
+const INITIATIVE_MIN = -99;
 
-export type FighterInfo = { id: number; name: string; wound: WoundState };
+export type FighterInfo = {
+  id: number;
+  name: string;
+  wound: WoundState;
+  /** BODY and the current death save penalty, for the death save hint. */
+  body: number;
+  deathSavePenalty: number;
+};
 
 type InitiativeTrackerProps = {
   combat: Combat;
   /** Everyone who exists, in or out of the fight. */
   characters: FighterInfo[];
-  onAdd: (id: number, manual: number | null) => void;
-  onReroll: (id: number, manual: number | null) => void;
+  onAdd: (id: number, manual: number[] | null) => void;
+  onReroll: (id: number, manual: number[] | null) => void;
   onSetInitiative: (id: number, initiative: number) => void;
   onShift: (id: number, delta: number) => void;
   onRemove: (id: number) => void;
   onStart: () => void;
   onNextTurn: () => void;
   onEnd: () => void;
+  /** Rolls the death save; resolves with the result, `null` if it failed to run. */
+  onDeathSave: (id: number, manual: number | null) => Promise<DeathSave | null>;
+  onStabilize: (id: number) => void;
 };
 
-/** Parses a whole number from an input; `null` for empty or invalid text. */
-function parseWhole(text: string): number | null {
+/** Parses a whole number (may be negative) from an input; `null` for empty or invalid text. */
+function parseSigned(text: string): number | null {
   const n = Number(text);
-  return text.trim() !== "" && Number.isInteger(n) && n >= 0 ? n : null;
+  return text.trim() !== "" && Number.isInteger(n) ? n : null;
+}
+
+/** Faces for a d10 check typed by hand: `null` = roll randomly, `false` = invalid text. */
+function manualFaces(text: string): number[] | null | false {
+  const faces = parseFaces(text);
+  if (faces === null) return null;
+  return validD10Faces(faces) ? faces : false;
 }
 
 /** Initiative order, round counter and turn controls of the current fight. */
@@ -52,8 +71,11 @@ export function InitiativeTracker({
   onStart,
   onNextTurn,
   onEnd,
+  onDeathSave,
+  onStabilize,
 }: InitiativeTrackerProps) {
   const { t } = useTranslation();
+  const [lastSave, setLastSave] = useState<{ id: number; save: DeathSave } | null>(null);
   const started = combat.round > 0;
   const outside = characters.filter((c) => !combat.combatants.some((f) => f.character_id === c.id));
 
@@ -87,6 +109,24 @@ export function InitiativeTracker({
         )}
       </div>
 
+      {combat.death_save_due && combat.active !== null && (
+        <DeathSavePanel
+          fighter={characters.find((c) => c.id === combat.active)}
+          onRoll={async (manual) => {
+            const id = combat.active as number;
+            const save = await onDeathSave(id, manual);
+            if (save) setLastSave({ id, save });
+            return save !== null;
+          }}
+        />
+      )}
+      {!combat.death_save_due && lastSave && lastSave.id === combat.active && (
+        <DeathSaveResult
+          name={characters.find((c) => c.id === lastSave.id)?.name ?? ""}
+          save={lastSave.save}
+        />
+      )}
+
       <AddFighter outside={outside} onAdd={onAdd} />
 
       {combat.combatants.length === 0 ? (
@@ -108,6 +148,7 @@ export function InitiativeTracker({
                 onSetInitiative={onSetInitiative}
                 onShift={onShift}
                 onRemove={onRemove}
+                onStabilize={onStabilize}
               />
             );
           })}
@@ -128,12 +169,12 @@ function AddFighter({ outside, onAdd }: AddFighterProps) {
   const [dieText, setDieText] = useState("");
 
   const id = outside.find((c) => String(c.id) === chosen)?.id ?? null;
-  const die = parseWhole(dieText);
-  const dieInvalid = dieText.trim() !== "" && (die === null || die < 1 || die > DIE_SIDES);
+  const faces = manualFaces(dieText);
+  const dieInvalid = faces === false;
 
   const submit = () => {
-    if (id === null || dieInvalid) return;
-    onAdd(id, die);
+    if (id === null || faces === false) return;
+    onAdd(id, faces);
     setChosen("");
     setDieText("");
   };
@@ -166,6 +207,7 @@ function AddFighter({ outside, onAdd }: AddFighterProps) {
           onChange={(e) => setDieText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && submit()}
           aria-invalid={dieInvalid}
+          title={t("initiative.die_hint")}
           className="num w-28"
         />
       </div>
@@ -187,6 +229,7 @@ type FighterRowProps = {
   onSetInitiative: InitiativeTrackerProps["onSetInitiative"];
   onShift: InitiativeTrackerProps["onShift"];
   onRemove: InitiativeTrackerProps["onRemove"];
+  onStabilize: InitiativeTrackerProps["onStabilize"];
 };
 
 function FighterRow({
@@ -200,17 +243,18 @@ function FighterRow({
   onSetInitiative,
   onShift,
   onRemove,
+  onStabilize,
 }: FighterRowProps) {
   const { t } = useTranslation();
   const [text, setText] = useState(String(combatant.initiative));
   const [dieText, setDieText] = useState("");
-  const die = parseWhole(dieText);
-  const dieInvalid = dieText.trim() !== "" && (die === null || die < 1 || die > DIE_SIDES);
+  const faces = manualFaces(dieText);
+  const dieInvalid = faces === false;
 
   // The total commits on blur / Enter; invalid text snaps back.
   const commit = () => {
-    const value = parseWhole(text);
-    if (value === null || value > INITIATIVE_MAX) {
+    const value = parseSigned(text);
+    if (value === null || value > INITIATIVE_MAX || value < INITIATIVE_MIN) {
       setText(String(combatant.initiative));
     } else if (value !== combatant.initiative) {
       onSetInitiative(combatant.character_id, value);
@@ -236,7 +280,7 @@ function FighterRow({
       />
       <span className="num text-xs text-muted-foreground">
         {combatant.roll !== null
-          ? `${t("stats.REF")} ${combatant.reflex} + ${combatant.roll}`
+          ? `${t("stats.REF")} ${combatant.reflex} + ${formatCheck(combatant.roll)}`
           : t("initiative.manual")}
       </span>
       <span className="mr-auto truncate font-display text-sm font-semibold uppercase">
@@ -269,22 +313,86 @@ function FighterRow({
         aria-label={t("initiative.die")}
         aria-invalid={dieInvalid}
         onChange={(e) => setDieText(e.target.value)}
-        className="num w-16"
+        title={t("initiative.die_hint")}
+        className="num w-20"
       />
       <Button
         size="xs"
         variant="outline"
         disabled={dieInvalid}
         onClick={() => {
-          onReroll(combatant.character_id, die);
+          if (faces === false) return;
+          onReroll(combatant.character_id, faces);
           setDieText("");
         }}
       >
         {t("initiative.reroll")}
       </Button>
+      {wound !== "healthy" && wound !== "dead" && (
+        <Button size="xs" variant="outline" onClick={() => onStabilize(combatant.character_id)}>
+          {t("initiative.stabilize")}
+        </Button>
+      )}
       <Button size="xs" variant="outline" onClick={() => onRemove(combatant.character_id)}>
         {t("initiative.remove")}
       </Button>
     </li>
+  );
+}
+
+type DeathSavePanelProps = {
+  fighter: FighterInfo | undefined;
+  /** Resolves `true` when the save was made. */
+  onRoll: (manual: number | null) => Promise<boolean>;
+};
+
+/** Start of a mortally wounded fighter's turn: the death save with manual die entry. */
+function DeathSavePanel({ fighter, onRoll }: DeathSavePanelProps) {
+  const { t } = useTranslation();
+  const [text, setText] = useState("");
+  const face = text.trim() === "" ? null : Number(text);
+  const invalid = face !== null && (!Number.isInteger(face) || face < 1 || face > 10);
+  if (!fighter) return null;
+
+  return (
+    <div className="cut flex flex-wrap items-center gap-3 p-3 [--cut:8px] [--cut-border:var(--state-mortal)]">
+      <span className="font-display text-sm font-semibold uppercase">{fighter.name}</span>
+      <span className="text-sm text-state-mortal">{t("initiative.death_save_due")}</span>
+      <span className="num mr-auto text-xs text-muted-foreground">
+        {t("initiative.death_save_rule", { body: fighter.body, penalty: fighter.deathSavePenalty })}
+      </span>
+      <Input
+        inputMode="numeric"
+        value={text}
+        placeholder={t("initiative.die_random")}
+        aria-label={t("initiative.die")}
+        aria-invalid={invalid}
+        onChange={(e) => setText(e.target.value)}
+        className="num w-28"
+      />
+      <Button
+        disabled={invalid}
+        onClick={async () => {
+          if (await onRoll(face)) setText("");
+        }}
+      >
+        {t("initiative.death_save")}
+      </Button>
+    </div>
+  );
+}
+
+type DeathSaveResultProps = { name: string; save: DeathSave };
+
+function DeathSaveResult({ name, save }: DeathSaveResultProps) {
+  const { t } = useTranslation();
+  return (
+    <p className="num text-sm">
+      <span className="font-display font-semibold uppercase">{name}</span>{" "}
+      {t("initiative.death_save")}: d10 {save.roll.dice[0]} + {save.penalty} —{" "}
+      <span className={save.passed ? "text-state-ok" : "text-state-dead"}>
+        {t(save.passed ? "initiative.death_save_passed" : "initiative.death_save_failed")}
+      </span>
+    </p>
   );
 }

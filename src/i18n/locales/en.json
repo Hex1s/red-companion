@@ -408,6 +408,23 @@
     "up": "Move up",
     "down": "Move down",
     "reroll": "Re-roll",
-    "remove": "Remove"
+    "remove": "Remove",
+    "die_hint": "On a 10 or a 1 enter the second die too: \"10 4\"",
+    "stabilize": "Stabilize",
+    "death_save": "Death save",
+    "death_save_due": "mortally wounded: death save at the start of the turn",
+    "death_save_rule": "d10 + penalty {{penalty}} ≤ BODY {{body}}; a 10 is death",
+    "death_save_passed": "alive",
+    "death_save_failed": "dead"
+  },
+  "stabilize": {
+    "title": "Stabilization",
+    "helper": "Helper",
+    "skill": "Skill",
+    "formula": "TECH {{tech}} + skill {{level}} + d10 vs the wound's DV (10 / 13 / 15)",
+    "roll": "Roll",
+    "success": "Stabilized.",
+    "failure": "Failed.",
+    "revived": "The target is back at 1 HP."
   }
 }

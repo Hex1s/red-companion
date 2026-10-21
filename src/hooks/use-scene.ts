@@ -46,8 +46,8 @@ export function useScene() {
     removeCover: (id: number) => run(api.removeCover(id)),
     setCharacterCover: (characterId: number, coverId: number | null) =>
       run(api.setCharacterCover(characterId, coverId)),
-    combatAdd: (id: number, manual: number | null) => run(api.combatAdd(id, manual)),
-    combatReroll: (id: number, manual: number | null) => run(api.combatReroll(id, manual)),
+    combatAdd: (id: number, manual: number[] | null) => run(api.combatAdd(id, manual)),
+    combatReroll: (id: number, manual: number[] | null) => run(api.combatReroll(id, manual)),
     combatSetInitiative: (id: number, initiative: number) =>
       run(api.combatSetInitiative(id, initiative)),
     combatShift: (id: number, delta: number) => run(api.combatShift(id, delta)),

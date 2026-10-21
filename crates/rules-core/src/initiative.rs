@@ -1,7 +1,8 @@
 //! Initiative tracker: who acts in which order, rounds and the active turn.
 //!
 //! Initiative is REF + 1d10, rolled once per fight (or typed in from physical
-//! dice). The order is stored, not recomputed: ties are broken by higher REF and
+//! dice). The d10 explodes like any check: a natural 10 adds another d10, a
+//! natural 1 subtracts one (p. 130), so the total can even be negative. The order is stored, not recomputed: ties are broken by higher REF and
 //! then by the order of adding, and the GM can nudge anyone up or down by hand
 //! (decision of the user, ROADMAP 1.6). Dead characters stay in the list but
 //! their turn is skipped; the caller passes their ids as `skip`.
@@ -10,10 +11,12 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use ts_rs::TS;
 
-/// Largest initiative accepted from the UI (REF 10 + d10 = 20, with room for bonuses).
-pub const INITIATIVE_MAX: u32 = 99;
-/// Sides of the initiative die.
-pub const INITIATIVE_DIE: u32 = 10;
+use crate::dice::CheckRoll;
+
+/// Initiative range accepted from the UI (REF 10 + two d10 = 30 at best,
+/// REF 1 + 1 - 10 = -8 at worst, with room for bonuses).
+pub const INITIATIVE_MAX: i32 = 99;
+pub const INITIATIVE_MIN: i32 = -99;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[ts(export)]
@@ -22,9 +25,9 @@ pub struct Combatant {
     pub character_id: i64,
     /// REF at the moment of rolling; only used to break ties.
     pub reflex: u8,
-    /// Face of the initiative die; `None` when the total was typed in by hand.
-    pub roll: Option<u32>,
-    pub initiative: u32,
+    /// The d10 check; `None` when the total was typed in by hand.
+    pub roll: Option<CheckRoll>,
+    pub initiative: i32,
 }
 
 /// The fight in progress. `round == 0` means it has not started yet (the GM is
@@ -41,6 +44,10 @@ pub struct Combat {
     #[serde(default)]
     #[ts(type = "number | null")]
     pub active: Option<i64>,
+    /// The active fighter is mortally wounded and has not made this turn's
+    /// death save yet (set by the app when a turn begins).
+    #[serde(default)]
+    pub death_save_due: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
@@ -49,7 +56,7 @@ pub enum InitiativeError {
     NotInFight(i64),
     #[error("character {0} is already in the fight")]
     AlreadyInFight(i64),
-    #[error("initiative must be between 0 and {INITIATIVE_MAX}")]
+    #[error("initiative must be between {INITIATIVE_MIN} and {INITIATIVE_MAX}")]
     OutOfRange,
     #[error("the fight has not started")]
     NotStarted,
@@ -81,29 +88,39 @@ impl Combat {
         self.combatants.insert(at, entry);
     }
 
-    /// Adds a participant with a rolled die face (`roll` in 1..=10).
-    pub fn add(&mut self, character_id: i64, reflex: u8, roll: u32) -> Result<(), InitiativeError> {
+    /// Adds a participant with a rolled initiative die.
+    pub fn add(
+        &mut self,
+        character_id: i64,
+        reflex: u8,
+        roll: CheckRoll,
+    ) -> Result<(), InitiativeError> {
         if self.combatants.iter().any(|c| c.character_id == character_id) {
             return Err(InitiativeError::AlreadyInFight(character_id));
         }
         self.insert_sorted(Combatant {
             character_id,
             reflex,
+            initiative: i32::from(reflex) + roll.total,
             roll: Some(roll),
-            initiative: u32::from(reflex) + roll,
         });
         Ok(())
     }
 
-    /// Re-rolls someone's initiative (new die face) and puts them in place.
-    pub fn reroll(&mut self, character_id: i64, reflex: u8, roll: u32) -> Result<(), InitiativeError> {
+    /// Re-rolls someone's initiative (a new die) and puts them in place.
+    pub fn reroll(
+        &mut self,
+        character_id: i64,
+        reflex: u8,
+        roll: CheckRoll,
+    ) -> Result<(), InitiativeError> {
         let at = self.position(character_id)?;
         self.combatants.remove(at);
         self.insert_sorted(Combatant {
             character_id,
             reflex,
+            initiative: i32::from(reflex) + roll.total,
             roll: Some(roll),
-            initiative: u32::from(reflex) + roll,
         });
         Ok(())
     }
@@ -112,9 +129,9 @@ impl Combat {
     pub fn set_initiative(
         &mut self,
         character_id: i64,
-        initiative: u32,
+        initiative: i32,
     ) -> Result<(), InitiativeError> {
-        if initiative > INITIATIVE_MAX {
+        if !(INITIATIVE_MIN..=INITIATIVE_MAX).contains(&initiative) {
             return Err(InitiativeError::OutOfRange);
         }
         let at = self.position(character_id)?;
@@ -161,7 +178,8 @@ impl Combat {
 
     /// Passes the turn on; the round counter grows when the order wraps.
     pub fn next_turn(&mut self, skip: &[i64]) -> Result<(), InitiativeError> {
-        let active = self.active.filter(|_| self.is_started()).ok_or(InitiativeError::NotStarted)?;
+        let active =
+            self.active.filter(|_| self.is_started()).ok_or(InitiativeError::NotStarted)?;
         let from = self.position(active)?;
         let (idx, wrapped) =
             self.next_after(from, skip, true).ok_or(InitiativeError::NobodyCanAct)?;
@@ -199,6 +217,11 @@ impl Combat {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::dice::{CheckKind, check_manual};
+
+    fn die(face: u32) -> CheckRoll {
+        check_manual(&[face]).unwrap()
+    }
 
     fn ids(combat: &Combat) -> Vec<i64> {
         combat.combatants.iter().map(|c| c.character_id).collect()
@@ -206,10 +229,10 @@ mod tests {
 
     fn fight() -> Combat {
         let mut combat = Combat::default();
-        combat.add(1, 6, 4).unwrap(); // 10
-        combat.add(2, 5, 9).unwrap(); // 14
-        combat.add(3, 8, 2).unwrap(); // 10, higher REF than #1
-        combat.add(4, 8, 2).unwrap(); // 10, full tie with #3: added later
+        combat.add(1, 6, die(4)).unwrap(); // 10
+        combat.add(2, 5, die(9)).unwrap(); // 14
+        combat.add(3, 8, die(2)).unwrap(); // 10, higher REF than #1
+        combat.add(4, 8, die(2)).unwrap(); // 10, full tie with #3: added later
         combat
     }
 
@@ -222,26 +245,39 @@ mod tests {
     fn initiative_is_reflex_plus_die() {
         let combat = fight();
         assert_eq!(combat.combatants[0].initiative, 14);
-        assert_eq!(combat.combatants[0].roll, Some(9));
+        assert_eq!(combat.combatants[0].roll.as_ref().map(|r| r.total), Some(9));
+    }
+
+    #[test]
+    fn exploding_die_changes_the_total() {
+        let mut combat = Combat::default();
+        combat.add(1, 6, check_manual(&[10, 5]).unwrap()).unwrap(); // 6 + 15
+        combat.add(2, 6, check_manual(&[1, 9]).unwrap()).unwrap(); // 6 - 8
+        combat.add(3, 6, die(7)).unwrap(); // 13
+        assert_eq!(ids(&combat), vec![1, 3, 2]);
+        assert_eq!(combat.combatants[0].initiative, 21);
+        assert_eq!(combat.combatants[0].roll.as_ref().unwrap().kind, CheckKind::CriticalSuccess);
+        assert_eq!(combat.combatants[2].initiative, -2);
     }
 
     #[test]
     fn duplicate_and_unknown_characters_are_rejected() {
         let mut combat = fight();
-        assert_eq!(combat.add(1, 5, 5), Err(InitiativeError::AlreadyInFight(1)));
-        assert_eq!(combat.reroll(9, 5, 5), Err(InitiativeError::NotInFight(9)));
+        assert_eq!(combat.add(1, 5, die(5)), Err(InitiativeError::AlreadyInFight(1)));
+        assert_eq!(combat.reroll(9, 5, die(5)), Err(InitiativeError::NotInFight(9)));
         assert_eq!(combat.shift(9, 1), Err(InitiativeError::NotInFight(9)));
     }
 
     #[test]
     fn reroll_and_manual_total_reposition_the_combatant() {
         let mut combat = fight();
-        combat.reroll(1, 6, 10).unwrap(); // 16: now first
+        combat.reroll(1, 6, die(9)).unwrap(); // 15: now first
         assert_eq!(ids(&combat), vec![1, 2, 3, 4]);
         combat.set_initiative(1, 3).unwrap();
         assert_eq!(ids(&combat), vec![2, 3, 4, 1]);
         assert_eq!(combat.combatants[3].roll, None);
         assert_eq!(combat.set_initiative(1, 100), Err(InitiativeError::OutOfRange));
+        assert_eq!(combat.set_initiative(1, -100), Err(InitiativeError::OutOfRange));
     }
 
     #[test]
@@ -319,7 +355,7 @@ mod tests {
     #[test]
     fn removing_the_last_combatant_leaves_nobody_active() {
         let mut combat = Combat::default();
-        combat.add(1, 5, 5).unwrap();
+        combat.add(1, 5, die(5)).unwrap();
         combat.start(&[]).unwrap();
         combat.remove(1, &[]).unwrap();
         assert_eq!(combat.active, None);
@@ -331,7 +367,7 @@ mod tests {
         let mut combat = fight();
         combat.start(&[]).unwrap();
         combat.next_turn(&[]).unwrap();
-        combat.add(5, 10, 10).unwrap(); // 20: goes to the top of the order
+        combat.add(5, 10, check_manual(&[10, 1]).unwrap()).unwrap(); // 21: top of the order
         assert_eq!(combat.active, Some(3));
         assert_eq!(ids(&combat)[0], 5);
         combat.next_turn(&[]).unwrap();
