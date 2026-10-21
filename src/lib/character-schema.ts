@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { Character } from "@/bindings/Character";
 
 // Mirrors the limits in `rules-core::character`; Rust stays the final judge.
+// EMP and LUCK may be 0 (cyberware burns EMP, the book's filler NPCs have no luck).
 export const STAT_MIN = 1;
 export const STAT_MAX = 10;
 export const SP_MAX = 20;
@@ -22,7 +23,7 @@ export const characterSchema = z.object({
     tech: stat,
     cool: stat,
     will: stat,
-    luck: stat,
+    luck: z.number().int().min(0).max(STAT_MAX),
     movement: stat,
     body: stat,
     emp: z.number().int().min(0).max(STAT_MAX),

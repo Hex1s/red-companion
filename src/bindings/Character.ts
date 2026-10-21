@@ -12,6 +12,8 @@ injuries: Array<string>,
  */
 death_save_penalty: number, dead: boolean, notes: string, 
 /**
- * Skill levels by skill id; skills that are absent are at level 0.
+ * Skill levels by skill key; skills that are absent are at level 0. The key
+ * is a catalog skill id, or `id:specialty` for skills taken several times
+ * with a specialty (see `skill_base_id`).
  */
 skills: Record<string, number>, };

@@ -13,6 +13,7 @@ import type { InjuryRoll } from "@/bindings/InjuryRoll";
 import type { RollResult } from "@/bindings/RollResult";
 import type { SceneRecord } from "@/bindings/SceneRecord";
 import type { StabilizeApplied } from "@/bindings/StabilizeApplied";
+import type { NpcTemplate } from "@/bindings/NpcTemplate";
 import type { Skill } from "@/bindings/Skill";
 
 /** True inside the Tauri window; false in plain `npm run dev` in a browser. */
@@ -20,6 +21,10 @@ export const hasBackend = "__TAURI_INTERNALS__" in globalThis;
 
 export const api = {
   listSkills: () => invoke<Skill[]>("list_skills"),
+  listNpcTemplates: () => invoke<NpcTemplate[]>("list_npc_templates"),
+  /** Clones a ready-made NPC into a new NPC sheet; `notes` is the localized weapons and gear text. */
+  createNpcFromTemplate: (templateId: string, name: string, notes: string) =>
+    invoke<CharacterRecord>("create_npc_from_template", { templateId, name, notes }),
   listCharacters: (kind: CharacterKind) => invoke<CharacterRecord[]>("list_characters", { kind }),
   createCharacter: (kind: CharacterKind, name: string) =>
     invoke<CharacterRecord>("create_character", { kind, name }),

@@ -10,4 +10,10 @@ export type Skill = { id: string, name_key: string, stat: StatKey, category: Ski
 /**
  * Marked "(x2)" in the book: costs twice as much to learn and improve.
  */
-double_cost: boolean, source: Source, };
+double_cost: boolean, 
+/**
+ * Taken separately per specialty (a language, an area, a field of science,
+ * a martial art, an instrument): the sheet keeps one level per
+ * `id:specialty` key, see `character::skill_base_id`.
+ */
+specialty: boolean, source: Source, };

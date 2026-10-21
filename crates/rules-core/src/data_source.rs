@@ -4,7 +4,7 @@
 use thiserror::Error;
 
 use crate::catalog::{
-    Armor, Collection, CollectionVersion, CoverMaterial, CriticalInjury, Shield, Skill,
+    Armor, Collection, CollectionVersion, CoverMaterial, CriticalInjury, NpcTemplate, Shield, Skill,
 };
 
 #[derive(Debug, Error)]
@@ -21,6 +21,7 @@ pub trait DataSource {
     fn armor(&self) -> DataResult<Collection<Armor>>;
     fn shields(&self) -> DataResult<Collection<Shield>>;
     fn skills(&self) -> DataResult<Collection<Skill>>;
+    fn npc_templates(&self) -> DataResult<Collection<NpcTemplate>>;
 
     /// Versions of every collection, the "manifest" compared during sync.
     fn versions(&self) -> DataResult<Vec<CollectionVersion>> {
@@ -30,6 +31,7 @@ pub trait DataSource {
             self.armor()?.version_info(),
             self.shields()?.version_info(),
             self.skills()?.version_info(),
+            self.npc_templates()?.version_info(),
         ])
     }
 }
@@ -61,6 +63,9 @@ impl DataSource for SeedDataSource {
     fn skills(&self) -> DataResult<Collection<Skill>> {
         parse("skills", include_str!("../data/seed/skills.json"))
     }
+    fn npc_templates(&self) -> DataResult<Collection<NpcTemplate>> {
+        parse("npc_templates", include_str!("../data/seed/npc_templates.json"))
+    }
 }
 
 #[cfg(test)]
@@ -75,12 +80,13 @@ mod tests {
         assert_eq!(ds.armor().unwrap().name, "armor");
         assert_eq!(ds.shields().unwrap().name, "shields");
         assert_eq!(ds.skills().unwrap().name, "skills");
+        assert_eq!(ds.npc_templates().unwrap().name, "npc_templates");
     }
 
     #[test]
     fn manifest_lists_all_collections() {
         let names: Vec<_> = SeedDataSource.versions().unwrap().into_iter().map(|v| v.name).collect();
-        assert_eq!(names, ["critical_injuries", "cover_materials", "armor", "shields", "skills"]);
+        assert_eq!(names, ["critical_injuries", "cover_materials", "armor", "shields", "skills", "npc_templates"]);
     }
 
     #[test]
@@ -108,6 +114,13 @@ mod tests {
         keys.extend(ds.armor().unwrap().entries.into_iter().map(|e| e.name_key));
         keys.extend(ds.shields().unwrap().entries.into_iter().map(|e| e.name_key));
         keys.extend(ds.skills().unwrap().entries.into_iter().map(|e| e.name_key));
+        for e in ds.npc_templates().unwrap().entries {
+            keys.push(e.name_key);
+            keys.push(e.armor_name_key);
+            keys.push(e.gear_key);
+            keys.extend(e.notes_key);
+            keys.extend(e.weapons.into_iter().map(|w| w.name_key));
+        }
 
         for lang in ["ru", "en"] {
             let path = format!("{}/../../src/i18n/locales/{lang}.json", env!("CARGO_MANIFEST_DIR"));
@@ -129,6 +142,10 @@ mod tests {
         assert_eq!(validate_armor(&ds.armor().unwrap()), Ok(()));
         assert_eq!(validate_shields(&ds.shields().unwrap()), Ok(()));
         assert_eq!(validate_skills(&ds.skills().unwrap()), Ok(()));
+        assert_eq!(
+            validate_npc_templates(&ds.npc_templates().unwrap(), &ds.skills().unwrap()),
+            Ok(())
+        );
     }
 
     /// Skill categories have a name in both locales, like the entries do.
@@ -172,6 +189,10 @@ mod tests {
             doubled,
             ["autofire", "demolitions", "electronics_security_tech", "heavy_weapons", "martial_arts", "paramedic", "pilot_air_vehicle"]
         );
+        let mut with_specialty: Vec<_> =
+            skills.entries.iter().filter(|e| e.specialty).map(|e| e.id.as_str()).collect();
+        with_specialty.sort_unstable();
+        assert_eq!(with_specialty, ["language", "local_expert", "martial_arts", "play_instrument", "science"]);
         let stat = |id: &str| skills.entries.iter().find(|e| e.id == id).unwrap().stat;
         assert_eq!(stat("concentration"), StatKey::Will);
         assert_eq!(stat("first_aid"), StatKey::Tech);
@@ -206,5 +227,75 @@ mod tests {
         assert_eq!(broken_leg.treatment.len(), 2);
         let dsp = inj.entries.iter().filter(|e| e.death_save_penalty).count();
         assert_eq!(dsp, 11); // 5 body + 6 head rows
+    }
+
+    /// NPC templates against the book (p. 412-416): derived values printed in
+    /// the stat blocks, tiers, and the cloned sheet.
+    #[test]
+    fn npc_templates_match_book() {
+        use crate::catalog::*;
+        use crate::damage::max_hp;
+        let ds = SeedDataSource;
+        let npcs = ds.npc_templates().unwrap();
+        let skills = ds.skills().unwrap();
+        assert_eq!(npcs.entries.len(), 10);
+
+        // (id, HP, serious wound threshold, death save) as printed.
+        let printed = [
+            ("bodyguard", 35, 18, 6),
+            ("booster", 20, 10, 2),
+            ("road_bandit", 25, 13, 3),
+            ("security_operative", 30, 15, 5),
+            ("netrunner", 30, 15, 3),
+            ("chief_restorer", 40, 20, 6),
+            ("security_officer", 40, 20, 7),
+            ("patrol", 40, 20, 6),
+            ("pyrotechnician", 35, 18, 5),
+            ("cyberpsychopath", 55, 28, 10),
+        ];
+        for (id, hp, serious, save) in printed {
+            let t = npcs.entries.iter().find(|e| e.id == id).unwrap();
+            let derived = max_hp(t.stats.body, t.stats.will);
+            assert_eq!((derived, derived.div_ceil(2), u32::from(t.stats.body)), (hp, serious, save), "{id}");
+            assert_eq!(t.stats.luck, 0, "{id}: LUCK is a dash in the book");
+            let c = t.to_character("x", "", &skills.entries);
+            assert_eq!((c.validate(), c.hp), (Ok(()), hp), "{id}");
+        }
+
+        let tier = |id: &str| npcs.entries.iter().find(|e| e.id == id).unwrap().tier;
+        assert_eq!(tier("bodyguard"), NpcTier::Mook);
+        assert_eq!(tier("netrunner"), NpcTier::Lieutenant);
+        assert_eq!(tier("pyrotechnician"), NpcTier::MiniBoss);
+        assert_eq!(tier("cyberpsychopath"), NpcTier::Boss);
+
+        // Armor that is a catalog item has the catalog's SP.
+        let armor = ds.armor().unwrap();
+        for t in &npcs.entries {
+            if let Some(a) = armor.entries.iter().find(|a| a.name_key == t.armor_name_key) {
+                assert_eq!((t.armor_head_sp, t.armor_body_sp), (a.sp, a.sp), "{}", t.id);
+            }
+        }
+
+        // Level = printed sum - linked stat: stat + level gives the printed sum
+        // again, except for the one printed penalty (cyberpsychopath concentration).
+        let mut below = vec![];
+        for t in &npcs.entries {
+            let levels = t.skill_levels(&skills.entries);
+            for (key, &total) in &t.skill_totals {
+                let id = crate::character::skill_base_id(key);
+                let stat = skills.entries.iter().find(|s| s.id == id).unwrap().stat.value_in(&t.stats);
+                if stat + levels[key] != total {
+                    below.push(format!("{}:{key}", t.id));
+                }
+            }
+        }
+        assert_eq!(below, ["cyberpsychopath:concentration"]);
+
+        // Spot checks against the images.
+        let bodyguard = npcs.entries.iter().find(|e| e.id == "bodyguard").unwrap();
+        assert_eq!(bodyguard.skill_totals["handgun"], 10);
+        assert_eq!(bodyguard.skill_levels(&skills.entries)["handgun"], 4); // REF 6
+        let officer = npcs.entries.iter().find(|e| e.id == "security_officer").unwrap();
+        assert_eq!((officer.stats.reflex, officer.armor_body_sp), (8, 12));
     }
 }

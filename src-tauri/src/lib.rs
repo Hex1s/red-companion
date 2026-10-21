@@ -1,7 +1,7 @@
 use std::sync::Mutex;
 
 use rules_core::RulesInfo;
-use rules_core::catalog::{BodyArea, CriticalInjury, Skill};
+use rules_core::catalog::{BodyArea, CriticalInjury, NpcTemplate, Skill};
 use rules_core::character::{Character, CharacterKind, CharacterRecord};
 use rules_core::damage::DamageOutcome;
 use rules_core::damage::WoundState;
@@ -28,6 +28,37 @@ fn rules_info() -> RulesInfo {
 #[tauri::command]
 fn list_skills() -> Result<Vec<Skill>, String> {
     SeedDataSource.skills().map(|c| c.entries).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn list_npc_templates() -> Result<Vec<NpcTemplate>, String> {
+    SeedDataSource.npc_templates().map(|c| c.entries).map_err(|e| e.to_string())
+}
+
+/// Clones a ready-made NPC into a new NPC sheet: own HP and SP, so one
+/// template can be cloned many times. `notes` is the localized weapons and
+/// gear text composed by the UI.
+#[tauri::command]
+fn create_npc_from_template(
+    state: State<'_, AppStorage>,
+    template_id: String,
+    name: String,
+    notes: String,
+) -> Result<CharacterRecord, String> {
+    let templates = SeedDataSource.npc_templates().map_err(|e| e.to_string())?;
+    let template = templates
+        .entries
+        .iter()
+        .find(|t| t.id == template_id)
+        .ok_or_else(|| format!("NPC template {template_id:?} not found"))?;
+    let skills = SeedDataSource.skills().map_err(|e| e.to_string())?;
+    let character = template.to_character(&name, &notes, &skills.entries);
+    character.validate().map_err(|e| e.to_string())?;
+    let data = serde_json::to_string(&character).map_err(|e| e.to_string())?;
+    let id = lock(&state)?
+        .insert_character(storage::CharacterKind::Npc, &character.name, &data)
+        .map_err(|e| e.to_string())?;
+    Ok(CharacterRecord::new(id, character))
 }
 
 fn storage_kind(kind: CharacterKind) -> storage::CharacterKind {
@@ -563,6 +594,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             rules_info,
             list_skills,
+            list_npc_templates,
+            create_npc_from_template,
             list_characters,
             create_character,
             save_character,

@@ -6,6 +6,7 @@
 
 use std::collections::BTreeMap;
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use ts_rs::TS;
@@ -14,7 +15,8 @@ use crate::damage::{max_hp, wound_state, TargetState, WoundState};
 
 /// Current version of the character document.
 pub const SCHEMA_VERSION: u32 = 1;
-/// Stat range on the sheet (p. 79); EMP may drop to 0 from cyberware.
+/// Stat range on the sheet (p. 79); EMP may drop to 0 from cyberware, and
+/// LUCK is 0 for the book's filler NPCs ("—" in their stat blocks, p. 412).
 pub const STAT_MIN: u8 = 1;
 pub const STAT_MAX: u8 = 10;
 /// Armor SP range accepted on the sheet (best armor in the book is 18).
@@ -26,7 +28,7 @@ pub const SKILL_MAX: u8 = 10;
 /// Stat value used by "quick create"; the GM tunes it afterwards.
 pub const QUICK_STAT: u8 = 5;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
 #[ts(export)]
 pub struct Stats {
     pub int: u8,
@@ -58,9 +60,22 @@ impl Stats {
     }
 }
 
+/// Separator between a skill id and its specialty in a sheet's skill key.
+pub const SKILL_SPECIALTY_SEP: char = ':';
+
+/// Catalog id of a skill key: `language:native` -> `language`.
+pub fn skill_base_id(key: &str) -> &str {
+    key.split_once(SKILL_SPECIALTY_SEP).map_or(key, |(id, _)| id)
+}
+
+/// Specialty part of a skill key, if any: `language:native` -> `native`.
+pub fn skill_specialty(key: &str) -> Option<&str> {
+    key.split_once(SKILL_SPECIALTY_SEP).map(|(_, spec)| spec)
+}
+
 /// Worn armor of one area: current SP drops with ablation, max is what a
 /// repair restores.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
 #[ts(export)]
 pub struct ArmorSlot {
     pub sp: u8,
@@ -90,7 +105,9 @@ pub struct Character {
     pub dead: bool,
     #[serde(default)]
     pub notes: String,
-    /// Skill levels by skill id; skills that are absent are at level 0.
+    /// Skill levels by skill key; skills that are absent are at level 0. The key
+    /// is a catalog skill id, or `id:specialty` for skills taken several times
+    /// with a specialty (see `skill_base_id`).
     #[serde(default)]
     #[ts(type = "Record<string, number>")]
     pub skills: BTreeMap<String, u8>,
@@ -216,7 +233,6 @@ impl Character {
             ("tech", s.tech),
             ("cool", s.cool),
             ("will", s.will),
-            ("luck", s.luck),
             ("movement", s.movement),
             ("body", s.body),
         ] {
@@ -224,8 +240,10 @@ impl Character {
                 return Err(CharacterError::StatOutOfRange { stat, value });
             }
         }
-        if s.emp > STAT_MAX {
-            return Err(CharacterError::StatOutOfRange { stat: "emp", value: s.emp });
+        for (stat, value) in [("emp", s.emp), ("luck", s.luck)] {
+            if value > STAT_MAX {
+                return Err(CharacterError::StatOutOfRange { stat, value });
+            }
         }
         for (area, slot) in [("head", self.armor_head), ("body", self.armor_body)] {
             if slot.max_sp > SP_MAX || slot.sp > slot.max_sp {
@@ -312,6 +330,12 @@ mod tests {
         assert_eq!(c.validate(), Ok(()));
 
         let mut c = Character::quick("V");
+        c.stats.luck = 0; // allowed: filler NPCs have no luck
+        assert_eq!(c.validate(), Ok(()));
+        c.stats.luck = 11;
+        assert!(matches!(c.validate(), Err(CharacterError::StatOutOfRange { stat: "luck", .. })));
+
+        let mut c = Character::quick("V");
         c.armor_body = ArmorSlot { sp: 12, max_sp: 11 };
         assert!(matches!(c.validate(), Err(CharacterError::BadArmor { area: "body", .. })));
 
@@ -328,6 +352,14 @@ mod tests {
         let mut c = Character::quick("V");
         c.schema_version = 99;
         assert_eq!(c.validate(), Err(CharacterError::UnsupportedVersion(99)));
+    }
+
+    #[test]
+    fn skill_keys_split_into_id_and_specialty() {
+        assert_eq!(skill_base_id("language:native"), "language");
+        assert_eq!(skill_specialty("language:native"), Some("native"));
+        assert_eq!(skill_base_id("handgun"), "handgun");
+        assert_eq!(skill_specialty("handgun"), None);
     }
 
     #[test]

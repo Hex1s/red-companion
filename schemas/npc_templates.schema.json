@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Collection",
+  "description": "A versioned set of entries of one type, the unit of sync with the future API.",
+  "type": "object",
+  "properties": {
+    "entries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/NpcTemplate"
+      }
+    },
+    "name": {
+      "description": "Collection name, e.g. `critical_injuries`.",
+      "type": "string"
+    },
+    "version": {
+      "description": "Bumped by hand whenever the content changes.",
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "name",
+    "version",
+    "entries"
+  ],
+  "$defs": {
+    "NpcTemplate": {
+      "description": "Ready-made NPC from \"Шестёрки и Засранцы\" (p. 412-416). Cloning one makes a\nnew NPC character; HP, serious-wound threshold and death save are derived\nfrom the stats, the book's printed values are checked against them in tests.",
+      "type": "object",
+      "properties": {
+        "armor_body_sp": {
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "armor_head_sp": {
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "armor_name_key": {
+          "type": "string"
+        },
+        "gear_key": {
+          "description": "Cyberware and gear line, one localized text.",
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name_key": {
+          "type": "string"
+        },
+        "notes_key": {
+          "description": "Printed details the sheet has no field for (role abilities, bracketed\nalternative values, cyberdeck programs).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "skill_totals": {
+          "description": "Skill sums as printed in the book (p. 412): linked STAT + skill level +\nmodifiers of gear and cyberware, by sheet skill key (`id` or\n`id:specialty`). The sheet's level is the sum minus the stat, see\n`NpcTemplate::to_character`.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "format": "uint8",
+            "maximum": 255,
+            "minimum": 0
+          }
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "stats": {
+          "$ref": "#/$defs/Stats"
+        },
+        "tier": {
+          "$ref": "#/$defs/NpcTier"
+        },
+        "weapons": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NpcWeapon"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name_key",
+        "tier",
+        "stats",
+        "armor_name_key",
+        "armor_head_sp",
+        "armor_body_sp",
+        "weapons",
+        "skill_totals",
+        "gear_key",
+        "source"
+      ]
+    },
+    "NpcTier": {
+      "description": "Power tier of a filler NPC (p. 413-416): how many to put against a team.",
+      "oneOf": [
+        {
+          "description": "\"Шестёрка\": low-level enemy.",
+          "type": "string",
+          "const": "mook"
+        },
+        {
+          "description": "\"Лейтенант\": mid-level, one per two edgerunners.",
+          "type": "string",
+          "const": "lieutenant"
+        },
+        {
+          "description": "\"Мини-босс\": high-level, one per three edgerunners.",
+          "type": "string",
+          "const": "mini_boss"
+        },
+        {
+          "description": "Made for boss fights.",
+          "type": "string",
+          "const": "boss"
+        }
+      ]
+    },
+    "NpcWeapon": {
+      "type": "object",
+      "properties": {
+        "damage": {
+          "description": "Damage dice as printed, e.g. `5d6`.",
+          "type": "string"
+        },
+        "name_key": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name_key",
+        "damage"
+      ]
+    },
+    "Source": {
+      "description": "Where a value comes from in the rulebook.",
+      "type": "object",
+      "properties": {
+        "page": {
+          "description": "Printed page number (PDF page minus one).",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "page"
+      ]
+    },
+    "Stats": {
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "cool": {
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "dex": {
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "emp": {
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "int": {
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "luck": {
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "movement": {
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "reflex": {
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "tech": {
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "will": {
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        }
+      },
+      "required": [
+        "int",
+        "reflex",
+        "dex",
+        "tech",
+        "cool",
+        "will",
+        "luck",
+        "movement",
+        "body",
+        "emp"
+      ]
+    }
+  }
+}

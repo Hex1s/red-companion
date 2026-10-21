@@ -10,7 +10,7 @@ use std::collections::HashSet;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::character::{Character, CharacterError, CharacterKind};
+use crate::character::{skill_base_id, Character, CharacterError, CharacterKind};
 use crate::data_source::{DataError, DataSource};
 
 /// Value of the `format` field.
@@ -89,7 +89,7 @@ pub fn parse_import(
         c.name = c.name.trim().to_string();
         let name = c.name.clone();
         c.validate().map_err(|source| TransferError::Invalid { index, name: name.clone(), source })?;
-        if let Some(skill) = c.skills.keys().find(|k| !skills.contains(*k)) {
+        if let Some(skill) = c.skills.keys().find(|k| !skills.contains(skill_base_id(k))) {
             return Err(TransferError::UnknownSkill { index, name, skill: skill.clone() });
         }
         if let Some(injury) = c.injuries.iter().find(|k| !injuries.contains(*k)) {
@@ -173,5 +173,18 @@ mod tests {
         items[0].character.name = "  V  ".into();
         let json = export(items).unwrap();
         assert_eq!(parse_import(&json, &SeedDataSource).unwrap()[0].character.name, "V");
+    }
+
+    #[test]
+    fn specialty_skill_keys_are_checked_by_their_base_id() {
+        let mut items = sample();
+        items[0].character.skills.insert("language:native".into(), 6);
+        items[0].character.skills.insert("language:street_slang".into(), 3);
+        let json = export(items.clone()).unwrap();
+        assert_eq!(parse_import(&json, &SeedDataSource).unwrap(), items);
+
+        items[0].character.skills.insert("no_such_skill:x".into(), 1);
+        let json = export(items).unwrap();
+        assert!(matches!(parse_import(&json, &SeedDataSource), Err(TransferError::UnknownSkill { .. })));
     }
 }

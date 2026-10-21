@@ -232,7 +232,10 @@
       "name": "Enter a name",
       "range": "From {{min}} to {{max}}",
       "sp_over_max": "SP is above max"
-    }
+    },
+    "skill_specialty": "Specialty",
+    "skill_specialty_add": "Add",
+    "skill_specialty_remove": "Remove specialty"
   },
   "skill": {
     "category": {
@@ -313,6 +316,13 @@
       "pick_pocket": "Pick Pocket",
       "sea_vehicle_tech": "Sea Vehicle Tech",
       "weaponstech": "Weaponstech"
+    },
+    "specialties": {
+      "native": "Native",
+      "street_slang": "Street slang",
+      "home": "Your home",
+      "badlands": "Badlands",
+      "chemistry": "Chemistry"
     }
   },
   "scene": {
@@ -432,5 +442,92 @@
     "success": "Stabilized.",
     "failure": "Failed.",
     "revived": "The target is back at 1 HP."
+  },
+  "npc": {
+    "armor": {
+      "subdermal": "Subdermal armor"
+    },
+    "tier": {
+      "mook": "Mook",
+      "lieutenant": "Lieutenant",
+      "mini_boss": "Mini-boss",
+      "boss": "Boss"
+    },
+    "weapon": {
+      "shotgun": "Shotgun",
+      "shotgun_poor": "Shotgun (poor quality)",
+      "very_heavy_pistol": "Very heavy pistol",
+      "very_heavy_pistol_poor": "Very heavy pistol (poor quality)",
+      "heavy_pistol": "Heavy pistol",
+      "assault_rifle": "Assault rifle",
+      "assault_rifle_poor": "Assault rifle (poor quality)",
+      "bow": "Bow",
+      "flamethrower": "Flamethrower",
+      "light_melee": "Light melee weapon",
+      "medium_melee": "Medium melee weapon",
+      "heavy_melee": "Heavy melee weapon",
+      "slice_n_dice": "Slice 'N Dice",
+      "popup_grenade_launcher": "Popup grenade launcher",
+      "popup_heavy_smg": "Popup heavy SMG",
+      "cybersnake": "Cybersnake",
+      "wolvers": "Wolvers"
+    },
+    "template": {
+      "bodyguard": {
+        "name": "Bodyguard",
+        "gear": "Shotgun ammo x25, Very heavy pistol ammo x25, Radio"
+      },
+      "booster": {
+        "name": "Booster",
+        "gear": "Very heavy pistol ammo x30, Burner phone, Slice 'N Dice, Techhair"
+      },
+      "road_bandit": {
+        "name": "Road bandit",
+        "gear": "Very heavy pistol ammo x20, Arrows x20, Rope, Flashlight, Neural link (Interface plug)"
+      },
+      "security_operative": {
+        "name": "Security operative",
+        "gear": "Rifle ammo x40, Very heavy pistol ammo x20, Radio"
+      },
+      "netrunner": {
+        "name": "Netrunner",
+        "gear": "Very heavy pistol ammo x50, Flashlight, Virtuality goggles, Neural link (Interface plug)",
+        "notes": "Role ability: Interface 4. Cyberdeck programs: Banhammer, Dekalom, Eraser, Hellbolt, Shield, Sword, Worm."
+      },
+      "chief_restorer": {
+        "name": "Chief restorer",
+        "gear": "Shotgun ammo x25, Heavy pistol ammo x25, Agent, Grapple gun, Radio, Tent and camping gear, Nasal filters, Neural link (Chipware socket, Tactile boost chip)"
+      },
+      "security_officer": {
+        "name": "Security officer",
+        "gear": "Assault rifle ammo x50, Very heavy pistol ammo x30, Bulletproof shield (10 HP), Binoculars, Burner phone, Flashlight, Handcuffs x2, Radio, Radio scanner/Music player, Neural link (Kerenzikov)",
+        "notes": "The book prints alternative values in brackets: REF 8 (6), DEX 6 (4), MOVE 6 (4); skills: Athletics 10 (8), Autofire 12 (10), Brawling 10 (8), Driving 12 (10), Evasion 10 (8), Handgun 10 (8), Melee weapon 10 (8), Shoulder arms 10 (8), Stealth 8 (6). The book does not say what the brackets mean."
+      },
+      "patrol": {
+        "name": "Patrol",
+        "gear": "Assault rifle ammo x60, Very heavy pistol ammo x40, Handcuffs x2, Tracker beacon, Cyberaudio suite (Amplified hearing), Cybereye (Targeting scope, Teleoptics), Neural link (Interface plug)",
+        "notes": "Role ability: Family Motorpool 4."
+      },
+      "pyrotechnician": {
+        "name": "Pyrotechnician",
+        "gear": "Flamethrower ammo (incendiary shotgun shells) x8, Very heavy pistol ammo x50, Incendiary grenade x1, Flashbang grenade x1, Cyberaudio suite (Level damper), Cybereye x2 (Anti-dazzle x2), Nasal filters",
+        "notes": "Role ability: Combat Awareness 4."
+      },
+      "cyberpsychopath": {
+        "name": "Cyberpsychopath",
+        "gear": "Armor-piercing grenade x2, Heavy pistol ammo x100, Cyberarm x2 (Popup grenade launcher x2, Popup heavy SMG, Wolvers), Cyberleg x2 (Jump booster x2), Cybersnake, Muscle and bone lace, Neural link (Chipware socket, Pain editor), Subdermal armor"
+      }
+    },
+    "from_template": "From template",
+    "dialog_title": "Ready-made NPCs",
+    "dialog_hint": "Filler NPCs from the book (p. 412–416): pick one and clone it. Every clone has its own HP and SP.",
+    "count": "How many",
+    "clone": "Clone",
+    "clone_to_combat": "Clone into combat",
+    "clone_error": "Could not clone: {{error}}",
+    "notes": {
+      "weapons": "Weapons",
+      "gear": "Gear"
+    }
   }
 }

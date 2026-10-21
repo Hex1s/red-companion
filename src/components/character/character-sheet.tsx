@@ -76,12 +76,13 @@ export function CharacterSheet({ entry, onSave, onDelete }: CharacterSheetProps)
   const [confirmDelete, setConfirmDelete] = useState(false);
   const skills = useSkills();
 
-  // Every catalog skill gets an input; missing levels start at 0.
+  // Every plain catalog skill gets an input; missing levels start at 0. Skills with
+  // specialties (languages, areas...) only have the rows that were added.
   const values = useMemo<Character>(
     () => ({
       ...entry.character,
       skills: {
-        ...Object.fromEntries(skills.map((s) => [s.id, 0])),
+        ...Object.fromEntries(skills.filter((s) => !s.specialty).map((s) => [s.id, 0])),
         ...entry.character.skills,
       },
     }),
@@ -96,6 +97,9 @@ export function CharacterSheet({ entry, onSave, onDelete }: CharacterSheetProps)
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
+    unregister,
     formState: { errors, isDirty, isSubmitting },
   } = useForm<Character>({
     resolver: zodResolver(characterSchema),
@@ -115,6 +119,18 @@ export function CharacterSheet({ entry, onSave, onDelete }: CharacterSheetProps)
     },
     () => setStatus(null),
   );
+
+  // Specialty rows are keys `id:specialty` of the skills map (see `skill_base_id` in Rust).
+  const skillKeys = Object.keys(watch("skills") ?? {});
+  const [specialtyDraft, setSpecialtyDraft] = useState<Record<string, string>>({});
+  const specialtyName = (key: string) => key.slice(key.indexOf(":") + 1);
+  const addSpecialty = (skillId: string) => {
+    // Dots and brackets would break the form's field paths, the colon the skill key.
+    const name = (specialtyDraft[skillId] ?? "").trim().replace(/[.:[\]]/g, "");
+    setSpecialtyDraft((d) => ({ ...d, [skillId]: "" }));
+    if (!name || skillKeys.includes(`${skillId}:${name}`)) return;
+    setValue(`skills.${skillId}:${name}` as Path<Character>, 1, { shouldDirty: true });
+  };
 
   const num = (name: Path<Character>) => register(name, { valueAsNumber: true });
 
@@ -198,7 +214,7 @@ export function CharacterSheet({ entry, onSave, onDelete }: CharacterSheetProps)
               <Input
                 id={`stats.${key}`}
                 type="number"
-                min={key === "emp" ? 0 : STAT_MIN}
+                min={key === "emp" || key === "luck" ? 0 : STAT_MIN}
                 max={STAT_MAX}
                 className="num text-lg font-bold"
                 aria-invalid={!!errors.stats?.[key]}
@@ -257,26 +273,92 @@ export function CharacterSheet({ entry, onSave, onDelete }: CharacterSheetProps)
               <div key={category} className="cut [--cut:6px] space-y-1 p-3">
                 <div className="text-xs text-muted-foreground">{t(`skill.category.${category}`)}</div>
                 <ul className="grid grid-cols-2 gap-x-6 gap-y-1">
-                  {group.map((skill) => (
-                    <li key={skill.id} className="flex items-center gap-2 text-sm">
-                      <Label htmlFor={`skills.${skill.id}`} className="flex-1 font-normal">
-                        {t(skill.name_key)}
-                        {skill.double_cost && <span className="num text-muted-foreground"> ×2</span>}
-                      </Label>
-                      <span className="text-xs text-muted-foreground">
-                        {t(`stats.${STAT_LABELS[skill.stat]}`)}
-                      </span>
-                      <Input
-                        id={`skills.${skill.id}`}
-                        type="number"
-                        min={0}
-                        max={SKILL_MAX}
-                        className="num h-7 w-14"
-                        aria-invalid={!!errors.skills?.[skill.id]}
-                        {...num(`skills.${skill.id}`)}
-                      />
-                    </li>
-                  ))}
+                  {group.map((skill) =>
+                    skill.specialty ? (
+                      <li key={skill.id} className="col-span-2 space-y-1 text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="flex-1">
+                            {t(skill.name_key)}
+                            {skill.double_cost && <span className="num text-muted-foreground"> ×2</span>}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {t(`stats.${STAT_LABELS[skill.stat]}`)}
+                          </span>
+                          <Input
+                            aria-label={t("characters.skill_specialty")}
+                            placeholder={t("characters.skill_specialty")}
+                            className="h-7 w-40"
+                            value={specialtyDraft[skill.id] ?? ""}
+                            onChange={(e) =>
+                              setSpecialtyDraft((d) => ({ ...d, [skill.id]: e.target.value }))
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                addSpecialty(skill.id);
+                              }
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            size="xs"
+                            variant="outline"
+                            onClick={() => addSpecialty(skill.id)}
+                          >
+                            {t("characters.skill_specialty_add")}
+                          </Button>
+                        </div>
+                        {skillKeys
+                          .filter((key) => key.startsWith(`${skill.id}:`))
+                          .map((key) => (
+                            <div key={key} className="flex items-center gap-2 pl-4">
+                              <Label htmlFor={`skills.${key}`} className="flex-1 font-normal">
+                                {t(`skill.specialties.${specialtyName(key)}`, {
+                                  defaultValue: specialtyName(key),
+                                })}
+                              </Label>
+                              <Input
+                                id={`skills.${key}`}
+                                type="number"
+                                min={0}
+                                max={SKILL_MAX}
+                                className="num h-7 w-14"
+                                aria-invalid={!!errors.skills?.[key]}
+                                {...num(`skills.${key}` as Path<Character>)}
+                              />
+                              <Button
+                                type="button"
+                                size="xs"
+                                variant="outline"
+                                aria-label={t("characters.skill_specialty_remove")}
+                                onClick={() => unregister(`skills.${key}` as Path<Character>)}
+                              >
+                                ×
+                              </Button>
+                            </div>
+                          ))}
+                      </li>
+                    ) : (
+                      <li key={skill.id} className="flex items-center gap-2 text-sm">
+                        <Label htmlFor={`skills.${skill.id}`} className="flex-1 font-normal">
+                          {t(skill.name_key)}
+                          {skill.double_cost && <span className="num text-muted-foreground"> ×2</span>}
+                        </Label>
+                        <span className="text-xs text-muted-foreground">
+                          {t(`stats.${STAT_LABELS[skill.stat]}`)}
+                        </span>
+                        <Input
+                          id={`skills.${skill.id}`}
+                          type="number"
+                          min={0}
+                          max={SKILL_MAX}
+                          className="num h-7 w-14"
+                          aria-invalid={!!errors.skills?.[skill.id]}
+                          {...num(`skills.${skill.id}`)}
+                        />
+                      </li>
+                    ),
+                  )}
                 </ul>
               </div>
             ))}

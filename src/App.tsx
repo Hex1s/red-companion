@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { CharacterKind } from "@/bindings/CharacterKind";
 import { CharacterCard } from "@/components/character/character-card";
 import { CharacterSheet } from "@/components/character/character-sheet";
+import { NpcTemplateDialog, type CloneRequest } from "@/components/character/npc-template-dialog";
 import { InitiativeTracker } from "@/components/combat/initiative-tracker";
 import { StabilizeDialog } from "@/components/combat/stabilize-dialog";
 import { DamageDialog } from "@/components/combat/damage-dialog";
@@ -13,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { errorMessage, useCharacters } from "@/hooks/use-characters";
 import { useInjuries } from "@/hooks/use-injuries";
+import { useNpcTemplates } from "@/hooks/use-npc-templates";
 import { useScene } from "@/hooks/use-scene";
 import { api, hasBackend } from "@/lib/api";
 import { downloadText, pickTextFile } from "@/lib/file-transfer";
@@ -26,6 +28,8 @@ export default function App() {
   const { entries, error, create, save, remove, reload } = useCharacters();
   const sceneState = useScene();
   const injuries = useInjuries();
+  const npcTemplates = useNpcTemplates();
+  const [templatesOpen, setTemplatesOpen] = useState(false);
   const [stabilizeTargetId, setStabilizeTargetId] = useState<number | null>(null);
   const damageTarget = entries.find((e) => e.id === damageTargetId) ?? null;
   const selected = entries.find((e) => e.id === selectedCharacterId) ?? null;
@@ -42,6 +46,23 @@ export default function App() {
   const createCharacter = async (kind: CharacterKind) => {
     const record = await create(kind, t(`characters.default_name_${kind}`));
     selectCharacter(record.id);
+  };
+
+  /** Clones a ready-made NPC `names.length` times; optionally rolls each into the initiative order. */
+  const cloneTemplate = async ({ templateId, names, notes, intoCombat }: CloneRequest) => {
+    let last: number | null = null;
+    try {
+      for (const name of names) {
+        const record = await api.createNpcFromTemplate(templateId, name, notes);
+        last = record.id;
+        if (intoCombat) await sceneState.combatAdd(record.id, null);
+      }
+    } finally {
+      // Even after a partial failure the clones that exist must show up.
+      await reload();
+    }
+    if (last !== null) selectCharacter(last);
+    if (intoCombat) setTab("combat");
   };
 
   const [transferNote, setTransferNote] = useState<string | null>(null);
@@ -111,6 +132,13 @@ export default function App() {
               </Button>
               <Button variant="outline" disabled={!hasBackend} onClick={() => createCharacter("npc")}>
                 {t("characters.new_npc")}
+              </Button>
+              <Button
+                variant="outline"
+                disabled={!hasBackend || npcTemplates.length === 0}
+                onClick={() => setTemplatesOpen(true)}
+              >
+                {t("npc.from_template")}
               </Button>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -247,6 +275,13 @@ export default function App() {
               onDamage={() => openDamage(e.id)}
             />
           ))}
+          <NpcTemplateDialog
+            open={templatesOpen}
+            templates={npcTemplates}
+            existingNames={entries.map((e) => e.character.name)}
+            onClone={cloneTemplate}
+            onClose={() => setTemplatesOpen(false)}
+          />
           <StabilizeDialog
             target={entries.find((e) => e.id === stabilizeTargetId) ?? null}
             helpers={entries}

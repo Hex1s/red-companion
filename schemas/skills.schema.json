@@ -47,6 +47,11 @@
         "source": {
           "$ref": "#/$defs/Source"
         },
+        "specialty": {
+          "description": "Taken separately per specialty (a language, an area, a field of science,\na martial art, an instrument): the sheet keeps one level per\n`id:specialty` key, see `character::skill_base_id`.",
+          "type": "boolean",
+          "default": false
+        },
         "stat": {
           "$ref": "#/$defs/StatKey"
         }

@@ -1,0 +1,642 @@
+{
+  "name": "npc_templates",
+  "version": 1,
+  "entries": [
+    {
+      "id": "bodyguard",
+      "name_key": "npc.template.bodyguard.name",
+      "tier": "mook",
+      "stats": {
+        "int": 3,
+        "reflex": 6,
+        "dex": 5,
+        "tech": 2,
+        "cool": 4,
+        "will": 4,
+        "luck": 0,
+        "movement": 4,
+        "body": 6,
+        "emp": 3
+      },
+      "armor_name_key": "armor.items.kevlar",
+      "armor_head_sp": 7,
+      "armor_body_sp": 7,
+      "weapons": [
+        {
+          "name_key": "npc.weapon.shotgun_poor",
+          "damage": "5d6"
+        },
+        {
+          "name_key": "npc.weapon.very_heavy_pistol",
+          "damage": "4d6"
+        }
+      ],
+      "skill_totals": {
+        "athletics": 9,
+        "brawling": 11,
+        "concentration": 6,
+        "conversation": 5,
+        "drive_land_vehicle": 10,
+        "education": 5,
+        "endurance": 9,
+        "evasion": 7,
+        "first_aid": 4,
+        "handgun": 10,
+        "human_perception": 5,
+        "interrogation": 6,
+        "language:native": 5,
+        "language:street_slang": 5,
+        "local_expert:home": 5,
+        "perception": 9,
+        "persuasion": 6,
+        "resist_torture_drugs": 8,
+        "shoulder_arms": 10,
+        "stealth": 7
+      },
+      "gear_key": "npc.template.bodyguard.gear",
+      "notes_key": null,
+      "source": {
+        "page": 412
+      }
+    },
+    {
+      "id": "booster",
+      "name_key": "npc.template.booster.name",
+      "tier": "mook",
+      "stats": {
+        "int": 2,
+        "reflex": 6,
+        "dex": 5,
+        "tech": 2,
+        "cool": 4,
+        "will": 2,
+        "luck": 0,
+        "movement": 4,
+        "body": 2,
+        "emp": 3
+      },
+      "armor_name_key": "armor.items.leather",
+      "armor_head_sp": 4,
+      "armor_body_sp": 4,
+      "weapons": [
+        {
+          "name_key": "npc.weapon.very_heavy_pistol_poor",
+          "damage": "4d6"
+        },
+        {
+          "name_key": "npc.weapon.slice_n_dice",
+          "damage": "2d6"
+        }
+      ],
+      "skill_totals": {
+        "athletics": 9,
+        "brawling": 9,
+        "conceal_reveal_object": 4,
+        "concentration": 4,
+        "conversation": 5,
+        "drive_land_vehicle": 10,
+        "education": 4,
+        "endurance": 6,
+        "evasion": 7,
+        "first_aid": 4,
+        "handgun": 12,
+        "human_perception": 5,
+        "interrogation": 6,
+        "language:native": 4,
+        "language:street_slang": 4,
+        "local_expert:home": 4,
+        "melee_weapon": 11,
+        "perception": 6,
+        "persuasion": 6,
+        "resist_torture_drugs": 4,
+        "stealth": 7
+      },
+      "gear_key": "npc.template.booster.gear",
+      "notes_key": null,
+      "source": {
+        "page": 412
+      }
+    },
+    {
+      "id": "road_bandit",
+      "name_key": "npc.template.road_bandit.name",
+      "tier": "mook",
+      "stats": {
+        "int": 4,
+        "reflex": 6,
+        "dex": 4,
+        "tech": 4,
+        "cool": 3,
+        "will": 3,
+        "luck": 0,
+        "movement": 3,
+        "body": 3,
+        "emp": 3
+      },
+      "armor_name_key": "armor.items.leather",
+      "armor_head_sp": 4,
+      "armor_body_sp": 4,
+      "weapons": [
+        {
+          "name_key": "npc.weapon.very_heavy_pistol",
+          "damage": "4d6"
+        },
+        {
+          "name_key": "npc.weapon.light_melee",
+          "damage": "1d6"
+        },
+        {
+          "name_key": "npc.weapon.bow",
+          "damage": "4d6"
+        }
+      ],
+      "skill_totals": {
+        "athletics": 9,
+        "brawling": 9,
+        "conceal_reveal_object": 4,
+        "concentration": 4,
+        "conversation": 5,
+        "drive_land_vehicle": 10,
+        "education": 4,
+        "endurance": 6,
+        "evasion": 7,
+        "first_aid": 4,
+        "handgun": 12,
+        "human_perception": 5,
+        "interrogation": 6,
+        "language:native": 4,
+        "language:street_slang": 4,
+        "local_expert:home": 4,
+        "melee_weapon": 11,
+        "perception": 6,
+        "persuasion": 6,
+        "resist_torture_drugs": 4,
+        "stealth": 7
+      },
+      "gear_key": "npc.template.road_bandit.gear",
+      "notes_key": null,
+      "source": {
+        "page": 413
+      }
+    },
+    {
+      "id": "security_operative",
+      "name_key": "npc.template.security_operative.name",
+      "tier": "mook",
+      "stats": {
+        "int": 3,
+        "reflex": 7,
+        "dex": 4,
+        "tech": 2,
+        "cool": 2,
+        "will": 3,
+        "luck": 0,
+        "movement": 3,
+        "body": 5,
+        "emp": 3
+      },
+      "armor_name_key": "armor.items.kevlar",
+      "armor_head_sp": 7,
+      "armor_body_sp": 7,
+      "weapons": [
+        {
+          "name_key": "npc.weapon.assault_rifle_poor",
+          "damage": "5d6"
+        },
+        {
+          "name_key": "npc.weapon.very_heavy_pistol",
+          "damage": "4d6"
+        },
+        {
+          "name_key": "npc.weapon.medium_melee",
+          "damage": "2d6"
+        }
+      ],
+      "skill_totals": {
+        "athletics": 8,
+        "autofire": 10,
+        "brawling": 6,
+        "concentration": 7,
+        "conversation": 5,
+        "education": 5,
+        "evasion": 6,
+        "first_aid": 4,
+        "handgun": 10,
+        "human_perception": 5,
+        "interrogation": 6,
+        "language:native": 5,
+        "language:street_slang": 5,
+        "local_expert:home": 5,
+        "melee_weapon": 6,
+        "perception": 5,
+        "persuasion": 4,
+        "resist_torture_drugs": 5,
+        "shoulder_arms": 10,
+        "stealth": 6
+      },
+      "gear_key": "npc.template.security_operative.gear",
+      "notes_key": null,
+      "source": {
+        "page": 413
+      }
+    },
+    {
+      "id": "netrunner",
+      "name_key": "npc.template.netrunner.name",
+      "tier": "lieutenant",
+      "stats": {
+        "int": 7,
+        "reflex": 5,
+        "dex": 4,
+        "tech": 7,
+        "cool": 4,
+        "will": 5,
+        "luck": 0,
+        "movement": 5,
+        "body": 3,
+        "emp": 4
+      },
+      "armor_name_key": "armor.items.bodyweight_suit",
+      "armor_head_sp": 11,
+      "armor_body_sp": 11,
+      "weapons": [
+        {
+          "name_key": "npc.weapon.very_heavy_pistol",
+          "damage": "4d6"
+        }
+      ],
+      "skill_totals": {
+        "athletics": 9,
+        "basic_tech": 13,
+        "brawling": 6,
+        "conceal_reveal_object": 11,
+        "concentration": 9,
+        "conversation": 6,
+        "cryptography": 11,
+        "deduction": 11,
+        "education": 11,
+        "electronics_security_tech": 11,
+        "evasion": 6,
+        "first_aid": 9,
+        "forgery": 13,
+        "handgun": 10,
+        "human_perception": 6,
+        "language:native": 9,
+        "language:street_slang": 9,
+        "local_expert:home": 13,
+        "library_search": 9,
+        "perception": 11,
+        "persuasion": 6,
+        "pick_lock": 11,
+        "resist_torture_drugs": 7,
+        "stealth": 8
+      },
+      "gear_key": "npc.template.netrunner.gear",
+      "notes_key": "npc.template.netrunner.notes",
+      "source": {
+        "page": 414
+      }
+    },
+    {
+      "id": "chief_restorer",
+      "name_key": "npc.template.chief_restorer.name",
+      "tier": "lieutenant",
+      "stats": {
+        "int": 3,
+        "reflex": 6,
+        "dex": 6,
+        "tech": 5,
+        "cool": 4,
+        "will": 5,
+        "luck": 0,
+        "movement": 4,
+        "body": 6,
+        "emp": 4
+      },
+      "armor_name_key": "armor.items.light_armorjack",
+      "armor_head_sp": 11,
+      "armor_body_sp": 11,
+      "weapons": [
+        {
+          "name_key": "npc.weapon.shotgun",
+          "damage": "5d6"
+        },
+        {
+          "name_key": "npc.weapon.light_melee",
+          "damage": "1d6"
+        },
+        {
+          "name_key": "npc.weapon.heavy_pistol",
+          "damage": "3d6"
+        },
+        {
+          "name_key": "npc.weapon.heavy_melee",
+          "damage": "3d6"
+        }
+      ],
+      "skill_totals": {
+        "athletics": 12,
+        "basic_tech": 9,
+        "brawling": 8,
+        "concentration": 7,
+        "conversation": 6,
+        "deduction": 7,
+        "drive_land_vehicle": 10,
+        "education": 5,
+        "electronics_security_tech": 9,
+        "endurance": 11,
+        "evasion": 8,
+        "first_aid": 7,
+        "handgun": 10,
+        "human_perception": 6,
+        "land_vehicle_tech": 7,
+        "language:native": 5,
+        "language:street_slang": 5,
+        "local_expert:home": 5,
+        "melee_weapon": 10,
+        "paramedic": 7,
+        "perception": 8,
+        "persuasion": 6,
+        "pick_lock": 7,
+        "resist_torture_drugs": 10,
+        "shoulder_arms": 10,
+        "stealth": 10,
+        "weaponstech": 9,
+        "wilderness_survival": 7
+      },
+      "gear_key": "npc.template.chief_restorer.gear",
+      "notes_key": null,
+      "source": {
+        "page": 414
+      }
+    },
+    {
+      "id": "security_officer",
+      "name_key": "npc.template.security_officer.name",
+      "tier": "lieutenant",
+      "stats": {
+        "int": 4,
+        "reflex": 8,
+        "dex": 6,
+        "tech": 4,
+        "cool": 6,
+        "will": 5,
+        "luck": 0,
+        "movement": 6,
+        "body": 7,
+        "emp": 4
+      },
+      "armor_name_key": "armor.items.medium_armorjack",
+      "armor_head_sp": 12,
+      "armor_body_sp": 12,
+      "weapons": [
+        {
+          "name_key": "npc.weapon.assault_rifle",
+          "damage": "5d6"
+        },
+        {
+          "name_key": "npc.weapon.very_heavy_pistol",
+          "damage": "4d6"
+        },
+        {
+          "name_key": "npc.weapon.medium_melee",
+          "damage": "2d6"
+        }
+      ],
+      "skill_totals": {
+        "athletics": 10,
+        "autofire": 12,
+        "brawling": 10,
+        "concentration": 7,
+        "conversation": 6,
+        "deduction": 6,
+        "drive_land_vehicle": 12,
+        "education": 6,
+        "evasion": 10,
+        "first_aid": 6,
+        "handgun": 10,
+        "human_perception": 6,
+        "interrogation": 8,
+        "language:native": 6,
+        "language:street_slang": 6,
+        "local_expert:home": 6,
+        "melee_weapon": 10,
+        "perception": 6,
+        "persuasion": 8,
+        "resist_torture_drugs": 10,
+        "shoulder_arms": 10,
+        "stealth": 8,
+        "tactics": 6
+      },
+      "gear_key": "npc.template.security_officer.gear",
+      "notes_key": "npc.template.security_officer.notes",
+      "source": {
+        "page": 415
+      }
+    },
+    {
+      "id": "patrol",
+      "name_key": "npc.template.patrol.name",
+      "tier": "mini_boss",
+      "stats": {
+        "int": 6,
+        "reflex": 8,
+        "dex": 8,
+        "tech": 3,
+        "cool": 5,
+        "will": 6,
+        "luck": 0,
+        "movement": 6,
+        "body": 6,
+        "emp": 6
+      },
+      "armor_name_key": "armor.items.light_armorjack",
+      "armor_head_sp": 11,
+      "armor_body_sp": 11,
+      "weapons": [
+        {
+          "name_key": "npc.weapon.assault_rifle",
+          "damage": "5d6"
+        },
+        {
+          "name_key": "npc.weapon.very_heavy_pistol",
+          "damage": "4d6"
+        },
+        {
+          "name_key": "npc.weapon.light_melee",
+          "damage": "1d6"
+        }
+      ],
+      "skill_totals": {
+        "animal_handling": 8,
+        "athletics": 14,
+        "autofire": 12,
+        "basic_tech": 5,
+        "brawling": 14,
+        "concentration": 10,
+        "conversation": 6,
+        "criminology": 10,
+        "drive_land_vehicle": 14,
+        "education": 8,
+        "endurance": 10,
+        "evasion": 14,
+        "first_aid": 5,
+        "handgun": 14,
+        "human_perception": 8,
+        "land_vehicle_tech": 7,
+        "language:native": 8,
+        "language:street_slang": 8,
+        "local_expert:badlands": 10,
+        "local_expert:home": 8,
+        "melee_weapon": 12,
+        "perception": 14,
+        "persuasion": 7,
+        "resist_torture_drugs": 12,
+        "shoulder_arms": 14,
+        "stealth": 12,
+        "streetwise": 9,
+        "tracking": 10
+      },
+      "gear_key": "npc.template.patrol.gear",
+      "notes_key": "npc.template.patrol.notes",
+      "source": {
+        "page": 415
+      }
+    },
+    {
+      "id": "pyrotechnician",
+      "name_key": "npc.template.pyrotechnician.name",
+      "tier": "mini_boss",
+      "stats": {
+        "int": 5,
+        "reflex": 8,
+        "dex": 6,
+        "tech": 7,
+        "cool": 4,
+        "will": 4,
+        "luck": 0,
+        "movement": 6,
+        "body": 5,
+        "emp": 3
+      },
+      "armor_name_key": "armor.items.light_armorjack",
+      "armor_head_sp": 11,
+      "armor_body_sp": 11,
+      "weapons": [
+        {
+          "name_key": "npc.weapon.flamethrower",
+          "damage": "3d6"
+        },
+        {
+          "name_key": "npc.weapon.heavy_pistol",
+          "damage": "3d6"
+        },
+        {
+          "name_key": "npc.weapon.heavy_melee",
+          "damage": "3d6"
+        }
+      ],
+      "skill_totals": {
+        "athletics": 11,
+        "basic_tech": 12,
+        "brawling": 10,
+        "concentration": 8,
+        "conversation": 5,
+        "demolitions": 13,
+        "drive_land_vehicle": 10,
+        "education": 7,
+        "evasion": 13,
+        "first_aid": 9,
+        "handgun": 14,
+        "heavy_weapons": 14,
+        "human_perception": 5,
+        "interrogation": 10,
+        "language:native": 7,
+        "language:street_slang": 7,
+        "local_expert:home": 7,
+        "melee_weapon": 13,
+        "perception": 12,
+        "persuasion": 6,
+        "resist_torture_drugs": 14,
+        "science:chemistry": 10,
+        "stealth": 10,
+        "streetwise": 8,
+        "tactics": 8
+      },
+      "gear_key": "npc.template.pyrotechnician.gear",
+      "notes_key": "npc.template.pyrotechnician.notes",
+      "source": {
+        "page": 416
+      }
+    },
+    {
+      "id": "cyberpsychopath",
+      "name_key": "npc.template.cyberpsychopath.name",
+      "tier": "boss",
+      "stats": {
+        "int": 5,
+        "reflex": 8,
+        "dex": 8,
+        "tech": 5,
+        "cool": 4,
+        "will": 7,
+        "luck": 0,
+        "movement": 8,
+        "body": 10,
+        "emp": 0
+      },
+      "armor_name_key": "npc.armor.subdermal",
+      "armor_head_sp": 11,
+      "armor_body_sp": 11,
+      "weapons": [
+        {
+          "name_key": "npc.weapon.popup_grenade_launcher",
+          "damage": "6d6"
+        },
+        {
+          "name_key": "npc.weapon.cybersnake",
+          "damage": "4d6"
+        },
+        {
+          "name_key": "npc.weapon.popup_heavy_smg",
+          "damage": "3d6"
+        },
+        {
+          "name_key": "npc.weapon.wolvers",
+          "damage": "3d6"
+        }
+      ],
+      "skill_totals": {
+        "athletics": 16,
+        "autofire": 14,
+        "basic_tech": 11,
+        "brawling": 15,
+        "concentration": 6,
+        "conversation": 2,
+        "drive_land_vehicle": 10,
+        "education": 7,
+        "endurance": 10,
+        "evasion": 13,
+        "first_aid": 6,
+        "handgun": 12,
+        "heavy_weapons": 14,
+        "human_perception": 2,
+        "interrogation": 13,
+        "language:native": 7,
+        "language:street_slang": 7,
+        "local_expert:home": 7,
+        "melee_weapon": 17,
+        "perception": 9,
+        "persuasion": 6,
+        "resist_torture_drugs": 15,
+        "stealth": 10,
+        "tracking": 10
+      },
+      "gear_key": "npc.template.cyberpsychopath.gear",
+      "notes_key": null,
+      "source": {
+        "page": 416
+      }
+    }
+  ]
+}

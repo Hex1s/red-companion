@@ -159,6 +159,62 @@ pub struct Skill {
     pub category: SkillCategory,
     /// Marked "(x2)" in the book: costs twice as much to learn and improve.
     pub double_cost: bool,
+    /// Taken separately per specialty (a language, an area, a field of science,
+    /// a martial art, an instrument): the sheet keeps one level per
+    /// `id:specialty` key, see `character::skill_base_id`.
+    #[serde(default)]
+    pub specialty: bool,
+    pub source: Source,
+}
+
+/// Power tier of a filler NPC (p. 413-416): how many to put against a team.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+#[serde(rename_all = "snake_case")]
+pub enum NpcTier {
+    /// "Шестёрка": low-level enemy.
+    Mook,
+    /// "Лейтенант": mid-level, one per two edgerunners.
+    Lieutenant,
+    /// "Мини-босс": high-level, one per three edgerunners.
+    MiniBoss,
+    /// Made for boss fights.
+    Boss,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+pub struct NpcWeapon {
+    pub name_key: String,
+    /// Damage dice as printed, e.g. `5d6`.
+    pub damage: String,
+}
+
+/// Ready-made NPC from "Шестёрки и Засранцы" (p. 412-416). Cloning one makes a
+/// new NPC character; HP, serious-wound threshold and death save are derived
+/// from the stats, the book's printed values are checked against them in tests.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+pub struct NpcTemplate {
+    pub id: String,
+    pub name_key: String,
+    pub tier: NpcTier,
+    pub stats: crate::character::Stats,
+    pub armor_name_key: String,
+    pub armor_head_sp: u8,
+    pub armor_body_sp: u8,
+    pub weapons: Vec<NpcWeapon>,
+    /// Skill sums as printed in the book (p. 412): linked STAT + skill level +
+    /// modifiers of gear and cyberware, by sheet skill key (`id` or
+    /// `id:specialty`). The sheet's level is the sum minus the stat, see
+    /// `NpcTemplate::to_character`.
+    #[ts(type = "Record<string, number>")]
+    pub skill_totals: std::collections::BTreeMap<String, u8>,
+    /// Cyberware and gear line, one localized text.
+    pub gear_key: String,
+    /// Printed details the sheet has no field for (role abilities, bracketed
+    /// alternative values, cyberdeck programs).
+    pub notes_key: Option<String>,
     pub source: Source,
 }
 
@@ -295,6 +351,101 @@ pub fn validate_skills(c: &Collection<Skill>) -> Result<(), CatalogError> {
     }
 }
 
+impl StatKey {
+    pub fn value_in(self, stats: &crate::character::Stats) -> u8 {
+        match self {
+            StatKey::Int => stats.int,
+            StatKey::Reflex => stats.reflex,
+            StatKey::Dex => stats.dex,
+            StatKey::Tech => stats.tech,
+            StatKey::Cool => stats.cool,
+            StatKey::Will => stats.will,
+            StatKey::Luck => stats.luck,
+            StatKey::Movement => stats.movement,
+            StatKey::Body => stats.body,
+            StatKey::Emp => stats.emp,
+        }
+    }
+}
+
+impl NpcTemplate {
+    /// Sheet skill levels: the printed sum minus the linked stat, so that
+    /// `stat + level` gives the printed number again. Skills unknown to the
+    /// catalog are skipped (validation rejects such templates).
+    pub fn skill_levels(&self, skills: &[Skill]) -> std::collections::BTreeMap<String, u8> {
+        use crate::character::skill_base_id;
+        self.skill_totals
+            .iter()
+            .filter_map(|(key, &total)| {
+                let skill = skills.iter().find(|s| s.id == skill_base_id(key))?;
+                Some((key.clone(), total.saturating_sub(skill.stat.value_in(&self.stats))))
+            })
+            .collect()
+    }
+
+    /// A fresh NPC sheet: full HP, unworn armor at full SP. `notes` is the
+    /// localized weapons and gear text the caller composes (the sheet has no
+    /// weapon or gear fields).
+    pub fn to_character(&self, name: &str, notes: &str, skills: &[Skill]) -> crate::character::Character {
+        use crate::character::{ArmorSlot, Character};
+        let mut c = Character::quick(name);
+        c.stats = self.stats.clone();
+        c.hp = c.max_hp();
+        c.armor_head = ArmorSlot { sp: self.armor_head_sp, max_sp: self.armor_head_sp };
+        c.armor_body = ArmorSlot { sp: self.armor_body_sp, max_sp: self.armor_body_sp };
+        c.skills = self.skill_levels(skills);
+        c.notes = notes.to_string();
+        c
+    }
+}
+
+/// Printed range of filler NPC templates (p. 412-416).
+pub const NPC_PAGES: std::ops::RangeInclusive<u32> = 412..=416;
+
+pub fn validate_npc_templates(
+    c: &Collection<NpcTemplate>,
+    skills: &Collection<Skill>,
+) -> Result<(), CatalogError> {
+    use crate::character::{skill_base_id, skill_specialty, SKILL_MAX};
+    check_ids(c.entries.iter().map(|e| (e.id.as_str(), e.name_key.as_str(), e.source.page)))?;
+    for e in &c.entries {
+        let bad = |why: &str| CatalogError::OutOfRange(format!("{} ({why})", e.id));
+        if !NPC_PAGES.contains(&e.source.page) || e.gear_key.is_empty() || e.armor_name_key.is_empty() {
+            return Err(bad("page or keys"));
+        }
+        let st = &e.stats;
+        for v in [st.int, st.reflex, st.dex, st.tech, st.cool, st.will, st.movement, st.body] {
+            if !(1..=10).contains(&v) {
+                return Err(bad("stat"));
+            }
+        }
+        if st.emp > 10 || st.luck > 10 || e.armor_head_sp > 20 || e.armor_body_sp > 20 {
+            return Err(bad("emp, luck or armor"));
+        }
+        for w in &e.weapons {
+            let dice: crate::dice::DiceNotation = w.damage.parse().map_err(|_| bad("damage dice"))?;
+            if dice.sides != 6 || dice.modifier != 0 || w.name_key.is_empty() {
+                return Err(bad("weapon"));
+            }
+        }
+        for (key, &total) in &e.skill_totals {
+            let known = skills.entries.iter().find(|s| s.id == skill_base_id(key));
+            let Some(skill) = known else { return Err(bad(&format!("unknown skill {key}"))) };
+            // A sum is stat + level (+ modifiers), so at most stat + 10. A sum below
+            // the stat (a printed penalty) is allowed and gives level 0.
+            let stat = skill.stat.value_in(&e.stats);
+            if total.saturating_sub(stat) > SKILL_MAX {
+                return Err(bad(&format!("sum of {key}")));
+            }
+            // A specialty is given exactly for skills that take one.
+            if skill.specialty != skill_specialty(key).is_some_and(|s| !s.is_empty()) {
+                return Err(bad(&format!("specialty of {key}")));
+            }
+        }
+    }
+    Ok(())
+}
+
 /// JSON Schemas of all reference collections, by file name.
 pub fn json_schemas() -> Vec<(&'static str, schemars::Schema)> {
     use schemars::schema_for;
@@ -304,6 +455,7 @@ pub fn json_schemas() -> Vec<(&'static str, schemars::Schema)> {
         ("armor", schema_for!(Collection<Armor>)),
         ("shields", schema_for!(Collection<Shield>)),
         ("skills", schema_for!(Collection<Skill>)),
+        ("npc_templates", schema_for!(Collection<NpcTemplate>)),
         ("collection_version", schema_for!(CollectionVersion)),
     ]
 }
