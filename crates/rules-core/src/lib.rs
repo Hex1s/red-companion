@@ -8,6 +8,7 @@ pub mod character;
 pub mod damage;
 pub mod data_source;
 pub mod dice;
+pub mod scene;
 
 use serde::Serialize;
 use ts_rs::TS;

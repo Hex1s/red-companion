@@ -168,11 +168,16 @@
     "bulletproof_glass": "Bulletproof glass",
     "concrete": "Concrete",
     "wood": "Wood",
-    "drywall": "Drywall / foam / polymers"
+    "drywall": "Drywall / foam / polymers",
+    "thickness": {
+      "thick": "thick",
+      "thin": "thin"
+    }
   },
   "shield": {
     "bulletproof_shield": "Bulletproof shield",
-    "corpse": "Corpse"
+    "corpse": "Corpse",
+    "living_shield": "Living shield"
   },
   "characters": {
     "title": "Characters",
@@ -301,5 +306,26 @@
       "sea_vehicle_tech": "Sea Vehicle Tech",
       "weaponstech": "Weaponstech"
     }
+  },
+  "scene": {
+    "title": "Scene",
+    "covers": "Cover",
+    "no_covers": "No cover yet. Add the first one from a preset below.",
+    "add": "Add cover",
+    "preset": "Preset",
+    "custom": "Custom cover",
+    "name": "Name",
+    "name_optional": "Name (optional)",
+    "hp": "HP",
+    "max_hp": "Max HP",
+    "hp_required": "Enter HP",
+    "destroyed": "Destroyed",
+    "remove": "Remove",
+    "behind": "Behind cover",
+    "nobody": "Nobody",
+    "add_character": "Put behind cover…",
+    "leave": "Leave cover",
+    "no_backend": "The scene is only available in the app (npm run tauri dev).",
+    "load_error": "Could not load the scene: {{error}}"
   }
 }

@@ -150,6 +150,25 @@ impl Storage {
         })?;
         Ok(rows.collect::<std::result::Result<_, _>>()?)
     }
+
+    /// The most recently created scene: the one the app works with.
+    pub fn latest_scene(&self) -> Result<Option<SceneRow>> {
+        Ok(self
+            .conn
+            .query_row(
+                "SELECT id, session_id, name, data FROM scenes ORDER BY id DESC LIMIT 1",
+                [],
+                |r| {
+                    Ok(SceneRow {
+                        id: r.get(0)?,
+                        session_id: r.get(1)?,
+                        name: r.get(2)?,
+                        data: r.get(3)?,
+                    })
+                },
+            )
+            .optional()?)
+    }
 }
 
 fn character_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<CharacterRow> {
@@ -191,6 +210,16 @@ mod tests {
 
         s.delete_session(session).unwrap();
         assert!(s.list_scenes(session).unwrap().is_empty());
+    }
+
+    #[test]
+    fn latest_scene_is_the_newest() {
+        let s = Storage::open_in_memory().unwrap();
+        assert!(s.latest_scene().unwrap().is_none());
+        let session = s.create_session("Night 1").unwrap();
+        s.create_scene(session, "first", "{}").unwrap();
+        let second = s.create_scene(session, "second", "{}").unwrap();
+        assert_eq!(s.latest_scene().unwrap().unwrap().id, second);
     }
 
     #[test]
