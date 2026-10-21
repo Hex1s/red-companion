@@ -85,10 +85,10 @@ GM-companion для Cyberpunk RED (Tauri: Rust + React). Основан на р�
 
 | Статус | # | Задача | Зависит от |
 |---|---|---|---|
-| [ ] | 0.1 | Tauri-проект, workspace: `rules-core` (чистый Rust, без Tauri), `app` (Tauri), `ui` (React + TS) | — |
+| [x] | 0.1 | Tauri-проект, workspace: `rules-core` (чистый Rust, без Tauri), `app` (Tauri), `ui` (React + TS). Сделано: корневой Cargo-workspace, `crates/rules-core`, `src-tauri` (app), фронт остаётся в `src/` | — |
 | [x] | 0.2 | Tailwind, shadcn/ui, i18next (ru/en) | — |
-| [ ] | 0.3 | Генерация TS-типов из Rust (`specta` / `ts-rs`) | 0.1 |
-| [ ] | 0.4 | Движок кубиков: разбор нотации `NdM`, внедряемый RNG, лог бросков, ручной ввод | 0.1 |
+| [x] | 0.3 | Генерация TS-типов из Rust: выбран `ts-rs`, типы пишутся в `src/bindings/` при `cargo test` (пример: `RulesInfo`, команда `rules_info`) | 0.1 |
+| [x] | 0.4 | Движок кубиков: разбор нотации `NdM`, внедряемый RNG, лог бросков, ручной ввод (`rules-core::dice`, 7 тестов; детект двух шестёрок — `RollResult::is_critical`) | 0.1 |
 | [ ] | 0.5 | Хранилище пользователя (SQLite): персонажи, NPC, сцены, сессии; миграции | 0.1 |
 | [ ] | 0.6 | **Слой данных `DataSource`** (трейт в Rust): справочники (оружие, броня, укрытия, травмы, NPC-шаблоны, навыки). Реализация №1 — встроенный снимок данных (`seed`) | 0.1, 0.7 |
 | [ ] | 0.7 | Схемы справочников (JSON Schema → позже OpenAPI) и версия набора данных (хэш/версия на коллекцию) | — |

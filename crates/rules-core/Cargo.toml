@@ -1,0 +1,11 @@
+[package]
+name = "rules-core"
+description = "Cyberpunk RED rules engine: pure Rust, no Tauri dependency"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+rand = "0.10.3"
+serde = { version = "1", features = ["derive"] }
+thiserror = "2.0.21"
+ts-rs = "12.0.1"
