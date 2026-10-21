@@ -26,6 +26,10 @@ export const api = {
   saveCharacter: (id: number, character: Character) =>
     invoke<CharacterRecord>("save_character", { id, character }),
   deleteCharacter: (id: number) => invoke<void>("delete_character", { id }),
+  /** Export file text for `ids`, or for everyone when `null`. */
+  exportCharacters: (ids: number[] | null) => invoke<string>("export_characters", { ids }),
+  /** Imports a file's text as new characters; rejects the whole file if anything is invalid. */
+  importCharacters: (json: string) => invoke<CharacterRecord[]>("import_characters", { json }),
   getScene: () => invoke<SceneRecord>("get_scene"),
   listCoverPresets: () => invoke<CoverPreset[]>("list_cover_presets"),
   addCover: (preset: string | null, name: string, hp: number | null) =>

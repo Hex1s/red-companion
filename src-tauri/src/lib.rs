@@ -12,6 +12,7 @@ use rules_core::dice::{
     roll_manual,
 };
 use rules_core::scene::{CoverPreset, Scene, SceneRecord, cover_presets};
+use rules_core::transfer::{self, ExportedCharacter};
 use rules_core::vitals::{self, DeathSaveApplied, STABILIZE_SKILLS, StabilizeApplied};
 use storage::{CharacterRow, Storage};
 use tauri::{Manager, State};
@@ -85,6 +86,46 @@ fn save_character(
         return Err(format!("character {id} not found"));
     }
     Ok(CharacterRecord::new(id, character))
+}
+
+/// Serialises characters (`ids`, or everyone when `None`) into an export file.
+#[tauri::command]
+fn export_characters(
+    state: State<'_, AppStorage>,
+    ids: Option<Vec<i64>>,
+) -> Result<String, String> {
+    let storage = lock(&state)?;
+    let mut items = Vec::new();
+    for kind in [CharacterKind::Pc, CharacterKind::Npc] {
+        for row in storage.list_characters(storage_kind(kind)).map_err(|e| e.to_string())? {
+            if ids.as_ref().is_some_and(|ids| !ids.contains(&row.id)) {
+                continue;
+            }
+            let character: Character = serde_json::from_str(&row.data).map_err(|e| e.to_string())?;
+            items.push(ExportedCharacter { kind, character });
+        }
+    }
+    transfer::export(items).map_err(|e| e.to_string())
+}
+
+/// Imports an export file as new characters; the whole file is validated
+/// before anything is stored.
+#[tauri::command]
+fn import_characters(
+    state: State<'_, AppStorage>,
+    json: String,
+) -> Result<Vec<CharacterRecord>, String> {
+    let items = transfer::parse_import(&json, &SeedDataSource).map_err(|e| e.to_string())?;
+    let storage = lock(&state)?;
+    let mut records = Vec::new();
+    for item in items {
+        let data = serde_json::to_string(&item.character).map_err(|e| e.to_string())?;
+        let id = storage
+            .insert_character(storage_kind(item.kind), &item.character.name, &data)
+            .map_err(|e| e.to_string())?;
+        records.push(CharacterRecord::new(id, item.character));
+    }
+    Ok(records)
 }
 
 #[tauri::command]
@@ -526,6 +567,8 @@ pub fn run() {
             create_character,
             save_character,
             delete_character,
+            export_characters,
+            import_characters,
             get_scene,
             list_cover_presets,
             add_cover,

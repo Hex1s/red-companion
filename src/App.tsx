@@ -15,6 +15,7 @@ import { errorMessage, useCharacters } from "@/hooks/use-characters";
 import { useInjuries } from "@/hooks/use-injuries";
 import { useScene } from "@/hooks/use-scene";
 import { api, hasBackend } from "@/lib/api";
+import { downloadText, pickTextFile } from "@/lib/file-transfer";
 import { SUPPORTED_LANGUAGES } from "@/i18n";
 import { useUiStore, type AppTab } from "@/store/ui-store";
 
@@ -41,6 +42,31 @@ export default function App() {
   const createCharacter = async (kind: CharacterKind) => {
     const record = await create(kind, t(`characters.default_name_${kind}`));
     selectCharacter(record.id);
+  };
+
+  const [transferNote, setTransferNote] = useState<string | null>(null);
+
+  const exportCharacters = async (ids: number[] | null) => {
+    try {
+      const name = ids ? (selected?.character.name ?? "character") : "characters";
+      downloadText(`${name.replace(/[\\/:*?"<>|]/g, "_")}.redcompanion.json`, await api.exportCharacters(ids));
+      setTransferNote(null);
+    } catch (e) {
+      setTransferNote(t("characters.export_error", { error: errorMessage(e) }));
+    }
+  };
+
+  const importCharacters = async () => {
+    try {
+      const json = await pickTextFile(".json,application/json");
+      if (json === null) return;
+      const imported = await api.importCharacters(json);
+      await reload();
+      if (imported.length === 1) selectCharacter(imported[0].id);
+      setTransferNote(t("characters.imported", { count: imported.length }));
+    } catch (e) {
+      setTransferNote(t("characters.import_error", { error: errorMessage(e) }));
+    }
   };
 
   const undoDamage = async () => {
@@ -86,6 +112,28 @@ export default function App() {
               <Button variant="outline" disabled={!hasBackend} onClick={() => createCharacter("npc")}>
                 {t("characters.new_npc")}
               </Button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" size="xs" disabled={!hasBackend} onClick={importCharacters}>
+                {t("characters.import")}
+              </Button>
+              <Button
+                variant="outline"
+                size="xs"
+                disabled={!hasBackend || !selected}
+                onClick={() => exportCharacters(selected ? [selected.id] : null)}
+              >
+                {t("characters.export_selected")}
+              </Button>
+              <Button
+                variant="outline"
+                size="xs"
+                disabled={!hasBackend || entries.length === 0}
+                onClick={() => exportCharacters(null)}
+              >
+                {t("characters.export_all")}
+              </Button>
+              {transferNote && <span className="text-sm text-muted-foreground">{transferNote}</span>}
             </div>
             {!hasBackend && <p className="text-muted-foreground">{t("characters.no_backend")}</p>}
             {error && (

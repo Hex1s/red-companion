@@ -188,6 +188,12 @@
     "default_name_pc": "New character",
     "default_name_npc": "New NPC",
     "empty": "No characters yet. Create the first one with the button above.",
+    "import": "Import from file",
+    "export_selected": "Export selected",
+    "export_all": "Export all",
+    "imported": "Imported characters: {{count}}.",
+    "import_error": "Import failed: {{error}}",
+    "export_error": "Export failed: {{error}}",
     "select_hint": "Pick a character on the right or create a new one.",
     "kind": {
       "pc": "Player",
