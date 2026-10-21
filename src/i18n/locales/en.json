@@ -31,5 +31,34 @@
   "armor": {
     "head": "HEAD",
     "body": "BODY"
+  },
+  "glossary": {
+    "hp": "HP",
+    "hp_full": "Hit Points",
+    "sp": "SP",
+    "sp_full": "Stopping Power",
+    "dv": "DV",
+    "dv_full": "Difficulty Value",
+    "humanity": "HUM",
+    "humanity_full": "Humanity",
+    "wound": {
+      "light": "Lightly wounded",
+      "serious": "Seriously wounded",
+      "mortal": "Mortally wounded",
+      "dead": "Dead"
+    },
+    "armor_mode": {
+      "full": "Full armor",
+      "half": "Half armor",
+      "ignored": "Armor ignored"
+    },
+    "area": {
+      "head": "Head",
+      "body": "Body"
+    },
+    "death_save": "Death save",
+    "critical_injury": "Critical injury",
+    "cover": "Cover",
+    "ablation": "Ablation"
   }
 }

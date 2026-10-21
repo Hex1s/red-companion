@@ -3,6 +3,8 @@
 //! Pure Rust: must not depend on Tauri so it can be tested alone and
 //! later reused in WASM or on the server.
 
+pub mod catalog;
+pub mod data_source;
 pub mod dice;
 
 use serde::Serialize;

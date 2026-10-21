@@ -1,0 +1,10 @@
+[package]
+name = "storage"
+description = "Local user storage (SQLite): characters, NPCs, sessions, scenes"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+rusqlite = { version = "0.37", features = ["bundled"] }
+refinery = { version = "0.10", features = ["rusqlite"] }
+thiserror = "2"

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CollectionVersion",
+  "description": "Small description of a collection used to compare local and remote data.",
+  "type": "object",
+  "properties": {
+    "hash": {
+      "description": "SHA-256 of the serialized entries, lowercase hex.",
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "version": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "name",
+    "version",
+    "hash"
+  ]
+}
