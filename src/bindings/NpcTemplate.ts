@@ -9,7 +9,16 @@ import type { Stats } from "./Stats";
  * new NPC character; HP, serious-wound threshold and death save are derived
  * from the stats, the book's printed values are checked against them in tests.
  */
-export type NpcTemplate = { id: string, name_key: string, tier: NpcTier, stats: Stats, armor_name_key: string, armor_head_sp: number, armor_body_sp: number, weapons: Array<NpcWeapon>, 
+export type NpcTemplate = { uuid: string, code: string, name: string, tier: NpcTier, stats: Stats, 
+/**
+ * Armor as printed, in the content language.
+ */
+armor_name: string, 
+/**
+ * `code` of the armor catalog entry when the armor is one (its SP is
+ * then the catalog's); `None` for armor outside the catalog (cyberware).
+ */
+armor_code: string | null, armor_head_sp: number, armor_body_sp: number, weapons: Array<NpcWeapon>, 
 /**
  * Skill sums as printed in the book (p. 412): linked STAT + skill level +
  * modifiers of gear and cyberware, by sheet skill key (`id` or
@@ -18,11 +27,11 @@ export type NpcTemplate = { id: string, name_key: string, tier: NpcTier, stats: 
  */
 skill_totals: Record<string, number>, 
 /**
- * Cyberware and gear line, one localized text.
+ * Cyberware and gear line, one text in the content language.
  */
-gear_key: string, 
+gear: string, 
 /**
  * Printed details the sheet has no field for (role abilities, bracketed
  * alternative values, cyberdeck programs).
  */
-notes_key: string | null, source: Source, };
+notes: string | null, source: Source, };

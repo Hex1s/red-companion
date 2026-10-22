@@ -31,10 +31,10 @@
       "description": "Armor type (book p. 184-185). Any type can be worn on the head or on the\nbody; armor does not stack: only the best SP of an area counts.",
       "type": "object",
       "properties": {
-        "id": {
+        "code": {
           "type": "string"
         },
-        "name_key": {
+        "name": {
           "type": "string"
         },
         "penalty": {
@@ -52,11 +52,15 @@
           "format": "uint8",
           "maximum": 255,
           "minimum": 0
+        },
+        "uuid": {
+          "type": "string"
         }
       },
       "required": [
-        "id",
-        "name_key",
+        "uuid",
+        "code",
+        "name",
         "sp",
         "penalty",
         "source"

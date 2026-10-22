@@ -635,7 +635,7 @@ mod tests {
 
     #[test]
     fn critical_injury_roll_skips_injuries_already_owned_p187() {
-        let seed = SeedDataSource;
+        let seed = SeedDataSource::default();
         let table = seed.critical_injuries().unwrap().entries;
         let owned = vec!["broken_arm".to_string()]; // body, roll 6
         // First 2d6 = 6 (3+3) is owned: reroll; then 2+3 = 5.
@@ -648,7 +648,7 @@ mod tests {
 
     #[test]
     fn critical_injury_roll_gives_none_when_all_owned() {
-        let seed = SeedDataSource;
+        let seed = SeedDataSource::default();
         let table = seed.critical_injuries().unwrap().entries;
         let owned: Vec<String> =
             table.iter().filter(|i| i.area == BodyArea::Head).map(|i| i.id.clone()).collect();

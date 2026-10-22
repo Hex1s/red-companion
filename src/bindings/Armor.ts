@@ -5,7 +5,7 @@ import type { Source } from "./Source";
  * Armor type (book p. 184-185). Any type can be worn on the head or on the
  * body; armor does not stack: only the best SP of an area counts.
  */
-export type Armor = { id: string, name_key: string, sp: number, 
+export type Armor = { uuid: string, code: string, name: string, sp: number, 
 /**
  * Penalty to REF, DEX and MOVE (0, 2 or 4); applied once, the highest
  * of the worn armor.

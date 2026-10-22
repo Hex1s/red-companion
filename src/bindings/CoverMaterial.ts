@@ -8,6 +8,15 @@ import type { Source } from "./Source";
  */
 export type CoverMaterial = { 
 /**
- * Unique per material and thickness (e.g. `metal_thick`).
+ * Identity of the record, the same in every language.
  */
-id: string, name_key: string, thickness: CoverThickness, hp: number, source: Source, };
+uuid: string, 
+/**
+ * Stable readable code, unique per material and thickness (e.g.
+ * `metal_thick`); scenes refer to presets by it.
+ */
+code: string, 
+/**
+ * Material name in the content language.
+ */
+name: string, thickness: CoverThickness, hp: number, source: Source, };

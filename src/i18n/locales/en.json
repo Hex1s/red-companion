@@ -5,7 +5,7 @@
   },
   "nav": {
     "combat": "Combat",
-    "rules": "Rules",
+    "rules": "Reference",
     "map": "Night City",
     "characters": "Characters"
   },
@@ -31,17 +31,7 @@
   },
   "armor": {
     "head": "HEAD",
-    "body": "BODY",
-    "items": {
-      "leather": "Leathers",
-      "kevlar": "Kevlar",
-      "light_armorjack": "Light Armorjack",
-      "bodyweight_suit": "Bodyweight Suit",
-      "medium_armorjack": "Medium Armorjack",
-      "heavy_armorjack": "Heavy Armorjack",
-      "flak": "Flak",
-      "metalgear": "Metalgear"
-    }
+    "body": "BODY"
   },
   "glossary": {
     "hp": "HP",
@@ -165,21 +155,10 @@
     }
   },
   "cover": {
-    "metal": "Metal",
-    "stone": "Stone",
-    "bulletproof_glass": "Bulletproof glass",
-    "concrete": "Concrete",
-    "wood": "Wood",
-    "drywall": "Drywall / foam / polymers",
     "thickness": {
       "thick": "thick",
       "thin": "thin"
     }
-  },
-  "shield": {
-    "bulletproof_shield": "Bulletproof shield",
-    "corpse": "Corpse",
-    "living_shield": "Living shield"
   },
   "characters": {
     "title": "Characters",
@@ -471,79 +450,11 @@
     "formula_short": "TECH {{tech}} + skill {{level}}"
   },
   "npc": {
-    "armor": {
-      "subdermal": "Subdermal armor"
-    },
     "tier": {
       "mook": "Mook",
       "lieutenant": "Lieutenant",
       "mini_boss": "Mini-boss",
       "boss": "Boss"
-    },
-    "weapon": {
-      "shotgun": "Shotgun",
-      "shotgun_poor": "Shotgun (poor quality)",
-      "very_heavy_pistol": "Very heavy pistol",
-      "very_heavy_pistol_poor": "Very heavy pistol (poor quality)",
-      "heavy_pistol": "Heavy pistol",
-      "assault_rifle": "Assault rifle",
-      "assault_rifle_poor": "Assault rifle (poor quality)",
-      "bow": "Bow",
-      "flamethrower": "Flamethrower",
-      "light_melee": "Light melee weapon",
-      "medium_melee": "Medium melee weapon",
-      "heavy_melee": "Heavy melee weapon",
-      "slice_n_dice": "Slice 'N Dice",
-      "popup_grenade_launcher": "Popup grenade launcher",
-      "popup_heavy_smg": "Popup heavy SMG",
-      "cybersnake": "Cybersnake",
-      "wolvers": "Wolvers"
-    },
-    "template": {
-      "bodyguard": {
-        "name": "Bodyguard",
-        "gear": "Shotgun ammo x25, Very heavy pistol ammo x25, Radio"
-      },
-      "booster": {
-        "name": "Booster",
-        "gear": "Very heavy pistol ammo x30, Burner phone, Slice 'N Dice, Techhair"
-      },
-      "road_bandit": {
-        "name": "Road bandit",
-        "gear": "Very heavy pistol ammo x20, Arrows x20, Rope, Flashlight, Neural link (Interface plug)"
-      },
-      "security_operative": {
-        "name": "Security operative",
-        "gear": "Rifle ammo x40, Very heavy pistol ammo x20, Radio"
-      },
-      "netrunner": {
-        "name": "Netrunner",
-        "gear": "Very heavy pistol ammo x50, Flashlight, Virtuality goggles, Neural link (Interface plug)",
-        "notes": "Role ability: Interface 4. Cyberdeck programs: Banhammer, Dekalom, Eraser, Hellbolt, Shield, Sword, Worm."
-      },
-      "chief_restorer": {
-        "name": "Chief restorer",
-        "gear": "Shotgun ammo x25, Heavy pistol ammo x25, Agent, Grapple gun, Radio, Tent and camping gear, Nasal filters, Neural link (Chipware socket, Tactile boost chip)"
-      },
-      "security_officer": {
-        "name": "Security officer",
-        "gear": "Assault rifle ammo x50, Very heavy pistol ammo x30, Bulletproof shield (10 HP), Binoculars, Burner phone, Flashlight, Handcuffs x2, Radio, Radio scanner/Music player, Neural link (Kerenzikov)",
-        "notes": "The book prints alternative values in brackets: REF 8 (6), DEX 6 (4), MOVE 6 (4); skills: Athletics 10 (8), Autofire 12 (10), Brawling 10 (8), Driving 12 (10), Evasion 10 (8), Handgun 10 (8), Melee weapon 10 (8), Shoulder arms 10 (8), Stealth 8 (6). The book does not say what the brackets mean."
-      },
-      "patrol": {
-        "name": "Patrol",
-        "gear": "Assault rifle ammo x60, Very heavy pistol ammo x40, Handcuffs x2, Tracker beacon, Cyberaudio suite (Amplified hearing), Cybereye (Targeting scope, Teleoptics), Neural link (Interface plug)",
-        "notes": "Role ability: Family Motorpool 4."
-      },
-      "pyrotechnician": {
-        "name": "Pyrotechnician",
-        "gear": "Flamethrower ammo (incendiary shotgun shells) x8, Very heavy pistol ammo x50, Incendiary grenade x1, Flashbang grenade x1, Cyberaudio suite (Level damper), Cybereye x2 (Anti-dazzle x2), Nasal filters",
-        "notes": "Role ability: Combat Awareness 4."
-      },
-      "cyberpsychopath": {
-        "name": "Cyberpsychopath",
-        "gear": "Armor-piercing grenade x2, Heavy pistol ammo x100, Cyberarm x2 (Popup grenade launcher x2, Popup heavy SMG, Wolvers), Cyberleg x2 (Jump booster x2), Cybersnake, Muscle and bone lace, Neural link (Chipware socket, Pain editor), Subdermal armor"
-      }
     },
     "from_template": "From template",
     "dialog_title": "Ready-made NPCs",
@@ -608,5 +519,22 @@
     "result": "{{bonus}} + d10 {{die}} = {{total}} vs DV {{dv}}",
     "declared_result": "Stabilized without a roll (DV {{dv}})",
     "failed": "failed"
+  },
+  "reference": {
+    "title": "Reference",
+    "search": "Search by name and description",
+    "nothing_found": "Nothing found.",
+    "penalty": "Penalty to REF, DEX and MOVE: −{{value}}",
+    "section": {
+      "injuries": "Injuries",
+      "cover": "Cover",
+      "armor": "Armor",
+      "skills": "Skills",
+      "npc": "NPCs"
+    },
+    "area": {
+      "body": "Body",
+      "head": "Head"
+    }
   }
 }

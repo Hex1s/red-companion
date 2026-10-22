@@ -1,7 +1,11 @@
 //! Reference-data schemas (collections of game entries) and dataset versioning.
 //!
-//! Numbers live in the data without any language; names and descriptions are
-//! i18n keys. Every entry records where in the book it came from. The same
+//! Core rules data (critical injuries, skills) keeps names as i18n keys of the
+//! app. Server content (cover, shields, armor, NPCs and later weapons, lore)
+//! is one table per type: `uuid`, a stable `code`, numeric columns of the
+//! contract and plain text columns in the language of the server the data came
+//! from; everything but the texts is identical in every language. Every entry
+//! records where in the book it came from. The same
 //! types are exported as JSON Schema (see `schemas/`) and will be the base of
 //! the future OpenAPI contract.
 
@@ -83,9 +87,13 @@ pub enum CoverThickness {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
 #[ts(export)]
 pub struct CoverMaterial {
-    /// Unique per material and thickness (e.g. `metal_thick`).
-    pub id: String,
-    pub name_key: String,
+    /// Identity of the record, the same in every language.
+    pub uuid: String,
+    /// Stable readable code, unique per material and thickness (e.g.
+    /// `metal_thick`); scenes refer to presets by it.
+    pub code: String,
+    /// Material name in the content language.
+    pub name: String,
     pub thickness: CoverThickness,
     pub hp: u32,
     pub source: Source,
@@ -96,8 +104,9 @@ pub struct CoverMaterial {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
 #[ts(export)]
 pub struct Armor {
-    pub id: String,
-    pub name_key: String,
+    pub uuid: String,
+    pub code: String,
+    pub name: String,
     pub sp: u8,
     /// Penalty to REF, DEX and MOVE (0, 2 or 4); applied once, the highest
     /// of the worn armor.
@@ -109,8 +118,9 @@ pub struct Armor {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
 #[ts(export)]
 pub struct Shield {
-    pub id: String,
-    pub name_key: String,
+    pub uuid: String,
+    pub code: String,
+    pub name: String,
     /// `None` for a body used as a shield: its HP equal the BODY stat the
     /// person had while alive.
     pub hp: Option<u32>,
@@ -185,7 +195,7 @@ pub enum NpcTier {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
 #[ts(export)]
 pub struct NpcWeapon {
-    pub name_key: String,
+    pub name: String,
     /// Damage dice as printed, e.g. `5d6`.
     pub damage: String,
 }
@@ -196,11 +206,16 @@ pub struct NpcWeapon {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
 #[ts(export)]
 pub struct NpcTemplate {
-    pub id: String,
-    pub name_key: String,
+    pub uuid: String,
+    pub code: String,
+    pub name: String,
     pub tier: NpcTier,
     pub stats: crate::character::Stats,
-    pub armor_name_key: String,
+    /// Armor as printed, in the content language.
+    pub armor_name: String,
+    /// `code` of the armor catalog entry when the armor is one (its SP is
+    /// then the catalog's); `None` for armor outside the catalog (cyberware).
+    pub armor_code: Option<String>,
     pub armor_head_sp: u8,
     pub armor_body_sp: u8,
     pub weapons: Vec<NpcWeapon>,
@@ -210,11 +225,11 @@ pub struct NpcTemplate {
     /// `NpcTemplate::to_character`.
     #[ts(type = "Record<string, number>")]
     pub skill_totals: std::collections::BTreeMap<String, u8>,
-    /// Cyberware and gear line, one localized text.
-    pub gear_key: String,
+    /// Cyberware and gear line, one text in the content language.
+    pub gear: String,
     /// Printed details the sheet has no field for (role abilities, bracketed
     /// alternative values, cyberdeck programs).
-    pub notes_key: Option<String>,
+    pub notes: Option<String>,
     pub source: Source,
 }
 
@@ -314,25 +329,25 @@ pub fn validate_critical_injuries(c: &Collection<CriticalInjury>) -> Result<(), 
 }
 
 pub fn validate_cover_materials(c: &Collection<CoverMaterial>) -> Result<(), CatalogError> {
-    check_ids(c.entries.iter().map(|e| (e.id.as_str(), e.name_key.as_str(), e.source.page)))?;
+    check_ids(c.entries.iter().map(|e| (e.code.as_str(), e.name.as_str(), e.source.page)))?;
     match c.entries.iter().find(|e| e.hp == 0) {
-        Some(e) => Err(CatalogError::OutOfRange(e.id.clone())),
+        Some(e) => Err(CatalogError::OutOfRange(e.code.clone())),
         None => Ok(()),
     }
 }
 
 pub fn validate_armor(c: &Collection<Armor>) -> Result<(), CatalogError> {
-    check_ids(c.entries.iter().map(|e| (e.id.as_str(), e.name_key.as_str(), e.source.page)))?;
+    check_ids(c.entries.iter().map(|e| (e.code.as_str(), e.name.as_str(), e.source.page)))?;
     match c.entries.iter().find(|e| e.sp == 0 || e.sp > 30 || e.penalty > 4) {
-        Some(e) => Err(CatalogError::OutOfRange(e.id.clone())),
+        Some(e) => Err(CatalogError::OutOfRange(e.code.clone())),
         None => Ok(()),
     }
 }
 
 pub fn validate_shields(c: &Collection<Shield>) -> Result<(), CatalogError> {
-    check_ids(c.entries.iter().map(|e| (e.id.as_str(), e.name_key.as_str(), e.source.page)))?;
+    check_ids(c.entries.iter().map(|e| (e.code.as_str(), e.name.as_str(), e.source.page)))?;
     match c.entries.iter().find(|e| e.hp == Some(0)) {
-        Some(e) => Err(CatalogError::OutOfRange(e.id.clone())),
+        Some(e) => Err(CatalogError::OutOfRange(e.code.clone())),
         None => Ok(()),
     }
 }
@@ -407,11 +422,11 @@ pub fn validate_npc_templates(
     skills: &Collection<Skill>,
 ) -> Result<(), CatalogError> {
     use crate::character::{skill_base_id, skill_specialty, SKILL_MAX};
-    check_ids(c.entries.iter().map(|e| (e.id.as_str(), e.name_key.as_str(), e.source.page)))?;
+    check_ids(c.entries.iter().map(|e| (e.code.as_str(), e.name.as_str(), e.source.page)))?;
     for e in &c.entries {
-        let bad = |why: &str| CatalogError::OutOfRange(format!("{} ({why})", e.id));
-        if !NPC_PAGES.contains(&e.source.page) || e.gear_key.is_empty() || e.armor_name_key.is_empty() {
-            return Err(bad("page or keys"));
+        let bad = |why: &str| CatalogError::OutOfRange(format!("{} ({why})", e.code));
+        if !NPC_PAGES.contains(&e.source.page) || e.gear.is_empty() || e.armor_name.is_empty() {
+            return Err(bad("page or texts"));
         }
         let st = &e.stats;
         for v in [st.int, st.reflex, st.dex, st.tech, st.cool, st.will, st.movement, st.body] {
@@ -424,7 +439,7 @@ pub fn validate_npc_templates(
         }
         for w in &e.weapons {
             let dice: crate::dice::DiceNotation = w.damage.parse().map_err(|_| bad("damage dice"))?;
-            if dice.sides != 6 || dice.modifier != 0 || w.name_key.is_empty() {
+            if dice.sides != 6 || dice.modifier != 0 || w.name.is_empty() {
                 return Err(bad("weapon"));
             }
         }
@@ -540,8 +555,9 @@ mod tests {
             name: "cover_materials".into(),
             version: 1,
             entries: vec![CoverMaterial {
-                id: "concrete".into(),
-                name_key: "cover.concrete".into(),
+                uuid: "u1".into(),
+                code: "concrete".into(),
+                name: "Concrete".into(),
                 thickness: CoverThickness::Thick,
                 hp: 0,
                 source: src.clone(),
@@ -553,8 +569,9 @@ mod tests {
             name: "armor".into(),
             version: 1,
             entries: vec![Armor {
-                id: "kevlar".into(),
-                name_key: "armor.kevlar".into(),
+                uuid: "u2".into(),
+                code: "kevlar".into(),
+                name: "Kevlar".into(),
                 sp: 7,
                 penalty: 0,
                 source: src,

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { CoverPreset } from "@/bindings/CoverPreset";
 import type { Scene } from "@/bindings/Scene";
 import type { SceneRecord } from "@/bindings/SceneRecord";
@@ -9,19 +10,24 @@ const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 /** Working scene (cover objects) and cover presets from the Rust backend. */
 export function useScene() {
+  const { i18n } = useTranslation();
   const [scene, setScene] = useState<Scene | null>(null);
   const [presets, setPresets] = useState<CoverPreset[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!hasBackend) return;
-    Promise.all([api.getScene(), api.listCoverPresets()])
-      .then(([record, list]) => {
-        setScene(record.scene);
-        setPresets(list);
-      })
+    api
+      .getScene()
+      .then((record) => setScene(record.scene))
       .catch((e: unknown) => setError(message(e)));
   }, []);
+
+  // Presets are server content: names follow the language.
+  useEffect(() => {
+    if (!hasBackend) return;
+    api.listCoverPresets(i18n.language).then(setPresets, (e: unknown) => setError(message(e)));
+  }, [i18n.language]);
 
   /** Runs a scene command; the backend answers with the whole updated scene. */
   const run = useCallback(async (command: Promise<SceneRecord>) => {

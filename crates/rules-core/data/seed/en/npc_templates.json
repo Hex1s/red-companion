@@ -1,0 +1,662 @@
+{
+  "name": "npc_templates",
+  "version": 1,
+  "entries": [
+    {
+      "uuid": "281e9a30-a679-5c49-9be8-b6cca38704d3",
+      "code": "bodyguard",
+      "name": "Bodyguard",
+      "tier": "mook",
+      "stats": {
+        "int": 3,
+        "reflex": 6,
+        "dex": 5,
+        "tech": 2,
+        "cool": 4,
+        "will": 4,
+        "luck": 0,
+        "movement": 4,
+        "body": 6,
+        "emp": 3
+      },
+      "armor_name": "Kevlar",
+      "armor_code": "kevlar",
+      "armor_head_sp": 7,
+      "armor_body_sp": 7,
+      "weapons": [
+        {
+          "name": "Shotgun (poor quality)",
+          "damage": "5d6"
+        },
+        {
+          "name": "Very heavy pistol",
+          "damage": "4d6"
+        }
+      ],
+      "skill_totals": {
+        "athletics": 9,
+        "brawling": 11,
+        "concentration": 6,
+        "conversation": 5,
+        "drive_land_vehicle": 10,
+        "education": 5,
+        "endurance": 9,
+        "evasion": 7,
+        "first_aid": 4,
+        "handgun": 10,
+        "human_perception": 5,
+        "interrogation": 6,
+        "language:native": 5,
+        "language:street_slang": 5,
+        "local_expert:home": 5,
+        "perception": 9,
+        "persuasion": 6,
+        "resist_torture_drugs": 8,
+        "shoulder_arms": 10,
+        "stealth": 7
+      },
+      "gear": "Shotgun ammo x25, Very heavy pistol ammo x25, Radio",
+      "notes": null,
+      "source": {
+        "page": 412
+      }
+    },
+    {
+      "uuid": "1fcf6a68-f547-5c30-aaf8-ed94f6a26fc5",
+      "code": "booster",
+      "name": "Booster",
+      "tier": "mook",
+      "stats": {
+        "int": 2,
+        "reflex": 6,
+        "dex": 5,
+        "tech": 2,
+        "cool": 4,
+        "will": 2,
+        "luck": 0,
+        "movement": 4,
+        "body": 2,
+        "emp": 3
+      },
+      "armor_name": "Leathers",
+      "armor_code": "leather",
+      "armor_head_sp": 4,
+      "armor_body_sp": 4,
+      "weapons": [
+        {
+          "name": "Very heavy pistol (poor quality)",
+          "damage": "4d6"
+        },
+        {
+          "name": "Slice 'N Dice",
+          "damage": "2d6"
+        }
+      ],
+      "skill_totals": {
+        "athletics": 9,
+        "brawling": 9,
+        "conceal_reveal_object": 4,
+        "concentration": 4,
+        "conversation": 5,
+        "drive_land_vehicle": 10,
+        "education": 4,
+        "endurance": 6,
+        "evasion": 7,
+        "first_aid": 4,
+        "handgun": 12,
+        "human_perception": 5,
+        "interrogation": 6,
+        "language:native": 4,
+        "language:street_slang": 4,
+        "local_expert:home": 4,
+        "melee_weapon": 11,
+        "perception": 6,
+        "persuasion": 6,
+        "resist_torture_drugs": 4,
+        "stealth": 7
+      },
+      "gear": "Very heavy pistol ammo x30, Burner phone, Slice 'N Dice, Techhair",
+      "notes": null,
+      "source": {
+        "page": 412
+      }
+    },
+    {
+      "uuid": "9f957622-49e4-5d2f-84a2-a2af3dde7557",
+      "code": "road_bandit",
+      "name": "Road bandit",
+      "tier": "mook",
+      "stats": {
+        "int": 4,
+        "reflex": 6,
+        "dex": 4,
+        "tech": 4,
+        "cool": 3,
+        "will": 3,
+        "luck": 0,
+        "movement": 3,
+        "body": 3,
+        "emp": 3
+      },
+      "armor_name": "Leathers",
+      "armor_code": "leather",
+      "armor_head_sp": 4,
+      "armor_body_sp": 4,
+      "weapons": [
+        {
+          "name": "Very heavy pistol",
+          "damage": "4d6"
+        },
+        {
+          "name": "Light melee weapon",
+          "damage": "1d6"
+        },
+        {
+          "name": "Bow",
+          "damage": "4d6"
+        }
+      ],
+      "skill_totals": {
+        "athletics": 9,
+        "brawling": 9,
+        "conceal_reveal_object": 4,
+        "concentration": 4,
+        "conversation": 5,
+        "drive_land_vehicle": 10,
+        "education": 4,
+        "endurance": 6,
+        "evasion": 7,
+        "first_aid": 4,
+        "handgun": 12,
+        "human_perception": 5,
+        "interrogation": 6,
+        "language:native": 4,
+        "language:street_slang": 4,
+        "local_expert:home": 4,
+        "melee_weapon": 11,
+        "perception": 6,
+        "persuasion": 6,
+        "resist_torture_drugs": 4,
+        "stealth": 7
+      },
+      "gear": "Very heavy pistol ammo x20, Arrows x20, Rope, Flashlight, Neural link (Interface plug)",
+      "notes": null,
+      "source": {
+        "page": 413
+      }
+    },
+    {
+      "uuid": "1ac762cc-e384-5b3d-88cf-2085bf455d53",
+      "code": "security_operative",
+      "name": "Security operative",
+      "tier": "mook",
+      "stats": {
+        "int": 3,
+        "reflex": 7,
+        "dex": 4,
+        "tech": 2,
+        "cool": 2,
+        "will": 3,
+        "luck": 0,
+        "movement": 3,
+        "body": 5,
+        "emp": 3
+      },
+      "armor_name": "Kevlar",
+      "armor_code": "kevlar",
+      "armor_head_sp": 7,
+      "armor_body_sp": 7,
+      "weapons": [
+        {
+          "name": "Assault rifle (poor quality)",
+          "damage": "5d6"
+        },
+        {
+          "name": "Very heavy pistol",
+          "damage": "4d6"
+        },
+        {
+          "name": "Medium melee weapon",
+          "damage": "2d6"
+        }
+      ],
+      "skill_totals": {
+        "athletics": 8,
+        "autofire": 10,
+        "brawling": 6,
+        "concentration": 7,
+        "conversation": 5,
+        "education": 5,
+        "evasion": 6,
+        "first_aid": 4,
+        "handgun": 10,
+        "human_perception": 5,
+        "interrogation": 6,
+        "language:native": 5,
+        "language:street_slang": 5,
+        "local_expert:home": 5,
+        "melee_weapon": 6,
+        "perception": 5,
+        "persuasion": 4,
+        "resist_torture_drugs": 5,
+        "shoulder_arms": 10,
+        "stealth": 6
+      },
+      "gear": "Rifle ammo x40, Very heavy pistol ammo x20, Radio",
+      "notes": null,
+      "source": {
+        "page": 413
+      }
+    },
+    {
+      "uuid": "2e3a6c9a-646f-5ce8-be83-be0cb51cb6eb",
+      "code": "netrunner",
+      "name": "Netrunner",
+      "tier": "lieutenant",
+      "stats": {
+        "int": 7,
+        "reflex": 5,
+        "dex": 4,
+        "tech": 7,
+        "cool": 4,
+        "will": 5,
+        "luck": 0,
+        "movement": 5,
+        "body": 3,
+        "emp": 4
+      },
+      "armor_name": "Bodyweight Suit",
+      "armor_code": "bodyweight_suit",
+      "armor_head_sp": 11,
+      "armor_body_sp": 11,
+      "weapons": [
+        {
+          "name": "Very heavy pistol",
+          "damage": "4d6"
+        }
+      ],
+      "skill_totals": {
+        "athletics": 9,
+        "basic_tech": 13,
+        "brawling": 6,
+        "conceal_reveal_object": 11,
+        "concentration": 9,
+        "conversation": 6,
+        "cryptography": 11,
+        "deduction": 11,
+        "education": 11,
+        "electronics_security_tech": 11,
+        "evasion": 6,
+        "first_aid": 9,
+        "forgery": 13,
+        "handgun": 10,
+        "human_perception": 6,
+        "language:native": 9,
+        "language:street_slang": 9,
+        "local_expert:home": 13,
+        "library_search": 9,
+        "perception": 11,
+        "persuasion": 6,
+        "pick_lock": 11,
+        "resist_torture_drugs": 7,
+        "stealth": 8
+      },
+      "gear": "Very heavy pistol ammo x50, Flashlight, Virtuality goggles, Neural link (Interface plug)",
+      "notes": "Role ability: Interface 4. Cyberdeck programs: Banhammer, Dekalom, Eraser, Hellbolt, Shield, Sword, Worm.",
+      "source": {
+        "page": 414
+      }
+    },
+    {
+      "uuid": "7008c0cc-ecf4-51f2-920d-27c5916bc160",
+      "code": "chief_restorer",
+      "name": "Chief restorer",
+      "tier": "lieutenant",
+      "stats": {
+        "int": 3,
+        "reflex": 6,
+        "dex": 6,
+        "tech": 5,
+        "cool": 4,
+        "will": 5,
+        "luck": 0,
+        "movement": 4,
+        "body": 6,
+        "emp": 4
+      },
+      "armor_name": "Light Armorjack",
+      "armor_code": "light_armorjack",
+      "armor_head_sp": 11,
+      "armor_body_sp": 11,
+      "weapons": [
+        {
+          "name": "Shotgun",
+          "damage": "5d6"
+        },
+        {
+          "name": "Light melee weapon",
+          "damage": "1d6"
+        },
+        {
+          "name": "Heavy pistol",
+          "damage": "3d6"
+        },
+        {
+          "name": "Heavy melee weapon",
+          "damage": "3d6"
+        }
+      ],
+      "skill_totals": {
+        "athletics": 12,
+        "basic_tech": 9,
+        "brawling": 8,
+        "concentration": 7,
+        "conversation": 6,
+        "deduction": 7,
+        "drive_land_vehicle": 10,
+        "education": 5,
+        "electronics_security_tech": 9,
+        "endurance": 11,
+        "evasion": 8,
+        "first_aid": 7,
+        "handgun": 10,
+        "human_perception": 6,
+        "land_vehicle_tech": 7,
+        "language:native": 5,
+        "language:street_slang": 5,
+        "local_expert:home": 5,
+        "melee_weapon": 10,
+        "paramedic": 7,
+        "perception": 8,
+        "persuasion": 6,
+        "pick_lock": 7,
+        "resist_torture_drugs": 10,
+        "shoulder_arms": 10,
+        "stealth": 10,
+        "weaponstech": 9,
+        "wilderness_survival": 7
+      },
+      "gear": "Shotgun ammo x25, Heavy pistol ammo x25, Agent, Grapple gun, Radio, Tent and camping gear, Nasal filters, Neural link (Chipware socket, Tactile boost chip)",
+      "notes": null,
+      "source": {
+        "page": 414
+      }
+    },
+    {
+      "uuid": "39f13ba2-a79d-5c67-b911-eea1ab863b64",
+      "code": "security_officer",
+      "name": "Security officer",
+      "tier": "lieutenant",
+      "stats": {
+        "int": 4,
+        "reflex": 8,
+        "dex": 6,
+        "tech": 4,
+        "cool": 6,
+        "will": 5,
+        "luck": 0,
+        "movement": 6,
+        "body": 7,
+        "emp": 4
+      },
+      "armor_name": "Medium Armorjack",
+      "armor_code": "medium_armorjack",
+      "armor_head_sp": 12,
+      "armor_body_sp": 12,
+      "weapons": [
+        {
+          "name": "Assault rifle",
+          "damage": "5d6"
+        },
+        {
+          "name": "Very heavy pistol",
+          "damage": "4d6"
+        },
+        {
+          "name": "Medium melee weapon",
+          "damage": "2d6"
+        }
+      ],
+      "skill_totals": {
+        "athletics": 10,
+        "autofire": 12,
+        "brawling": 10,
+        "concentration": 7,
+        "conversation": 6,
+        "deduction": 6,
+        "drive_land_vehicle": 12,
+        "education": 6,
+        "evasion": 10,
+        "first_aid": 6,
+        "handgun": 10,
+        "human_perception": 6,
+        "interrogation": 8,
+        "language:native": 6,
+        "language:street_slang": 6,
+        "local_expert:home": 6,
+        "melee_weapon": 10,
+        "perception": 6,
+        "persuasion": 8,
+        "resist_torture_drugs": 10,
+        "shoulder_arms": 10,
+        "stealth": 8,
+        "tactics": 6
+      },
+      "gear": "Assault rifle ammo x50, Very heavy pistol ammo x30, Bulletproof shield (10 HP), Binoculars, Burner phone, Flashlight, Handcuffs x2, Radio, Radio scanner/Music player, Neural link (Kerenzikov)",
+      "notes": "The book prints alternative values in brackets: REF 8 (6), DEX 6 (4), MOVE 6 (4); skills: Athletics 10 (8), Autofire 12 (10), Brawling 10 (8), Driving 12 (10), Evasion 10 (8), Handgun 10 (8), Melee weapon 10 (8), Shoulder arms 10 (8), Stealth 8 (6). The book does not say what the brackets mean.",
+      "source": {
+        "page": 415
+      }
+    },
+    {
+      "uuid": "c51a3aac-d82e-5ffb-94b4-460246284eb3",
+      "code": "patrol",
+      "name": "Patrol",
+      "tier": "mini_boss",
+      "stats": {
+        "int": 6,
+        "reflex": 8,
+        "dex": 8,
+        "tech": 3,
+        "cool": 5,
+        "will": 6,
+        "luck": 0,
+        "movement": 6,
+        "body": 6,
+        "emp": 6
+      },
+      "armor_name": "Light Armorjack",
+      "armor_code": "light_armorjack",
+      "armor_head_sp": 11,
+      "armor_body_sp": 11,
+      "weapons": [
+        {
+          "name": "Assault rifle",
+          "damage": "5d6"
+        },
+        {
+          "name": "Very heavy pistol",
+          "damage": "4d6"
+        },
+        {
+          "name": "Light melee weapon",
+          "damage": "1d6"
+        }
+      ],
+      "skill_totals": {
+        "animal_handling": 8,
+        "athletics": 14,
+        "autofire": 12,
+        "basic_tech": 5,
+        "brawling": 14,
+        "concentration": 10,
+        "conversation": 6,
+        "criminology": 10,
+        "drive_land_vehicle": 14,
+        "education": 8,
+        "endurance": 10,
+        "evasion": 14,
+        "first_aid": 5,
+        "handgun": 14,
+        "human_perception": 8,
+        "land_vehicle_tech": 7,
+        "language:native": 8,
+        "language:street_slang": 8,
+        "local_expert:badlands": 10,
+        "local_expert:home": 8,
+        "melee_weapon": 12,
+        "perception": 14,
+        "persuasion": 7,
+        "resist_torture_drugs": 12,
+        "shoulder_arms": 14,
+        "stealth": 12,
+        "streetwise": 9,
+        "tracking": 10
+      },
+      "gear": "Assault rifle ammo x60, Very heavy pistol ammo x40, Handcuffs x2, Tracker beacon, Cyberaudio suite (Amplified hearing), Cybereye (Targeting scope, Teleoptics), Neural link (Interface plug)",
+      "notes": "Role ability: Family Motorpool 4.",
+      "source": {
+        "page": 415
+      }
+    },
+    {
+      "uuid": "9fe94b81-f138-59bf-a99d-506e7485b219",
+      "code": "pyrotechnician",
+      "name": "Pyrotechnician",
+      "tier": "mini_boss",
+      "stats": {
+        "int": 5,
+        "reflex": 8,
+        "dex": 6,
+        "tech": 7,
+        "cool": 4,
+        "will": 4,
+        "luck": 0,
+        "movement": 6,
+        "body": 5,
+        "emp": 3
+      },
+      "armor_name": "Light Armorjack",
+      "armor_code": "light_armorjack",
+      "armor_head_sp": 11,
+      "armor_body_sp": 11,
+      "weapons": [
+        {
+          "name": "Flamethrower",
+          "damage": "3d6"
+        },
+        {
+          "name": "Heavy pistol",
+          "damage": "3d6"
+        },
+        {
+          "name": "Heavy melee weapon",
+          "damage": "3d6"
+        }
+      ],
+      "skill_totals": {
+        "athletics": 11,
+        "basic_tech": 12,
+        "brawling": 10,
+        "concentration": 8,
+        "conversation": 5,
+        "demolitions": 13,
+        "drive_land_vehicle": 10,
+        "education": 7,
+        "evasion": 13,
+        "first_aid": 9,
+        "handgun": 14,
+        "heavy_weapons": 14,
+        "human_perception": 5,
+        "interrogation": 10,
+        "language:native": 7,
+        "language:street_slang": 7,
+        "local_expert:home": 7,
+        "melee_weapon": 13,
+        "perception": 12,
+        "persuasion": 6,
+        "resist_torture_drugs": 14,
+        "science:chemistry": 10,
+        "stealth": 10,
+        "streetwise": 8,
+        "tactics": 8
+      },
+      "gear": "Flamethrower ammo (incendiary shotgun shells) x8, Very heavy pistol ammo x50, Incendiary grenade x1, Flashbang grenade x1, Cyberaudio suite (Level damper), Cybereye x2 (Anti-dazzle x2), Nasal filters",
+      "notes": "Role ability: Combat Awareness 4.",
+      "source": {
+        "page": 416
+      }
+    },
+    {
+      "uuid": "33eb67cd-c24e-5a76-a265-e3a96eb9f317",
+      "code": "cyberpsychopath",
+      "name": "Cyberpsychopath",
+      "tier": "boss",
+      "stats": {
+        "int": 5,
+        "reflex": 8,
+        "dex": 8,
+        "tech": 5,
+        "cool": 4,
+        "will": 7,
+        "luck": 0,
+        "movement": 8,
+        "body": 10,
+        "emp": 0
+      },
+      "armor_name": "Subdermal armor",
+      "armor_code": null,
+      "armor_head_sp": 11,
+      "armor_body_sp": 11,
+      "weapons": [
+        {
+          "name": "Popup grenade launcher",
+          "damage": "6d6"
+        },
+        {
+          "name": "Cybersnake",
+          "damage": "4d6"
+        },
+        {
+          "name": "Popup heavy SMG",
+          "damage": "3d6"
+        },
+        {
+          "name": "Wolvers",
+          "damage": "3d6"
+        }
+      ],
+      "skill_totals": {
+        "athletics": 16,
+        "autofire": 14,
+        "basic_tech": 11,
+        "brawling": 15,
+        "concentration": 6,
+        "conversation": 2,
+        "drive_land_vehicle": 10,
+        "education": 7,
+        "endurance": 10,
+        "evasion": 13,
+        "first_aid": 6,
+        "handgun": 12,
+        "heavy_weapons": 14,
+        "human_perception": 2,
+        "interrogation": 13,
+        "language:native": 7,
+        "language:street_slang": 7,
+        "local_expert:home": 7,
+        "melee_weapon": 17,
+        "perception": 9,
+        "persuasion": 6,
+        "resist_torture_drugs": 15,
+        "stealth": 10,
+        "tracking": 10
+      },
+      "gear": "Armor-piercing grenade x2, Heavy pistol ammo x100, Cyberarm x2 (Popup grenade launcher x2, Popup heavy SMG, Wolvers), Cyberleg x2 (Jump booster x2), Cybersnake, Muscle and bone lace, Neural link (Chipware socket, Pain editor), Subdermal armor",
+      "notes": null,
+      "source": {
+        "page": 416
+      }
+    }
+  ]
+}

@@ -37,26 +37,34 @@
           "maximum": 255,
           "minimum": 0
         },
+        "armor_code": {
+          "description": "`code` of the armor catalog entry when the armor is one (its SP is\nthen the catalog's); `None` for armor outside the catalog (cyberware).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "armor_head_sp": {
           "type": "integer",
           "format": "uint8",
           "maximum": 255,
           "minimum": 0
         },
-        "armor_name_key": {
+        "armor_name": {
+          "description": "Armor as printed, in the content language.",
           "type": "string"
         },
-        "gear_key": {
-          "description": "Cyberware and gear line, one localized text.",
+        "code": {
           "type": "string"
         },
-        "id": {
+        "gear": {
+          "description": "Cyberware and gear line, one text in the content language.",
           "type": "string"
         },
-        "name_key": {
+        "name": {
           "type": "string"
         },
-        "notes_key": {
+        "notes": {
           "description": "Printed details the sheet has no field for (role abilities, bracketed\nalternative values, cyberdeck programs).",
           "type": [
             "string",
@@ -82,6 +90,9 @@
         "tier": {
           "$ref": "#/$defs/NpcTier"
         },
+        "uuid": {
+          "type": "string"
+        },
         "weapons": {
           "type": "array",
           "items": {
@@ -90,16 +101,17 @@
         }
       },
       "required": [
-        "id",
-        "name_key",
+        "uuid",
+        "code",
+        "name",
         "tier",
         "stats",
-        "armor_name_key",
+        "armor_name",
         "armor_head_sp",
         "armor_body_sp",
         "weapons",
         "skill_totals",
-        "gear_key",
+        "gear",
         "source"
       ]
     },
@@ -135,12 +147,12 @@
           "description": "Damage dice as printed, e.g. `5d6`.",
           "type": "string"
         },
-        "name_key": {
+        "name": {
           "type": "string"
         }
       },
       "required": [
-        "name_key",
+        "name",
         "damage"
       ]
     },

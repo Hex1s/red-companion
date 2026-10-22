@@ -1,0 +1,116 @@
+{
+  "name": "cover_materials",
+  "version": 1,
+  "entries": [
+    {
+      "uuid": "0887ce84-a2f0-5c6a-b06d-13aa5204545b",
+      "code": "metal_thick",
+      "name": "Metal",
+      "thickness": "thick",
+      "hp": 50,
+      "source": {
+        "page": 182
+      }
+    },
+    {
+      "uuid": "337fa296-9730-5daa-afe0-b6de1e85238f",
+      "code": "metal_thin",
+      "name": "Metal",
+      "thickness": "thin",
+      "hp": 25,
+      "source": {
+        "page": 182
+      }
+    },
+    {
+      "uuid": "4a3b4ea5-7009-5ab9-8905-927a0573cf2b",
+      "code": "stone_thick",
+      "name": "Stone",
+      "thickness": "thick",
+      "hp": 40,
+      "source": {
+        "page": 182
+      }
+    },
+    {
+      "uuid": "92b5f7c6-1d61-5494-9c79-f2a4255cebe9",
+      "code": "stone_thin",
+      "name": "Stone",
+      "thickness": "thin",
+      "hp": 20,
+      "source": {
+        "page": 182
+      }
+    },
+    {
+      "uuid": "83b00c2a-d65a-5a68-955b-f953a258afd2",
+      "code": "bulletproof_glass_thick",
+      "name": "Bulletproof glass",
+      "thickness": "thick",
+      "hp": 30,
+      "source": {
+        "page": 182
+      }
+    },
+    {
+      "uuid": "cbf2f8be-46a5-54be-b897-0fd92454e84d",
+      "code": "bulletproof_glass_thin",
+      "name": "Bulletproof glass",
+      "thickness": "thin",
+      "hp": 15,
+      "source": {
+        "page": 182
+      }
+    },
+    {
+      "uuid": "a2b6187e-203f-541d-912e-0037ca0189a3",
+      "code": "concrete_thick",
+      "name": "Concrete",
+      "thickness": "thick",
+      "hp": 25,
+      "source": {
+        "page": 182
+      }
+    },
+    {
+      "uuid": "7c6b1617-4ed8-5937-8995-e1b4c4ca9f93",
+      "code": "concrete_thin",
+      "name": "Concrete",
+      "thickness": "thin",
+      "hp": 10,
+      "source": {
+        "page": 182
+      }
+    },
+    {
+      "uuid": "a8f37381-c2fb-5ef4-a580-ffd36bb57ae8",
+      "code": "wood_thick",
+      "name": "Wood",
+      "thickness": "thick",
+      "hp": 20,
+      "source": {
+        "page": 182
+      }
+    },
+    {
+      "uuid": "7514057f-6f41-5450-8467-4cf539d1a2c2",
+      "code": "wood_thin",
+      "name": "Wood",
+      "thickness": "thin",
+      "hp": 5,
+      "source": {
+        "page": 182
+      }
+    },
+    {
+      "uuid": "0e2867e7-05e4-5c9f-aa5c-11ed022e9ffa",
+      "code": "drywall_thick",
+      "name": "Drywall / foam / polymers",
+      "thickness": "thick",
+      "hp": 15,
+      "source": {
+        "page": 182
+      }
+    }
+  ]
+}

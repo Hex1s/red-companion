@@ -62,7 +62,7 @@ export function NpcTemplateDialog({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const selected = templates.find((x) => x.id === selectedId) ?? null;
+  const selected = templates.find((x) => x.code === selectedId) ?? null;
   const countValue = Number(count);
   const countValid =
     Number.isInteger(countValue) && countValue >= COUNT_MIN && countValue <= COUNT_MAX;
@@ -75,10 +75,10 @@ export function NpcTemplateDialog({
   const notesOf = (template: NpcTemplate) =>
     [
       `${t("npc.notes.weapons")}: ${template.weapons
-        .map((w) => `${t(w.name_key)} ${w.damage}`)
+        .map((w) => `${w.name} ${w.damage}`)
         .join(", ")}`,
-      `${t("npc.notes.gear")}: ${t(template.gear_key)}`,
-      template.notes_key ? t(template.notes_key) : null,
+      `${t("npc.notes.gear")}: ${template.gear}`,
+      template.notes,
     ]
       .filter(Boolean)
       .join("\n");
@@ -89,8 +89,8 @@ export function NpcTemplateDialog({
     setError(null);
     try {
       await onClone({
-        templateId: selected.id,
-        names: cloneNames(t(selected.name_key), countValue, existingNames),
+        templateId: selected.code,
+        names: cloneNames(selected.name, countValue, existingNames),
         notes: notesOf(selected),
       });
       onClose();
@@ -116,17 +116,17 @@ export function NpcTemplateDialog({
                 <div className="text-xs text-muted-foreground">{t(`npc.tier.${tier}`)}</div>
                 <ul className="space-y-1">
                   {items.map((item) => (
-                    <li key={item.id}>
+                    <li key={item.code}>
                       <button
                         type="button"
-                        onClick={() => setSelectedId(item.id)}
+                        onClick={() => setSelectedId(item.code)}
                         className={cn(
                           "cut flex w-full items-baseline gap-3 px-3 py-1.5 text-left [--cut:4px]",
-                          item.id === selectedId && "[--cut-border:var(--primary)]",
+                          item.code === selectedId && "[--cut-border:var(--primary)]",
                         )}
                       >
                         <span className="flex-1 font-display text-sm font-semibold uppercase">
-                          {t(item.name_key)}
+                          {item.name}
                         </span>
                         <span className="num text-xs text-muted-foreground">
                           {t("armor.head")} {item.armor_head_sp} / {t("armor.body")} {item.armor_body_sp}

@@ -307,7 +307,7 @@ mod tests {
     use crate::scene::cover_presets;
 
     fn table() -> Vec<CriticalInjury> {
-        SeedDataSource.critical_injuries().unwrap().entries
+        SeedDataSource::default().critical_injuries().unwrap().entries
     }
 
     fn character() -> Character {
@@ -331,7 +331,7 @@ mod tests {
 
     fn scene_with_concrete() -> Scene {
         let mut scene = Scene::default();
-        let presets = cover_presets(&SeedDataSource).unwrap();
+        let presets = cover_presets(&SeedDataSource::default()).unwrap();
         let concrete = presets.iter().find(|p| p.hp == Some(25)).expect("25 HP preset");
         scene.add_cover(Some(concrete), "", None).unwrap();
         scene

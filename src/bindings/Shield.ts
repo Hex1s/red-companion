@@ -4,7 +4,7 @@ import type { Source } from "./Source";
 /**
  * Portable shield, usable as cover with its own HP.
  */
-export type Shield = { id: string, name_key: string, 
+export type Shield = { uuid: string, code: string, name: string, 
 /**
  * `None` for a body used as a shield: its HP equal the BODY stat the
  * person had while alive.

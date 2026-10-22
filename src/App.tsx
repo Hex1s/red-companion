@@ -10,6 +10,7 @@ import { NpcTemplateDialog, type CloneRequest } from "@/components/character/npc
 import { CombatBar } from "@/components/combat/combat-bar";
 import { DamageDialog } from "@/components/combat/damage-dialog";
 import { StabilizeDialog } from "@/components/combat/stabilize-dialog";
+import { ReferencePage } from "@/components/reference/reference-page";
 import { AppShell } from "@/components/layout/app-shell";
 import { CoverPicker } from "@/components/scene/cover-picker";
 import { Button } from "@/components/ui/button";
@@ -235,7 +236,7 @@ export default function App() {
               )}
             </div>
           ) : (
-            <p className="text-muted-foreground">{t("app.subtitle")}</p>
+            <ReferencePage />
           )
         }
         rail={

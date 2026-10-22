@@ -1,0 +1,33 @@
+{
+  "name": "shields",
+  "version": 1,
+  "entries": [
+    {
+      "uuid": "3cdde50a-804a-5748-b128-bf3bb193400a",
+      "code": "bulletproof_shield",
+      "name": "Bulletproof shield",
+      "hp": 10,
+      "source": {
+        "page": 184
+      }
+    },
+    {
+      "uuid": "d8af9038-7f23-5444-8bd7-5969efe03734",
+      "code": "corpse",
+      "name": "Corpse",
+      "hp": null,
+      "source": {
+        "page": 184
+      }
+    },
+    {
+      "uuid": "dad1287f-93d2-5fff-9f70-99da0bafa70e",
+      "code": "living_shield",
+      "name": "Living shield",
+      "hp": null,
+      "source": {
+        "page": 184
+      }
+    }
+  ]
+}

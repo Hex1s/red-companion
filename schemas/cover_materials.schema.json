@@ -31,16 +31,17 @@
       "description": "Cover material at a given thickness (book p. 182). Combinations with 0 HP\n(thin drywall) are not cover and are not stored.",
       "type": "object",
       "properties": {
+        "code": {
+          "description": "Stable readable code, unique per material and thickness (e.g.\n`metal_thick`); scenes refer to presets by it.",
+          "type": "string"
+        },
         "hp": {
           "type": "integer",
           "format": "uint32",
           "minimum": 0
         },
-        "id": {
-          "description": "Unique per material and thickness (e.g. `metal_thick`).",
-          "type": "string"
-        },
-        "name_key": {
+        "name": {
+          "description": "Material name in the content language.",
           "type": "string"
         },
         "source": {
@@ -48,11 +49,16 @@
         },
         "thickness": {
           "$ref": "#/$defs/CoverThickness"
+        },
+        "uuid": {
+          "description": "Identity of the record, the same in every language.",
+          "type": "string"
         }
       },
       "required": [
-        "id",
-        "name_key",
+        "uuid",
+        "code",
+        "name",
         "thickness",
         "hp",
         "source"

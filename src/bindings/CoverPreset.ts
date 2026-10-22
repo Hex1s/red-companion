@@ -2,9 +2,14 @@
 import type { CoverThickness } from "./CoverThickness";
 
 /**
- * Quick-add entry: a cover material, a portable shield or a living shield.
+ * Quick-add entry: a cover material or a shield (portable, corpse, living).
+ * Built from server content, so the name is in the content language.
  */
-export type CoverPreset = { id: string, name_key: string, thickness: CoverThickness | null, 
+export type CoverPreset = { 
+/**
+ * `code` of the content record; scenes refer to presets by it.
+ */
+id: string, name: string, thickness: CoverThickness | null, 
 /**
  * `None`: the GM has to enter the HP (corpse = BODY, living shield).
  */

@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type { Character } from "@/bindings/Character";
 import type { CharacterKind } from "@/bindings/CharacterKind";
 import type { CharacterRecord } from "@/bindings/CharacterRecord";
+import type { Armor } from "@/bindings/Armor";
 import type { BodyArea } from "@/bindings/BodyArea";
 import type { CoverPreset } from "@/bindings/CoverPreset";
 import type { CriticalInjury } from "@/bindings/CriticalInjury";
@@ -19,12 +20,23 @@ import type { StabilizeApplied } from "@/bindings/StabilizeApplied";
 import type { NpcTemplate } from "@/bindings/NpcTemplate";
 import type { Skill } from "@/bindings/Skill";
 
+/**
+ * Server content (cover, armor, NPCs...) comes in the content language, which
+ * follows the UI language: the backend is told first, then asked.
+ */
+async function inLanguage<T>(lang: string, load: () => Promise<T>): Promise<T> {
+  await invoke("set_content_lang", { code: lang });
+  return load();
+}
+
 /** True inside the Tauri window; false in plain `npm run dev` in a browser. */
 export const hasBackend = "__TAURI_INTERNALS__" in globalThis;
 
 export const api = {
+  listArmor: (lang: string) => inLanguage(lang, () => invoke<Armor[]>("list_armor")),
   listSkills: () => invoke<Skill[]>("list_skills"),
-  listNpcTemplates: () => invoke<NpcTemplate[]>("list_npc_templates"),
+  listNpcTemplates: (lang: string) =>
+    inLanguage(lang, () => invoke<NpcTemplate[]>("list_npc_templates")),
   /** Clones a ready-made NPC into a new NPC sheet; `notes` is the localized weapons and gear text. */
   createNpcFromTemplate: (templateId: string, name: string, notes: string) =>
     invoke<CharacterRecord>("create_npc_from_template", { templateId, name, notes }),
@@ -42,7 +54,8 @@ export const api = {
   importExportFile: (name: string) => invoke<CharacterRecord[]>("import_export_file", { name }),
   openExportsFolder: () => invoke<void>("open_exports_folder"),
   getScene: () => invoke<SceneRecord>("get_scene"),
-  listCoverPresets: () => invoke<CoverPreset[]>("list_cover_presets"),
+  listCoverPresets: (lang: string) =>
+    inLanguage(lang, () => invoke<CoverPreset[]>("list_cover_presets")),
   addCover: (preset: string | null, name: string, hp: number | null) =>
     invoke<SceneRecord>("add_cover", { preset, name, hp }),
   editCover: (coverId: number, name: string, hp: number, maxHp: number) =>

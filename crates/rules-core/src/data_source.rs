@@ -1,7 +1,9 @@
 //! Single access layer for reference data. The UI and the rules never know
 //! whether entries come from the built-in snapshot, a local cache or the API.
 
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use ts_rs::TS;
 
 use crate::catalog::{
     Armor, Collection, CollectionVersion, CoverMaterial, CriticalInjury, NpcTemplate, Shield, Skill,
@@ -36,9 +38,40 @@ pub trait DataSource {
     }
 }
 
-/// Snapshot compiled into the binary: works offline, no server needed.
+/// Language of server content. Each language has its own server (`ru.…`,
+/// `en.…`) with identical tables whose texts are in that language.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, TS)]
+#[ts(export)]
+#[serde(rename_all = "snake_case")]
+pub enum Lang {
+    #[default]
+    Ru,
+    En,
+}
+
+impl Lang {
+    pub const ALL: [Lang; 2] = [Lang::Ru, Lang::En];
+
+    /// Language code as used by the UI (`i18n.language`); unknown codes fall back to English.
+    pub fn from_code(code: &str) -> Lang {
+        if code.to_ascii_lowercase().starts_with("ru") { Lang::Ru } else { Lang::En }
+    }
+}
+
+/// Snapshot compiled into the binary: works offline and stands in for the
+/// server until it exists (the "response" of the `ru` or `en` server). Core
+/// collections (injuries, skills) are the same for both languages; content
+/// collections come in one copy per language.
 #[derive(Debug, Default, Clone, Copy)]
-pub struct SeedDataSource;
+pub struct SeedDataSource {
+    pub lang: Lang,
+}
+
+impl SeedDataSource {
+    pub fn new(lang: Lang) -> Self {
+        Self { lang }
+    }
+}
 
 fn parse<T: serde::de::DeserializeOwned>(
     name: &'static str,
@@ -47,24 +80,34 @@ fn parse<T: serde::de::DeserializeOwned>(
     serde_json::from_str(json).map_err(|source| DataError::Malformed { name, source })
 }
 
+/// Picks the compiled-in file of a content collection by language.
+macro_rules! content {
+    ($lang:expr, $name:literal) => {
+        match $lang {
+            Lang::Ru => parse($name, include_str!(concat!("../data/seed/ru/", $name, ".json"))),
+            Lang::En => parse($name, include_str!(concat!("../data/seed/en/", $name, ".json"))),
+        }
+    };
+}
+
 impl DataSource for SeedDataSource {
     fn critical_injuries(&self) -> DataResult<Collection<CriticalInjury>> {
         parse("critical_injuries", include_str!("../data/seed/critical_injuries.json"))
     }
     fn cover_materials(&self) -> DataResult<Collection<CoverMaterial>> {
-        parse("cover_materials", include_str!("../data/seed/cover_materials.json"))
+        content!(self.lang, "cover_materials")
     }
     fn armor(&self) -> DataResult<Collection<Armor>> {
-        parse("armor", include_str!("../data/seed/armor.json"))
+        content!(self.lang, "armor")
     }
     fn shields(&self) -> DataResult<Collection<Shield>> {
-        parse("shields", include_str!("../data/seed/shields.json"))
+        content!(self.lang, "shields")
     }
     fn skills(&self) -> DataResult<Collection<Skill>> {
         parse("skills", include_str!("../data/seed/skills.json"))
     }
     fn npc_templates(&self) -> DataResult<Collection<NpcTemplate>> {
-        parse("npc_templates", include_str!("../data/seed/npc_templates.json"))
+        content!(self.lang, "npc_templates")
     }
 }
 
@@ -74,7 +117,7 @@ mod tests {
 
     #[test]
     fn seed_files_parse_and_names_match() {
-        let ds = SeedDataSource;
+        let ds = SeedDataSource::default();
         assert_eq!(ds.critical_injuries().unwrap().name, "critical_injuries");
         assert_eq!(ds.cover_materials().unwrap().name, "cover_materials");
         assert_eq!(ds.armor().unwrap().name, "armor");
@@ -85,13 +128,13 @@ mod tests {
 
     #[test]
     fn manifest_lists_all_collections() {
-        let names: Vec<_> = SeedDataSource.versions().unwrap().into_iter().map(|v| v.name).collect();
+        let names: Vec<_> = SeedDataSource::default().versions().unwrap().into_iter().map(|v| v.name).collect();
         assert_eq!(names, ["critical_injuries", "cover_materials", "armor", "shields", "skills", "npc_templates"]);
     }
 
     #[test]
     fn works_through_trait_object() {
-        let ds: Box<dyn DataSource> = Box::new(SeedDataSource);
+        let ds: Box<dyn DataSource> = Box::new(SeedDataSource::default());
         assert!(ds.versions().is_ok());
     }
 
@@ -101,26 +144,16 @@ mod tests {
         assert!(err.to_string().contains("armor"));
     }
 
-    /// Every i18n key referenced by seed data exists in both locale files.
+    /// Core rules data: every i18n key referenced by it exists in both locale files.
     #[test]
-    fn seed_keys_exist_in_both_locales() {
-        let ds = SeedDataSource;
+    fn core_keys_exist_in_both_locales() {
+        let ds = SeedDataSource::default();
         let mut keys = vec![];
         for e in ds.critical_injuries().unwrap().entries {
             keys.push(e.name_key);
             keys.push(e.effect_key);
         }
-        keys.extend(ds.cover_materials().unwrap().entries.into_iter().map(|e| e.name_key));
-        keys.extend(ds.armor().unwrap().entries.into_iter().map(|e| e.name_key));
-        keys.extend(ds.shields().unwrap().entries.into_iter().map(|e| e.name_key));
         keys.extend(ds.skills().unwrap().entries.into_iter().map(|e| e.name_key));
-        for e in ds.npc_templates().unwrap().entries {
-            keys.push(e.name_key);
-            keys.push(e.armor_name_key);
-            keys.push(e.gear_key);
-            keys.extend(e.notes_key);
-            keys.extend(e.weapons.into_iter().map(|w| w.name_key));
-        }
 
         for lang in ["ru", "en"] {
             let path = format!("{}/../../src/i18n/locales/{lang}.json", env!("CARGO_MANIFEST_DIR"));
@@ -133,10 +166,60 @@ mod tests {
         }
     }
 
+    /// Server content: the databases of all languages are identical but for
+    /// the texts. Serialize with the texts blanked out and compare.
+    #[test]
+    fn content_differs_between_languages_only_in_texts() {
+        fn blank(v: &mut serde_json::Value) {
+            match v {
+                serde_json::Value::Object(m) => {
+                    for (k, x) in m.iter_mut() {
+                        if matches!(k.as_str(), "name" | "armor_name" | "gear" | "notes") && x.is_string() {
+                            assert!(!x.as_str().unwrap().is_empty(), "empty text {k}");
+                            *x = "".into();
+                        } else {
+                            blank(x);
+                        }
+                    }
+                }
+                serde_json::Value::Array(a) => a.iter_mut().for_each(blank),
+                _ => {}
+            }
+        }
+        fn shape(ds: SeedDataSource) -> Vec<serde_json::Value> {
+            let mut all = vec![
+                serde_json::to_value(ds.cover_materials().unwrap()).unwrap(),
+                serde_json::to_value(ds.armor().unwrap()).unwrap(),
+                serde_json::to_value(ds.shields().unwrap()).unwrap(),
+                serde_json::to_value(ds.npc_templates().unwrap()).unwrap(),
+            ];
+            all.iter_mut().for_each(blank);
+            all
+        }
+        assert_eq!(shape(SeedDataSource::new(Lang::Ru)), shape(SeedDataSource::new(Lang::En)));
+        // The texts really are in different languages.
+        let name = |l| SeedDataSource::new(l).armor().unwrap().entries[0].name.clone();
+        assert_ne!(name(Lang::Ru), name(Lang::En));
+    }
+
+    /// uuids are unique across every content table.
+    #[test]
+    fn content_uuids_are_unique() {
+        let ds = SeedDataSource::default();
+        let mut ids: Vec<String> = ds.cover_materials().unwrap().entries.into_iter().map(|e| e.uuid).collect();
+        ids.extend(ds.armor().unwrap().entries.into_iter().map(|e| e.uuid));
+        ids.extend(ds.shields().unwrap().entries.into_iter().map(|e| e.uuid));
+        ids.extend(ds.npc_templates().unwrap().entries.into_iter().map(|e| e.uuid));
+        let n = ids.len();
+        ids.sort();
+        ids.dedup();
+        assert_eq!(ids.len(), n);
+    }
+
     #[test]
     fn seed_data_passes_invariants() {
         use crate::catalog::*;
-        let ds = SeedDataSource;
+        let ds = SeedDataSource::default();
         assert_eq!(validate_critical_injuries(&ds.critical_injuries().unwrap()), Ok(()));
         assert_eq!(validate_cover_materials(&ds.cover_materials().unwrap()), Ok(()));
         assert_eq!(validate_armor(&ds.armor().unwrap()), Ok(()));
@@ -166,7 +249,7 @@ mod tests {
     #[test]
     fn skills_match_book() {
         use crate::catalog::*;
-        let skills = SeedDataSource.skills().unwrap();
+        let skills = SeedDataSource::default().skills().unwrap();
         let count = |c: SkillCategory| skills.entries.iter().filter(|e| e.category == c).count();
         assert_eq!(
             [
@@ -205,14 +288,14 @@ mod tests {
     #[test]
     fn seed_values_match_book() {
         use crate::catalog::*;
-        let ds = SeedDataSource;
+        let ds = SeedDataSource::default();
         let cover = ds.cover_materials().unwrap();
-        let hp = |id: &str| cover.entries.iter().find(|e| e.id == id).unwrap().hp;
+        let hp = |id: &str| cover.entries.iter().find(|e| e.code == id).unwrap().hp;
         assert_eq!((hp("concrete_thick"), hp("wood_thin"), hp("metal_thick")), (25, 5, 50));
-        assert!(cover.entries.iter().all(|e| e.id != "drywall_thin"));
+        assert!(cover.entries.iter().all(|e| e.code != "drywall_thin"));
 
         let armor = ds.armor().unwrap();
-        let a = |id: &str| armor.entries.iter().find(|e| e.id == id).unwrap().clone();
+        let a = |id: &str| armor.entries.iter().find(|e| e.code == id).unwrap().clone();
         assert_eq!((a("kevlar").sp, a("kevlar").penalty), (7, 0));
         assert_eq!((a("metalgear").sp, a("metalgear").penalty), (18, 4));
 
@@ -235,7 +318,7 @@ mod tests {
     fn npc_templates_match_book() {
         use crate::catalog::*;
         use crate::damage::max_hp;
-        let ds = SeedDataSource;
+        let ds = SeedDataSource::default();
         let npcs = ds.npc_templates().unwrap();
         let skills = ds.skills().unwrap();
         assert_eq!(npcs.entries.len(), 10);
@@ -254,7 +337,7 @@ mod tests {
             ("cyberpsychopath", 55, 28, 10),
         ];
         for (id, hp, serious, save) in printed {
-            let t = npcs.entries.iter().find(|e| e.id == id).unwrap();
+            let t = npcs.entries.iter().find(|e| e.code == id).unwrap();
             let derived = max_hp(t.stats.body, t.stats.will);
             assert_eq!((derived, derived.div_ceil(2), u32::from(t.stats.body)), (hp, serious, save), "{id}");
             assert_eq!(t.stats.luck, 0, "{id}: LUCK is a dash in the book");
@@ -262,7 +345,7 @@ mod tests {
             assert_eq!((c.validate(), c.hp), (Ok(()), hp), "{id}");
         }
 
-        let tier = |id: &str| npcs.entries.iter().find(|e| e.id == id).unwrap().tier;
+        let tier = |id: &str| npcs.entries.iter().find(|e| e.code == id).unwrap().tier;
         assert_eq!(tier("bodyguard"), NpcTier::Mook);
         assert_eq!(tier("netrunner"), NpcTier::Lieutenant);
         assert_eq!(tier("pyrotechnician"), NpcTier::MiniBoss);
@@ -271,8 +354,9 @@ mod tests {
         // Armor that is a catalog item has the catalog's SP.
         let armor = ds.armor().unwrap();
         for t in &npcs.entries {
-            if let Some(a) = armor.entries.iter().find(|a| a.name_key == t.armor_name_key) {
-                assert_eq!((t.armor_head_sp, t.armor_body_sp), (a.sp, a.sp), "{}", t.id);
+            if let Some(code) = &t.armor_code {
+                let a = armor.entries.iter().find(|a| &a.code == code).expect("armor code is in the catalog");
+                assert_eq!((t.armor_head_sp, t.armor_body_sp), (a.sp, a.sp), "{}", t.code);
             }
         }
 
@@ -285,17 +369,17 @@ mod tests {
                 let id = crate::character::skill_base_id(key);
                 let stat = skills.entries.iter().find(|s| s.id == id).unwrap().stat.value_in(&t.stats);
                 if stat + levels[key] != total {
-                    below.push(format!("{}:{key}", t.id));
+                    below.push(format!("{}:{key}", t.code));
                 }
             }
         }
         assert_eq!(below, ["cyberpsychopath:concentration"]);
 
         // Spot checks against the images.
-        let bodyguard = npcs.entries.iter().find(|e| e.id == "bodyguard").unwrap();
+        let bodyguard = npcs.entries.iter().find(|e| e.code == "bodyguard").unwrap();
         assert_eq!(bodyguard.skill_totals["handgun"], 10);
         assert_eq!(bodyguard.skill_levels(&skills.entries)["handgun"], 4); // REF 6
-        let officer = npcs.entries.iter().find(|e| e.id == "security_officer").unwrap();
+        let officer = npcs.entries.iter().find(|e| e.code == "security_officer").unwrap();
         assert_eq!((officer.stats.reflex, officer.armor_body_sp), (8, 12));
     }
 
@@ -305,7 +389,7 @@ mod tests {
         let path = format!("{}/../../src/components/combat/injury-icons.tsx", env!("CARGO_MANIFEST_DIR"));
         let source = std::fs::read_to_string(path).unwrap();
         let ids: Vec<String> =
-            SeedDataSource.critical_injuries().unwrap().entries.into_iter().map(|e| e.id).collect();
+            SeedDataSource::default().critical_injuries().unwrap().entries.into_iter().map(|e| e.id).collect();
         for id in &ids {
             assert!(source.contains(&format!("
   {id}: ")), "no icon for {id}");

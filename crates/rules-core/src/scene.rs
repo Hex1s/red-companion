@@ -16,47 +16,45 @@ use crate::initiative::Combat;
 
 /// Current version of the scene document.
 pub const SCHEMA_VERSION: u32 = 1;
-/// Id of the preset for a person used as a shield; its HP is set by the GM.
+/// Code of the shield record for a person used as a shield; its HP is set by the GM.
 pub const LIVING_SHIELD: &str = "living_shield";
 /// Upper bound for cover HP accepted from the UI (the sturdiest material is 50).
 pub const COVER_HP_MAX: u32 = 999;
 
-/// Quick-add entry: a cover material, a portable shield or a living shield.
+/// Quick-add entry: a cover material or a shield (portable, corpse, living).
+/// Built from server content, so the name is in the content language.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct CoverPreset {
+    /// `code` of the content record; scenes refer to presets by it.
     pub id: String,
-    pub name_key: String,
+    pub name: String,
     pub thickness: Option<CoverThickness>,
     /// `None`: the GM has to enter the HP (corpse = BODY, living shield).
     pub hp: Option<u32>,
 }
 
-/// All presets, in book order: materials (p. 182), shields (p. 184), living shield.
+/// All presets, in book order: materials (p. 182), then shields (p. 184,
+/// including the corpse and the living shield). Without downloaded content
+/// the list is empty and only hand-made covers remain.
 pub fn cover_presets(ds: &impl DataSource) -> DataResult<Vec<CoverPreset>> {
     let mut presets: Vec<CoverPreset> = ds
         .cover_materials()?
         .entries
         .into_iter()
         .map(|m| CoverPreset {
-            id: m.id,
-            name_key: m.name_key,
+            id: m.code,
+            name: m.name,
             thickness: Some(m.thickness),
             hp: Some(m.hp),
         })
         .collect();
     presets.extend(ds.shields()?.entries.into_iter().map(|s| CoverPreset {
-        id: s.id,
-        name_key: s.name_key,
+        id: s.code,
+        name: s.name,
         thickness: None,
         hp: s.hp,
     }));
-    presets.push(CoverPreset {
-        id: LIVING_SHIELD.to_string(),
-        name_key: "shield.living_shield".to_string(),
-        thickness: None,
-        hp: None,
-    });
     Ok(presets)
 }
 
@@ -253,12 +251,12 @@ mod tests {
     use crate::data_source::SeedDataSource;
 
     fn preset(id: &str) -> CoverPreset {
-        cover_presets(&SeedDataSource).unwrap().into_iter().find(|p| p.id == id).unwrap()
+        cover_presets(&SeedDataSource::default()).unwrap().into_iter().find(|p| p.id == id).unwrap()
     }
 
     #[test]
     fn presets_cover_materials_shields_and_living_shield() {
-        let presets = cover_presets(&SeedDataSource).unwrap();
+        let presets = cover_presets(&SeedDataSource::default()).unwrap();
         assert_eq!(presets.len(), 11 + 2 + 1);
         assert_eq!(preset("concrete_thick").hp, Some(25));
         assert_eq!(preset("bulletproof_shield").hp, Some(10));

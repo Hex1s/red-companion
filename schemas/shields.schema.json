@@ -31,6 +31,9 @@
       "description": "Portable shield, usable as cover with its own HP.",
       "type": "object",
       "properties": {
+        "code": {
+          "type": "string"
+        },
         "hp": {
           "description": "`None` for a body used as a shield: its HP equal the BODY stat the\nperson had while alive.",
           "type": [
@@ -40,19 +43,20 @@
           "format": "uint32",
           "minimum": 0
         },
-        "id": {
-          "type": "string"
-        },
-        "name_key": {
+        "name": {
           "type": "string"
         },
         "source": {
           "$ref": "#/$defs/Source"
+        },
+        "uuid": {
+          "type": "string"
         }
       },
       "required": [
-        "id",
-        "name_key",
+        "uuid",
+        "code",
+        "name",
         "source"
       ]
     },

@@ -3,8 +3,9 @@
   "version": 1,
   "entries": [
     {
-      "id": "bodyguard",
-      "name_key": "npc.template.bodyguard.name",
+      "uuid": "281e9a30-a679-5c49-9be8-b6cca38704d3",
+      "code": "bodyguard",
+      "name": "Телохранитель",
       "tier": "mook",
       "stats": {
         "int": 3,
@@ -18,16 +19,17 @@
         "body": 6,
         "emp": 3
       },
-      "armor_name_key": "armor.items.kevlar",
+      "armor_name": "Кевлар",
+      "armor_code": "kevlar",
       "armor_head_sp": 7,
       "armor_body_sp": 7,
       "weapons": [
         {
-          "name_key": "npc.weapon.shotgun_poor",
+          "name": "Дробовик (плохого качества)",
           "damage": "5d6"
         },
         {
-          "name_key": "npc.weapon.very_heavy_pistol",
+          "name": "Очень тяжёлый пистолет",
           "damage": "4d6"
         }
       ],
@@ -53,15 +55,16 @@
         "shoulder_arms": 10,
         "stealth": 7
       },
-      "gear_key": "npc.template.bodyguard.gear",
-      "notes_key": null,
+      "gear": "Боеприпасы для дробовика x25, Боеприпасы для Оч. тяж. пистолета x25, Рация",
+      "notes": null,
       "source": {
         "page": 412
       }
     },
     {
-      "id": "booster",
-      "name_key": "npc.template.booster.name",
+      "uuid": "1fcf6a68-f547-5c30-aaf8-ed94f6a26fc5",
+      "code": "booster",
+      "name": "Бустер",
       "tier": "mook",
       "stats": {
         "int": 2,
@@ -75,16 +78,17 @@
         "body": 2,
         "emp": 3
       },
-      "armor_name_key": "armor.items.leather",
+      "armor_name": "Кожа",
+      "armor_code": "leather",
       "armor_head_sp": 4,
       "armor_body_sp": 4,
       "weapons": [
         {
-          "name_key": "npc.weapon.very_heavy_pistol_poor",
+          "name": "Очень тяжёлый пистолет (плохого качества)",
           "damage": "4d6"
         },
         {
-          "name_key": "npc.weapon.slice_n_dice",
+          "name": "Потрошители",
           "damage": "2d6"
         }
       ],
@@ -111,15 +115,16 @@
         "resist_torture_drugs": 4,
         "stealth": 7
       },
-      "gear_key": "npc.template.booster.gear",
-      "notes_key": null,
+      "gear": "Боеприпасы для Оч. тяж. пистолета x30, Одноразовый телефон, Потрошители, Техноволосы",
+      "notes": null,
       "source": {
         "page": 412
       }
     },
     {
-      "id": "road_bandit",
-      "name_key": "npc.template.road_bandit.name",
+      "uuid": "9f957622-49e4-5d2f-84a2-a2af3dde7557",
+      "code": "road_bandit",
+      "name": "Дорожный бандит",
       "tier": "mook",
       "stats": {
         "int": 4,
@@ -133,20 +138,21 @@
         "body": 3,
         "emp": 3
       },
-      "armor_name_key": "armor.items.leather",
+      "armor_name": "Кожа",
+      "armor_code": "leather",
       "armor_head_sp": 4,
       "armor_body_sp": 4,
       "weapons": [
         {
-          "name_key": "npc.weapon.very_heavy_pistol",
+          "name": "Очень тяжёлый пистолет",
           "damage": "4d6"
         },
         {
-          "name_key": "npc.weapon.light_melee",
+          "name": "Лёгкое оружие ближнего боя",
           "damage": "1d6"
         },
         {
-          "name_key": "npc.weapon.bow",
+          "name": "Лук",
           "damage": "4d6"
         }
       ],
@@ -173,15 +179,16 @@
         "resist_torture_drugs": 4,
         "stealth": 7
       },
-      "gear_key": "npc.template.road_bandit.gear",
-      "notes_key": null,
+      "gear": "Боеприпасы для Оч. тяж. пистолета x20, Стрелы x20, Верёвка, Фонарик, Нейролинк (Личный порт)",
+      "notes": null,
       "source": {
         "page": 413
       }
     },
     {
-      "id": "security_operative",
-      "name_key": "npc.template.security_operative.name",
+      "uuid": "1ac762cc-e384-5b3d-88cf-2085bf455d53",
+      "code": "security_operative",
+      "name": "Оперативник службы безопасности",
       "tier": "mook",
       "stats": {
         "int": 3,
@@ -195,20 +202,21 @@
         "body": 5,
         "emp": 3
       },
-      "armor_name_key": "armor.items.kevlar",
+      "armor_name": "Кевлар",
+      "armor_code": "kevlar",
       "armor_head_sp": 7,
       "armor_body_sp": 7,
       "weapons": [
         {
-          "name_key": "npc.weapon.assault_rifle_poor",
+          "name": "Штурмовая винтовка (плохого качества)",
           "damage": "5d6"
         },
         {
-          "name_key": "npc.weapon.very_heavy_pistol",
+          "name": "Очень тяжёлый пистолет",
           "damage": "4d6"
         },
         {
-          "name_key": "npc.weapon.medium_melee",
+          "name": "Среднее оружие ближнего боя",
           "damage": "2d6"
         }
       ],
@@ -234,15 +242,16 @@
         "shoulder_arms": 10,
         "stealth": 6
       },
-      "gear_key": "npc.template.security_operative.gear",
-      "notes_key": null,
+      "gear": "Винтовочные патроны x40, Боеприпасы для Оч. тяж. пистолета x20, Рация",
+      "notes": null,
       "source": {
         "page": 413
       }
     },
     {
-      "id": "netrunner",
-      "name_key": "npc.template.netrunner.name",
+      "uuid": "2e3a6c9a-646f-5ce8-be83-be0cb51cb6eb",
+      "code": "netrunner",
+      "name": "Нетраннер",
       "tier": "lieutenant",
       "stats": {
         "int": 7,
@@ -256,12 +265,13 @@
         "body": 3,
         "emp": 4
       },
-      "armor_name_key": "armor.items.bodyweight_suit",
+      "armor_name": "Комбинезон «Бодивейт»",
+      "armor_code": "bodyweight_suit",
       "armor_head_sp": 11,
       "armor_body_sp": 11,
       "weapons": [
         {
-          "name_key": "npc.weapon.very_heavy_pistol",
+          "name": "Очень тяжёлый пистолет",
           "damage": "4d6"
         }
       ],
@@ -291,15 +301,16 @@
         "resist_torture_drugs": 7,
         "stealth": 8
       },
-      "gear_key": "npc.template.netrunner.gear",
-      "notes_key": "npc.template.netrunner.notes",
+      "gear": "Боеприпасы для Оч. тяж. пистолета x50, Фонарик, Очки виртуальности, Нейролинк (Личный порт)",
+      "notes": "Роль: Интерфейс 4. Программы на кибердеке: Банхаммер, Декалом, Стиратель, Адская стрела, Щит, Меч, Червь.",
       "source": {
         "page": 414
       }
     },
     {
-      "id": "chief_restorer",
-      "name_key": "npc.template.chief_restorer.name",
+      "uuid": "7008c0cc-ecf4-51f2-920d-27c5916bc160",
+      "code": "chief_restorer",
+      "name": "Шеф реставраторов",
       "tier": "lieutenant",
       "stats": {
         "int": 3,
@@ -313,24 +324,25 @@
         "body": 6,
         "emp": 4
       },
-      "armor_name_key": "armor.items.light_armorjack",
+      "armor_name": "Лёгкий бронекостюм",
+      "armor_code": "light_armorjack",
       "armor_head_sp": 11,
       "armor_body_sp": 11,
       "weapons": [
         {
-          "name_key": "npc.weapon.shotgun",
+          "name": "Дробовик",
           "damage": "5d6"
         },
         {
-          "name_key": "npc.weapon.light_melee",
+          "name": "Лёгкое оружие ближнего боя",
           "damage": "1d6"
         },
         {
-          "name_key": "npc.weapon.heavy_pistol",
+          "name": "Тяжёлый пистолет",
           "damage": "3d6"
         },
         {
-          "name_key": "npc.weapon.heavy_melee",
+          "name": "Тяжёлое оружие ближнего боя",
           "damage": "3d6"
         }
       ],
@@ -364,15 +376,16 @@
         "weaponstech": 9,
         "wilderness_survival": 7
       },
-      "gear_key": "npc.template.chief_restorer.gear",
-      "notes_key": null,
+      "gear": "Боеприпасы для дробовика x25, Боеприпасы для Тяж. пистолета x25, Агент, Пистолет-крюк, Рация, Палатка и оборудование для кемпинга, Назальные фильтры, Нейролинк (Разъём для щепок, Щепка тактильного усиления)",
+      "notes": null,
       "source": {
         "page": 414
       }
     },
     {
-      "id": "security_officer",
-      "name_key": "npc.template.security_officer.name",
+      "uuid": "39f13ba2-a79d-5c67-b911-eea1ab863b64",
+      "code": "security_officer",
+      "name": "Офицер службы безопасности",
       "tier": "lieutenant",
       "stats": {
         "int": 4,
@@ -386,20 +399,21 @@
         "body": 7,
         "emp": 4
       },
-      "armor_name_key": "armor.items.medium_armorjack",
+      "armor_name": "Средний бронекостюм",
+      "armor_code": "medium_armorjack",
       "armor_head_sp": 12,
       "armor_body_sp": 12,
       "weapons": [
         {
-          "name_key": "npc.weapon.assault_rifle",
+          "name": "Штурмовая винтовка",
           "damage": "5d6"
         },
         {
-          "name_key": "npc.weapon.very_heavy_pistol",
+          "name": "Очень тяжёлый пистолет",
           "damage": "4d6"
         },
         {
-          "name_key": "npc.weapon.medium_melee",
+          "name": "Среднее оружие ближнего боя",
           "damage": "2d6"
         }
       ],
@@ -428,15 +442,16 @@
         "stealth": 8,
         "tactics": 6
       },
-      "gear_key": "npc.template.security_officer.gear",
-      "notes_key": "npc.template.security_officer.notes",
+      "gear": "Боеприпасы для штурм. винтовки x50, Боеприпасы для Оч. тяж. пистолета x30, Пуленепробиваемый щит (10 ПЗ), Бинокль, Одноразовый телефон, Фонарик, Наручники x2, Рация, Радиосканер/Музыкальный проигрыватель, Нейролинк (Керезников)",
+      "notes": "В книге в скобках указаны другие значения: РЕА 8 (6), ЛВК 6 (4), СКО 6 (4); навыки: Атлетика 10 (8), Автоматический огонь 12 (10), Рукопашный бой 10 (8), Вождение 12 (10), Уклонение 10 (8), Пистолеты 10 (8), Оружие ближнего боя 10 (8), Тактическое оружие 10 (8), Скрытность 8 (6). Что означают скобки, в книге не сказано.",
       "source": {
         "page": 415
       }
     },
     {
-      "id": "patrol",
-      "name_key": "npc.template.patrol.name",
+      "uuid": "c51a3aac-d82e-5ffb-94b4-460246284eb3",
+      "code": "patrol",
+      "name": "Патрульный",
       "tier": "mini_boss",
       "stats": {
         "int": 6,
@@ -450,20 +465,21 @@
         "body": 6,
         "emp": 6
       },
-      "armor_name_key": "armor.items.light_armorjack",
+      "armor_name": "Лёгкий бронекостюм",
+      "armor_code": "light_armorjack",
       "armor_head_sp": 11,
       "armor_body_sp": 11,
       "weapons": [
         {
-          "name_key": "npc.weapon.assault_rifle",
+          "name": "Штурмовая винтовка",
           "damage": "5d6"
         },
         {
-          "name_key": "npc.weapon.very_heavy_pistol",
+          "name": "Очень тяжёлый пистолет",
           "damage": "4d6"
         },
         {
-          "name_key": "npc.weapon.light_melee",
+          "name": "Лёгкое оружие ближнего боя",
           "damage": "1d6"
         }
       ],
@@ -497,15 +513,16 @@
         "streetwise": 9,
         "tracking": 10
       },
-      "gear_key": "npc.template.patrol.gear",
-      "notes_key": "npc.template.patrol.notes",
+      "gear": "Боеприпасы для штурм. винтовки x60, Боеприпасы для Оч. тяж. пистолета x40, Наручники x2, Трекер-маячок, Комплект кибераудио (Усиленный слух), Киберглаз (Тактический прицел, Телеоптика), Нейролинк (Личный порт)",
+      "notes": "Роль: Автопарк семьи 4.",
       "source": {
         "page": 415
       }
     },
     {
-      "id": "pyrotechnician",
-      "name_key": "npc.template.pyrotechnician.name",
+      "uuid": "9fe94b81-f138-59bf-a99d-506e7485b219",
+      "code": "pyrotechnician",
+      "name": "Пиротехник",
       "tier": "mini_boss",
       "stats": {
         "int": 5,
@@ -519,20 +536,21 @@
         "body": 5,
         "emp": 3
       },
-      "armor_name_key": "armor.items.light_armorjack",
+      "armor_name": "Лёгкий бронекостюм",
+      "armor_code": "light_armorjack",
       "armor_head_sp": 11,
       "armor_body_sp": 11,
       "weapons": [
         {
-          "name_key": "npc.weapon.flamethrower",
+          "name": "Огнемёт",
           "damage": "3d6"
         },
         {
-          "name_key": "npc.weapon.heavy_pistol",
+          "name": "Тяжёлый пистолет",
           "damage": "3d6"
         },
         {
-          "name_key": "npc.weapon.heavy_melee",
+          "name": "Тяжёлое оружие ближнего боя",
           "damage": "3d6"
         }
       ],
@@ -563,15 +581,16 @@
         "streetwise": 8,
         "tactics": 8
       },
-      "gear_key": "npc.template.pyrotechnician.gear",
-      "notes_key": "npc.template.pyrotechnician.notes",
+      "gear": "Боеприпасы для огнемёта (Зажигательные боеприпасы для дробовика) x8, Боеприпасы для Оч. тяж. пистолета x50, Зажигательная граната x1, Светошумовая граната x1, Комплект кибераудио (Демпфер), Киберглаз x2 (Анти-ослепление x2), Назальные фильтры",
+      "notes": "Роль: Боевое чутьё 4.",
       "source": {
         "page": 416
       }
     },
     {
-      "id": "cyberpsychopath",
-      "name_key": "npc.template.cyberpsychopath.name",
+      "uuid": "33eb67cd-c24e-5a76-a265-e3a96eb9f317",
+      "code": "cyberpsychopath",
+      "name": "Киберпсихопат",
       "tier": "boss",
       "stats": {
         "int": 5,
@@ -585,24 +604,25 @@
         "body": 10,
         "emp": 0
       },
-      "armor_name_key": "npc.armor.subdermal",
+      "armor_name": "Подкожная броня",
+      "armor_code": null,
       "armor_head_sp": 11,
       "armor_body_sp": 11,
       "weapons": [
         {
-          "name_key": "npc.weapon.popup_grenade_launcher",
+          "name": "Выкидной гранатомёт",
           "damage": "6d6"
         },
         {
-          "name_key": "npc.weapon.cybersnake",
+          "name": "Киберзмея",
           "damage": "4d6"
         },
         {
-          "name_key": "npc.weapon.popup_heavy_smg",
+          "name": "Выкидной тяжёлый ПП",
           "damage": "3d6"
         },
         {
-          "name_key": "npc.weapon.wolvers",
+          "name": "Когти росомахи",
           "damage": "3d6"
         }
       ],
@@ -632,8 +652,8 @@
         "stealth": 10,
         "tracking": 10
       },
-      "gear_key": "npc.template.cyberpsychopath.gear",
-      "notes_key": null,
+      "gear": "Бронебойная граната x2, Боеприпасы для тяж. пистолета x100, Киберрука x2 (Выкидной гранатомёт x2, Выкидной тяжёлый ПП, Когти росомахи), Кибернога x2 (Прыжковый ускоритель x2), Киберзмея, Искусственные мышцы и усиленные кости, Нейролинк (Разъём для щепок, Редактор боли), Подкожная броня",
+      "notes": null,
       "source": {
         "page": 416
       }

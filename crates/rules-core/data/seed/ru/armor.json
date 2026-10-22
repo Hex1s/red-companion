@@ -1,0 +1,86 @@
+{
+  "name": "armor",
+  "version": 1,
+  "entries": [
+    {
+      "uuid": "c5acb6b7-b497-5e68-9c6a-0eb90d11b3f7",
+      "code": "leather",
+      "name": "Кожа",
+      "sp": 4,
+      "penalty": 0,
+      "source": {
+        "page": 185
+      }
+    },
+    {
+      "uuid": "a8071158-2544-5dd4-aeae-15b88c61a927",
+      "code": "kevlar",
+      "name": "Кевлар",
+      "sp": 7,
+      "penalty": 0,
+      "source": {
+        "page": 185
+      }
+    },
+    {
+      "uuid": "6773f343-a8bb-53db-8be1-a9fa29d2c7e6",
+      "code": "light_armorjack",
+      "name": "Лёгкий бронекостюм",
+      "sp": 11,
+      "penalty": 0,
+      "source": {
+        "page": 185
+      }
+    },
+    {
+      "uuid": "295d567d-0c34-5f71-952f-8681499440bd",
+      "code": "bodyweight_suit",
+      "name": "Комбинезон «Бодивейт»",
+      "sp": 11,
+      "penalty": 0,
+      "source": {
+        "page": 185
+      }
+    },
+    {
+      "uuid": "1ec6e996-5ee3-598b-a78a-fedbfb336441",
+      "code": "medium_armorjack",
+      "name": "Средний бронекостюм",
+      "sp": 12,
+      "penalty": 2,
+      "source": {
+        "page": 185
+      }
+    },
+    {
+      "uuid": "235a6c47-0c7c-5740-b721-8a832b34a2b8",
+      "code": "heavy_armorjack",
+      "name": "Тяжёлый бронекостюм",
+      "sp": 13,
+      "penalty": 2,
+      "source": {
+        "page": 185
+      }
+    },
+    {
+      "uuid": "0ba2f443-45ed-5a03-a290-a15711ca0b26",
+      "code": "flak",
+      "name": "Взрывозащищённая броня",
+      "sp": 15,
+      "penalty": 4,
+      "source": {
+        "page": 185
+      }
+    },
+    {
+      "uuid": "ee334fcf-e7f1-58a3-8def-d4325c060d91",
+      "code": "metalgear",
+      "name": "Металгир",
+      "sp": 18,
+      "penalty": 4,
+      "source": {
+        "page": 185
+      }
+    }
+  ]
+}

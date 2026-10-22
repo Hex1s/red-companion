@@ -168,12 +168,12 @@ mod tests {
     fn export_then_import_roundtrips() {
         let items = sample();
         let json = export(items.clone()).unwrap();
-        assert_eq!(parse_import(&json, &SeedDataSource).unwrap(), items);
+        assert_eq!(parse_import(&json, &SeedDataSource::default()).unwrap(), items);
     }
 
     #[test]
     fn rejects_foreign_and_broken_files() {
-        let d = &SeedDataSource;
+        let d = &SeedDataSource::default();
         assert!(matches!(parse_import("not json", d), Err(TransferError::Json(_))));
         assert!(matches!(parse_import("{}", d), Err(TransferError::WrongFormat)));
         assert!(matches!(parse_import("[]", d), Err(TransferError::WrongFormat)));
@@ -190,7 +190,7 @@ mod tests {
         let mut items = sample();
         items[1].character.stats.body = 100;
         let json = export(items).unwrap();
-        match parse_import(&json, &SeedDataSource) {
+        match parse_import(&json, &SeedDataSource::default()) {
             Err(TransferError::Invalid { index: 2, name, .. }) => assert_eq!(name, "Boosterganger"),
             other => panic!("unexpected: {other:?}"),
         }
@@ -199,7 +199,7 @@ mod tests {
         items[0].character.schema_version = 99;
         let json = export(items).unwrap();
         assert!(matches!(
-            parse_import(&json, &SeedDataSource),
+            parse_import(&json, &SeedDataSource::default()),
             Err(TransferError::Invalid { index: 1, source: CharacterError::UnsupportedVersion(99), .. })
         ));
     }
@@ -209,12 +209,12 @@ mod tests {
         let mut items = sample();
         items[0].character.skills.insert("no_such_skill".into(), 1);
         let json = export(items).unwrap();
-        assert!(matches!(parse_import(&json, &SeedDataSource), Err(TransferError::UnknownSkill { .. })));
+        assert!(matches!(parse_import(&json, &SeedDataSource::default()), Err(TransferError::UnknownSkill { .. })));
 
         let mut items = sample();
         items[0].character.injuries.push("no_such_injury".into());
         let json = export(items).unwrap();
-        assert!(matches!(parse_import(&json, &SeedDataSource), Err(TransferError::UnknownInjury { .. })));
+        assert!(matches!(parse_import(&json, &SeedDataSource::default()), Err(TransferError::UnknownInjury { .. })));
     }
 
     #[test]
@@ -222,7 +222,7 @@ mod tests {
         let mut items = sample();
         items[0].character.name = "  V  ".into();
         let json = export(items).unwrap();
-        assert_eq!(parse_import(&json, &SeedDataSource).unwrap()[0].character.name, "V");
+        assert_eq!(parse_import(&json, &SeedDataSource::default()).unwrap()[0].character.name, "V");
     }
 
     #[test]
@@ -231,11 +231,11 @@ mod tests {
         items[0].character.skills.insert("language:native".into(), 6);
         items[0].character.skills.insert("language:street_slang".into(), 3);
         let json = export(items.clone()).unwrap();
-        assert_eq!(parse_import(&json, &SeedDataSource).unwrap(), items);
+        assert_eq!(parse_import(&json, &SeedDataSource::default()).unwrap(), items);
 
         items[0].character.skills.insert("no_such_skill:x".into(), 1);
         let json = export(items).unwrap();
-        assert!(matches!(parse_import(&json, &SeedDataSource), Err(TransferError::UnknownSkill { .. })));
+        assert!(matches!(parse_import(&json, &SeedDataSource::default()), Err(TransferError::UnknownSkill { .. })));
     }
 
     #[test]

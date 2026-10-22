@@ -238,7 +238,7 @@ mod tests {
     #[test]
     fn base_penalty_counts_penalising_injuries_only() {
         use crate::data_source::{DataSource, SeedDataSource};
-        let table = SeedDataSource.critical_injuries().unwrap().entries;
+        let table = SeedDataSource::default().critical_injuries().unwrap().entries;
         let with: Vec<&CriticalInjury> = table.iter().filter(|i| i.death_save_penalty).collect();
         let without = table.iter().find(|i| !i.death_save_penalty).unwrap();
         let ids = |list: &[&CriticalInjury]| list.iter().map(|i| i.id.clone()).collect::<Vec<_>>();

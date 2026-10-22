@@ -2,12 +2,12 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 use rules_core::RulesInfo;
-use rules_core::catalog::{BodyArea, CriticalInjury, NpcTemplate, Skill};
+use rules_core::catalog::{Armor, BodyArea, CriticalInjury, NpcTemplate, Skill};
 use rules_core::character::{Character, CharacterKind, CharacterRecord, Derived};
 use rules_core::damage::DamageOutcome;
 use rules_core::damage::WoundState;
 use rules_core::damage_event::{self, DamageApplied, DamageRequest, InjuryRoll};
-use rules_core::data_source::{DataSource, SeedDataSource};
+use rules_core::data_source::{DataSource, Lang, SeedDataSource};
 use rules_core::dice::{
     CheckRoll, DiceError, DiceNotation, RollResult, ThreadDice, check_manual, check_total, roll, roll_check,
     roll_manual,
@@ -26,6 +26,24 @@ pub struct ExportsDir(pub PathBuf);
 /// User database, opened once at startup in the app data directory.
 pub struct AppStorage(pub Mutex<Storage>);
 
+/// Language of server content (names of cover, armor, NPCs...). Set by the UI
+/// from its own language; there is one server per language, the built-in
+/// snapshot stands in for it.
+pub struct ContentLang(pub Mutex<Lang>);
+
+/// Reference data source in the current content language.
+fn content(state: &State<'_, ContentLang>) -> Result<SeedDataSource, String> {
+    let lang = *state.0.lock().map_err(|_| "content language lock poisoned".to_string())?;
+    Ok(SeedDataSource::new(lang))
+}
+
+/// Switches the content language (`ru`, `en`, `ru-RU`...); unknown codes mean English.
+#[tauri::command]
+fn set_content_lang(state: State<'_, ContentLang>, code: String) -> Result<(), String> {
+    *state.0.lock().map_err(|_| "content language lock poisoned".to_string())? = Lang::from_code(&code);
+    Ok(())
+}
+
 #[tauri::command]
 fn rules_info() -> RulesInfo {
     rules_core::rules_info()
@@ -33,12 +51,17 @@ fn rules_info() -> RulesInfo {
 
 #[tauri::command]
 fn list_skills() -> Result<Vec<Skill>, String> {
-    SeedDataSource.skills().map(|c| c.entries).map_err(|e| e.to_string())
+    SeedDataSource::default().skills().map(|c| c.entries).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-fn list_npc_templates() -> Result<Vec<NpcTemplate>, String> {
-    SeedDataSource.npc_templates().map(|c| c.entries).map_err(|e| e.to_string())
+fn list_armor(lang: State<'_, ContentLang>) -> Result<Vec<Armor>, String> {
+    content(&lang)?.armor().map(|c| c.entries).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn list_npc_templates(lang: State<'_, ContentLang>) -> Result<Vec<NpcTemplate>, String> {
+    content(&lang)?.npc_templates().map(|c| c.entries).map_err(|e| e.to_string())
 }
 
 /// Clones a ready-made NPC into a new NPC sheet: own HP and SP, so one
@@ -47,17 +70,18 @@ fn list_npc_templates() -> Result<Vec<NpcTemplate>, String> {
 #[tauri::command]
 fn create_npc_from_template(
     state: State<'_, AppStorage>,
+    lang: State<'_, ContentLang>,
     template_id: String,
     name: String,
     notes: String,
 ) -> Result<CharacterRecord, String> {
-    let templates = SeedDataSource.npc_templates().map_err(|e| e.to_string())?;
+    let templates = content(&lang)?.npc_templates().map_err(|e| e.to_string())?;
     let template = templates
         .entries
         .iter()
-        .find(|t| t.id == template_id)
+        .find(|t| t.code == template_id)
         .ok_or_else(|| format!("NPC template {template_id:?} not found"))?;
-    let skills = SeedDataSource.skills().map_err(|e| e.to_string())?;
+    let skills = SeedDataSource::default().skills().map_err(|e| e.to_string())?;
     let character = template.to_character(&name, &notes, &skills.entries);
     character.validate().map_err(|e| e.to_string())?;
     let data = serde_json::to_string(&character).map_err(|e| e.to_string())?;
@@ -230,7 +254,7 @@ fn import_export_file(
         return Err(format!("{name:?} is not an export file name"));
     }
     let json = std::fs::read_to_string(dir.0.join(&name)).map_err(|e| e.to_string())?;
-    let items = transfer::parse_import(&json, &SeedDataSource).map_err(|e| e.to_string())?;
+    let items = transfer::parse_import(&json, &SeedDataSource::default()).map_err(|e| e.to_string())?;
     let storage = lock(&state)?;
     let mut records = Vec::new();
     for mut item in items {
@@ -312,8 +336,8 @@ fn get_scene(state: State<'_, AppStorage>) -> Result<SceneRecord, String> {
 }
 
 #[tauri::command]
-fn list_cover_presets() -> Result<Vec<CoverPreset>, String> {
-    cover_presets(&SeedDataSource).map_err(|e| e.to_string())
+fn list_cover_presets(lang: State<'_, ContentLang>) -> Result<Vec<CoverPreset>, String> {
+    cover_presets(&content(&lang)?).map_err(|e| e.to_string())
 }
 
 /// Adds a cover from a preset (`preset` = its id) or a hand-made one (`None`,
@@ -321,13 +345,14 @@ fn list_cover_presets() -> Result<Vec<CoverPreset>, String> {
 #[tauri::command]
 fn add_cover(
     state: State<'_, AppStorage>,
+    lang: State<'_, ContentLang>,
     preset: Option<String>,
     name: String,
     hp: Option<u32>,
 ) -> Result<SceneRecord, String> {
     let preset = match preset {
         Some(id) => Some(
-            cover_presets(&SeedDataSource)
+            cover_presets(&content(&lang)?)
                 .map_err(|e| e.to_string())?
                 .into_iter()
                 .find(|p| p.id == id)
@@ -590,7 +615,7 @@ fn stabilize(
 }
 
 fn injury_table() -> Result<Vec<CriticalInjury>, String> {
-    SeedDataSource.critical_injuries().map(|c| c.entries).map_err(|e| e.to_string())
+    SeedDataSource::default().critical_injuries().map(|c| c.entries).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -722,11 +747,14 @@ pub fn run() {
             std::fs::create_dir_all(&exports)?;
             app.manage(ExportsDir(exports));
             app.manage(AppStorage(Mutex::new(storage)));
+            app.manage(ContentLang(Mutex::new(Lang::default())));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             rules_info,
+            set_content_lang,
             list_skills,
+            list_armor,
             list_npc_templates,
             create_npc_from_template,
             list_characters,
