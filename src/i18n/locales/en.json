@@ -561,6 +561,9 @@
     }
   },
   "encounters": {
+    "tier_hint": "By stats closest to: {{tier}}",
+    "tier_hint_hint": "An estimate from stats; you pick the tier. HP {{hp}}, SP {{sp}}, best combat skill {{skill}} (STAT + level). Thresholds are fitted to the book's 10 NPCs (p. 412-416): SP 10+ lieutenant, skill 13+ mini-boss, skill 16+ or HP 50+ boss. The book prints one boss, so its thresholds are the least certain.",
+    "tier_reason": {"baseline": "below the higher tiers' thresholds", "armor": "by SP", "skill": "by combat skill", "hp": "by HP"},
     "export": "Export",
     "export_all": "Export all",
     "exported": "Exported: {{encounters}} encounters, {{templates}} templates. File: {{path}}",

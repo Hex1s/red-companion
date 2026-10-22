@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Assessment } from "@/bindings/Assessment";
+import type { TierHint } from "@/bindings/TierHint";
 import type { NpcTier } from "@/bindings/NpcTier";
 import type { Encounter } from "@/bindings/Encounter";
 import type { EncounterRecord } from "@/bindings/EncounterRecord";
@@ -57,6 +58,27 @@ const VERDICT_STYLE = {
 
 type PendingDelete = { kind: "encounter" | "template"; id: number; name: string };
 
+/** "By stats closer to a lieutenant": a hint under the template name; the tooltip shows the numbers. */
+function TierHintLine({ hint }: { hint: TierHint }) {
+  const { t } = useTranslation();
+  return (
+    <Hint
+      side="bottom"
+      label={
+        <span className="block max-w-72 whitespace-pre-line">
+          {t("encounters.tier_hint_hint", { hp: hint.hp, sp: hint.sp, skill: hint.skill })}
+        </span>
+      }
+    >
+      <span className="block cursor-help text-xs font-normal normal-case text-muted-foreground">
+        {t("encounters.tier_hint", { tier: t(`npc.tier.${hint.tier}`).toLowerCase() })}
+        {" · "}
+        {t(`encounters.tier_reason.${hint.reason}`)}
+      </span>
+    </Hint>
+  );
+}
+
 /** "Strength 6 / 4 - strong": a reference estimate, the tooltip says where the numbers come from. */
 function StrengthBadge({ assessment }: { assessment: Assessment }) {
   const { t } = useTranslation();
@@ -101,6 +123,7 @@ export function EncountersPage({
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const { encounterPlayers: players, setEncounterPlayers } = useUiStore();
   const [assessments, setAssessments] = useState<Record<number, Assessment>>({});
+  const [hints, setHints] = useState<Record<number, TierHint>>({});
   const [playersInput, setPlayersInput] = useState(String(players));
   const playersNumber = Number(playersInput);
   const playersValid =
@@ -121,6 +144,20 @@ export function EncountersPage({
       cancelled = true;
     };
   }, [encounters, userTemplates, players]);
+
+  // The tier hint is computed in Rust from the sheet; it is redone when the templates change.
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all(
+      userTemplates.map((x) => api.tierHint(x.character).then((h) => [x.id, h] as const)),
+    ).then(
+      (pairs) => !cancelled && setHints(Object.fromEntries(pairs)),
+      () => !cancelled && setHints({}),
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [userTemplates]);
 
   const run = async (task: () => Promise<unknown>, id: string) => {
     try {
@@ -268,6 +305,7 @@ export function EncountersPage({
                 <li key={template.id} className="cut flex items-baseline gap-3 px-3 py-1.5 [--cut:4px]">
                   <span className="flex-1 font-display text-sm font-semibold uppercase">
                     {character.name}
+                    {hints[template.id] && <TierHintLine hint={hints[template.id]} />}
                   </span>
                   <span className="num text-xs text-muted-foreground">
                     {t("armor.head")} {character.armor_head.max_sp} / {t("armor.body")}{" "}

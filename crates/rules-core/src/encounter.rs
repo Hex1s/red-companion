@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use ts_rs::TS;
 
-use crate::catalog::NpcTier;
-use crate::character::Character;
+use crate::catalog::{NpcTier, Skill};
+use crate::character::{skill_base_id, Character};
 
 /// Most clones of one template in an encounter.
 pub const COUNT_MAX: u32 = 20;
@@ -132,6 +132,90 @@ pub fn assess(weight: u32, players: u32, skipped: u32) -> Result<Assessment, Enc
         return Err(EncounterError::BadPlayers(players));
     }
     Ok(Assessment { weight, players, verdict: verdict(weight, players), skipped })
+}
+
+/// Skills that count as "combat" for the tier hint: shooting, melee, hand-to-hand and dodging.
+pub const COMBAT_SKILLS: [&str; 9] = [
+    "handgun",
+    "shoulder_arms",
+    "heavy_weapons",
+    "autofire",
+    "archery",
+    "melee_weapon",
+    "brawling",
+    "martial_arts",
+    "evasion",
+];
+
+/// Thresholds of the tier hint. The book gives no rule for a tier by stats, so they are fitted
+/// to its ten NPCs (p. 412-416) once and fixed here; the NPCs themselves are not consulted.
+/// Each sits in the gap between the neighbouring tiers of the book:
+/// - armor (body SP): mooks 4-7, everyone above them 11-12 -> lieutenant from 10;
+/// - best combat skill (STAT + level): mooks and lieutenants 10-12, mini-bosses 14, boss 17
+///   -> mini-boss from 13, boss from 16;
+/// - HP: 20-40 for all but the boss (55) -> boss from 50.
+/// Only one boss is printed, so the boss thresholds are the least certain.
+pub const HINT_LIEUTENANT_SP: u8 = 10;
+pub const HINT_MINI_BOSS_SKILL: u8 = 13;
+pub const HINT_BOSS_SKILL: u8 = 16;
+pub const HINT_BOSS_HP: u32 = 50;
+
+/// What pushed the hint to its tier.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+#[serde(rename_all = "snake_case")]
+pub enum HintReason {
+    /// Nothing reaches a higher tier: a mook.
+    Baseline,
+    Armor,
+    Skill,
+    Hp,
+}
+
+/// "By its stats the sheet is closest to this tier": information only, the GM picks the tier.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct TierHint {
+    pub tier: NpcTier,
+    pub reason: HintReason,
+    pub hp: u32,
+    /// Body armor SP (the better of the two slots when they differ).
+    pub sp: u8,
+    /// Best combat skill, STAT + level.
+    pub skill: u8,
+}
+
+/// Best STAT + level over the combat skills on the sheet (0 when it has none).
+pub fn best_combat_skill(character: &Character, catalog: &[Skill]) -> u8 {
+    character
+        .skills
+        .iter()
+        .filter(|(key, _)| COMBAT_SKILLS.contains(&skill_base_id(key)))
+        .filter_map(|(key, level)| {
+            let skill = catalog.iter().find(|s| s.id == skill_base_id(key))?;
+            Some(character.stats.get(skill.stat).saturating_add(*level))
+        })
+        .max()
+        .unwrap_or(0)
+}
+
+/// Picks the highest tier whose threshold the sheet reaches (see the `HINT_*` constants).
+pub fn tier_hint(character: &Character, catalog: &[Skill]) -> TierHint {
+    let hp = character.max_hp();
+    let sp = character.armor_body.max_sp.max(character.armor_head.max_sp);
+    let skill = best_combat_skill(character, catalog);
+    let (tier, reason) = if hp >= HINT_BOSS_HP {
+        (NpcTier::Boss, HintReason::Hp)
+    } else if skill >= HINT_BOSS_SKILL {
+        (NpcTier::Boss, HintReason::Skill)
+    } else if skill >= HINT_MINI_BOSS_SKILL {
+        (NpcTier::MiniBoss, HintReason::Skill)
+    } else if sp >= HINT_LIEUTENANT_SP {
+        (NpcTier::Lieutenant, HintReason::Armor)
+    } else {
+        (NpcTier::Mook, HintReason::Baseline)
+    };
+    TierHint { tier, reason, hp, sp, skill }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
@@ -276,5 +360,53 @@ mod tests {
         assert_eq!(fresh.death_save_penalty, 0);
         assert!(!fresh.dead);
         assert_eq!(fresh.name, "Thug");
+    }
+
+    #[test]
+    fn tier_hint_reproduces_the_ten_book_npcs() {
+        use crate::data_source::{DataSource, SeedDataSource};
+        let data = SeedDataSource::default();
+        let skills = data.skills().unwrap().entries;
+        let npcs = data.npc_templates().unwrap().entries;
+        assert_eq!(npcs.len(), 10);
+        for npc in &npcs {
+            let sheet = npc.to_character(&npc.name, "", &skills);
+            let hint = tier_hint(&sheet, &skills);
+            assert_eq!(hint.tier, npc.tier, "{}: {hint:?}", npc.code);
+        }
+    }
+
+    #[test]
+    fn tier_hint_thresholds_and_reasons() {
+        use crate::character::ArmorSlot;
+        use crate::data_source::DataSource;
+        let skills = crate::data_source::SeedDataSource::default().skills().unwrap().entries;
+        let mut c = Character::quick("X");
+        // quick(): default stats; no skills -> baseline.
+        assert_eq!(tier_hint(&c, &skills).reason, HintReason::Baseline);
+        assert_eq!(tier_hint(&c, &skills).skill, 0);
+
+        c.armor_body = ArmorSlot { sp: 10, max_sp: 10 };
+        let h = tier_hint(&c, &skills);
+        assert_eq!((h.tier, h.reason), (NpcTier::Lieutenant, HintReason::Armor));
+        c.armor_body = ArmorSlot { sp: 9, max_sp: 9 };
+        assert_eq!(tier_hint(&c, &skills).tier, NpcTier::Mook);
+
+        // Only combat skills count; a non-combat one does not raise the tier.
+        c.stats.reflex = 8;
+        c.skills.insert("perception".into(), 10);
+        assert_eq!(tier_hint(&c, &skills).skill, 0);
+        c.skills.insert("handgun".into(), 5); // handgun is REF-based: 8 + 5
+        let h = tier_hint(&c, &skills);
+        assert_eq!((h.skill, h.tier, h.reason), (13, NpcTier::MiniBoss, HintReason::Skill));
+        c.skills.insert("handgun".into(), 8);
+        assert_eq!(tier_hint(&c, &skills).tier, NpcTier::Boss);
+
+        // Specialty keys and HP.
+        let mut tank = Character::quick("Tank");
+        tank.stats.body = 10;
+        tank.stats.will = 10;
+        let h = tier_hint(&tank, &skills);
+        assert_eq!((h.hp, h.tier, h.reason), (60, NpcTier::Boss, HintReason::Hp));
     }
 }

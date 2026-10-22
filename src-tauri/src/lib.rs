@@ -180,6 +180,13 @@ fn set_user_template_tier(
     Ok(UserTemplateRecord { id, tier, character: record.character })
 }
 
+/// Which tier the stats of a sheet are closest to (information only; the GM picks the tier).
+#[tauri::command]
+fn tier_hint(character: Character) -> Result<encounter::TierHint, String> {
+    let skills = SeedDataSource::default().skills().map_err(|e| e.to_string())?;
+    Ok(encounter::tier_hint(&character, &skills.entries))
+}
+
 /// How strong an encounter is against `players` edgerunners (information only). Lines whose
 /// template no longer exists are left out and counted in `skipped`.
 #[tauri::command]
@@ -1078,6 +1085,7 @@ pub fn run() {
             delete_user_template,
             set_user_template_tier,
             assess_encounter,
+            tier_hint,
             create_npc_from_user_template,
             list_encounters,
             save_encounter,

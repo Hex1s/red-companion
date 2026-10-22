@@ -13,6 +13,7 @@ import type { Derived } from "@/bindings/Derived";
 import type { Encounter } from "@/bindings/Encounter";
 import type { EncounterRecord } from "@/bindings/EncounterRecord";
 import type { Assessment } from "@/bindings/Assessment";
+import type { TierHint } from "@/bindings/TierHint";
 import type { NpcTier } from "@/bindings/NpcTier";
 import type { ExportFile } from "@/bindings/ExportFile";
 import type { UserTemplateRecord } from "@/bindings/UserTemplateRecord";
@@ -50,6 +51,8 @@ export const api = {
   /** Clones a ready-made NPC into a new NPC sheet; `notes` is the localized weapons and gear text. */
   createNpcFromTemplate: (templateId: string, name: string, notes: string) =>
     invoke<CharacterRecord>("create_npc_from_template", { templateId, name, notes }),
+  /** The tier a sheet's stats are closest to; information only. */
+  tierHint: (character: Character) => invoke<TierHint>("tier_hint", { character }),
   listUserTemplates: () => invoke<UserTemplateRecord[]>("list_user_templates"),
   /** Copies a character's sheet (fresh HP and armor) into the GM's own templates; `templateId` overwrites one. */
   saveCharacterAsTemplate: (characterId: number, templateId: number | null) =>
