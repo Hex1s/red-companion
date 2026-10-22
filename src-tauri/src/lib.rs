@@ -727,6 +727,31 @@ fn rename_session(
     session_infos(&storage)
 }
 
+/// Longest session note text, in characters; a guard against a runaway paste, not a design limit.
+const SESSION_NOTES_MAX: usize = 100_000;
+
+/// Notes of a session (empty text when none were written).
+#[tauri::command]
+fn session_notes(state: State<'_, AppStorage>, id: i64) -> Result<String, String> {
+    let storage = lock(&state)?;
+    match storage.session_notes(id).map_err(|e| e.to_string())? {
+        Some(notes) => Ok(notes),
+        None => Err(format!("session {id} not found")),
+    }
+}
+
+#[tauri::command]
+fn set_session_notes(state: State<'_, AppStorage>, id: i64, notes: String) -> Result<(), String> {
+    if notes.chars().count() > SESSION_NOTES_MAX {
+        return Err(format!("notes are longer than {SESSION_NOTES_MAX} characters"));
+    }
+    let storage = lock(&state)?;
+    if !storage.set_session_notes(id, &notes).map_err(|e| e.to_string())? {
+        return Err(format!("session {id} not found"));
+    }
+    Ok(())
+}
+
 #[tauri::command]
 fn switch_session(state: State<'_, AppStorage>, id: i64) -> Result<Vec<SessionInfo>, String> {
     let storage = lock(&state)?;
@@ -1393,6 +1418,8 @@ pub fn run() {
             create_session,
             rename_session,
             switch_session,
+            session_notes,
+            set_session_notes,
             delete_session,
             session_members,
             add_to_session,

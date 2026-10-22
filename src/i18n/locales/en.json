@@ -8,7 +8,15 @@
     "rules": "Reference",
     "map": "Night City",
     "characters": "Characters",
-    "encounters": "Encounters"
+    "encounters": "Encounters",
+    "notes": "Notes"
+  },
+  "notes": {
+    "title": "Session notes",
+    "placeholder": "What happened, how it ended, what the players were promised…",
+    "no_session": "No active session. Create one in the header.",
+    "load_error": "Could not load the notes: {{error}}",
+    "save_error": "Could not save the notes: {{error}}"
   },
   "common": {
     "language": "Language",

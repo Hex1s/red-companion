@@ -108,6 +108,8 @@ export const api = {
   /** Creates a session with an empty scene and switches to it; answers with the updated list. */
   createSession: (name: string) => invoke<SessionInfo[]>("create_session", { name }),
   renameSession: (id: number, name: string) => invoke<SessionInfo[]>("rename_session", { id, name }),
+  sessionNotes: (id: number) => invoke<string>("session_notes", { id }),
+  setSessionNotes: (id: number, notes: string) => invoke<void>("set_session_notes", { id, notes }),
   switchSession: (id: number) => invoke<SessionInfo[]>("switch_session", { id }),
   /** Deletes a session with its scene and fight; its characters stay. The list is empty after the last one. */
   deleteSession: (id: number) => invoke<SessionInfo[]>("delete_session", { id }),

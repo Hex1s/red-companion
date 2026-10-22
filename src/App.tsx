@@ -21,6 +21,7 @@ import { ReferencePage } from "@/components/reference/reference-page";
 import { AppShell } from "@/components/layout/app-shell";
 import { SessionSwitcher } from "@/components/layout/session-switcher";
 import { CoverPicker } from "@/components/scene/cover-picker";
+import { SessionNotes } from "@/components/session/session-notes";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -329,6 +330,7 @@ export default function App() {
               <TabsList>
                 <TabsTrigger value="characters">{t("nav.characters")}</TabsTrigger>
                 <TabsTrigger value="encounters">{t("nav.encounters")}</TabsTrigger>
+                <TabsTrigger value="notes">{t("nav.notes")}</TabsTrigger>
                 <TabsTrigger value="rules">{t("nav.rules")}</TabsTrigger>
               </TabsList>
             </Tabs>
@@ -452,6 +454,16 @@ export default function App() {
                 selectCharacter(id);
               }}
             />
+          ) : tab === "notes" ? (
+            sessionState.active ? (
+              <SessionNotes
+                key={sessionState.active.id}
+                sessionId={sessionState.active.id}
+                sessionName={sessionState.active.name}
+              />
+            ) : (
+              <p className="text-muted-foreground">{t("notes.no_session")}</p>
+            )
           ) : (
             <ReferencePage />
           )
