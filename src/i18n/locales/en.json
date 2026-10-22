@@ -438,6 +438,13 @@
     "death_save_passed": "alive",
     "death_save_failed": "dead"
   },
+  "skill_check": {
+      "tooltip": "Skill check: STAT + skill + d10",
+      "roll": "Roll",
+      "total_hint": "Total of a physical d10 (with the 10 / 1 extra die added)",
+      "total_label": "d10 total",
+      "formula": "{{stat}} {{statValue}} + skill {{level}} + d10 {{die}}"
+  },
   "stabilize": {
     "title": "Stabilize",
     "helper": "Helper",

@@ -19,6 +19,7 @@ import type { SceneRecord } from "@/bindings/SceneRecord";
 import type { StabilizeApplied } from "@/bindings/StabilizeApplied";
 import type { NpcTemplate } from "@/bindings/NpcTemplate";
 import type { Skill } from "@/bindings/Skill";
+import type { SkillCheck } from "@/bindings/SkillCheck";
 import type { Weapon } from "@/bindings/Weapon";
 
 /**
@@ -104,4 +105,7 @@ export const api = {
     manualTotal: number | null,
     granted: boolean,
   ) => invoke<StabilizeApplied>("stabilize", { targetId, helperId, skill, manualTotal, granted }),
+  /** STAT + skill level + d10 of a saved sheet; `manualTotal` = the die typed in from a physical one. */
+  skillCheck: (characterId: number, skill: string, manualTotal: number | null) =>
+    invoke<SkillCheck>("skill_check", { characterId, skill, manualTotal }),
 };

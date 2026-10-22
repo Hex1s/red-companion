@@ -338,7 +338,7 @@ export function CharacterSheet({ entry, onSave, onDelete }: CharacterSheetProps)
       </Section>
 
       <Section title={t("characters.section.skills")}>
-        <SkillsSection form={form} skills={skills} onChange={scheduleSave} />
+        <SkillsSection characterId={entry.id} form={form} skills={skills} onChange={scheduleSave} />
       </Section>
 
       <Section title={t("characters.notes")}>

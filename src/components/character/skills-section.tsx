@@ -4,7 +4,7 @@ import type { Path, UseFormReturn } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import type { Character } from "@/bindings/Character";
 import type { Skill } from "@/bindings/Skill";
-import type { StatKey } from "@/bindings/StatKey";
+import { SkillCheckButton } from "@/components/character/skill-check-button";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -12,22 +12,12 @@ import { FieldBadge } from "@/components/ui/field-badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SKILL_MAX } from "@/lib/character-schema";
+import { STAT_ABBR } from "@/lib/stat-abbr";
 import { cn } from "@/lib/utils";
 
-const STAT_ABBR: Record<StatKey, string> = {
-  int: "INT",
-  reflex: "REF",
-  dex: "DEX",
-  tech: "TECH",
-  cool: "COOL",
-  will: "WILL",
-  luck: "LUCK",
-  movement: "MOVE",
-  body: "BODY",
-  emp: "EMP",
-};
-
 type SkillsSectionProps = {
+  /** Saved id of the sheet, for quick checks. */
+  characterId: number;
   form: UseFormReturn<Character>;
   skills: Skill[];
   /** Called after a change the form does not report by itself (a removed specialty). */
@@ -38,7 +28,7 @@ type SkillsSectionProps = {
 const levelOf = (values: Record<string, number>, key: string) => values[key] ?? 0;
 
 /** The sheet's skills: collapsible groups, a search box and a "trained only" filter. */
-export function SkillsSection({ form, skills, onChange }: SkillsSectionProps) {
+export function SkillsSection({ characterId, form, skills, onChange }: SkillsSectionProps) {
   const { t } = useTranslation();
   const {
     register,
@@ -128,6 +118,10 @@ export function SkillsSection({ form, skills, onChange }: SkillsSectionProps) {
     );
   };
 
+  const checkButton = (key: string, label: string) => (
+    <SkillCheckButton characterId={characterId} skillKey={key} label={label} />
+  );
+
   const skillRow = (skill: Skill) => {
     const stat = <span className="text-xs text-muted-foreground">{t(`stats.${STAT_ABBR[skill.stat]}`)}</span>;
     const title = (
@@ -144,6 +138,7 @@ export function SkillsSection({ form, skills, onChange }: SkillsSectionProps) {
           </Label>
           {stat}
           {levelInput(skill.id)}
+          {checkButton(skill.id, t(skill.name_key))}
         </li>
       );
     }
@@ -178,6 +173,7 @@ export function SkillsSection({ form, skills, onChange }: SkillsSectionProps) {
                 {specialtyLabel(key)}
               </Label>
               {levelInput(key)}
+              {checkButton(key, `${t(skill.name_key)}: ${specialtyLabel(key)}`)}
               <Button
                 type="button"
                 size="xs"

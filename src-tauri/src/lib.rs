@@ -12,6 +12,7 @@ use rules_core::dice::{
     CheckRoll, DiceError, DiceNotation, RollResult, ThreadDice, check_manual, check_total, roll, roll_check,
     roll_manual,
 };
+use rules_core::skill_check::{self, SkillCheck};
 use rules_core::scene::{CoverPreset, Scene, SceneRecord, cover_presets};
 use rules_core::transfer::{self, ExportFile, ExportSaved, ExportedCharacter};
 use rules_core::vitals::{self, DeathSaveApplied, STABILIZE_SKILLS, StabilizeApplied};
@@ -628,6 +629,24 @@ fn list_injuries() -> Result<Vec<CriticalInjury>, String> {
     injury_table()
 }
 
+/// Skill check of a saved sheet: STAT + level + a d10 check, rolled here or typed in
+/// from a physical die (`manual_total`, the explosion already added up).
+#[tauri::command]
+fn skill_check(
+    state: State<'_, AppStorage>,
+    character_id: i64,
+    skill: String,
+    manual_total: Option<i32>,
+) -> Result<SkillCheck, String> {
+    let character = require_character(&*lock(&state)?, character_id)?;
+    let die = match manual_total {
+        Some(total) => check_total(total).map_err(|e| e.to_string())?,
+        None => roll_check(&mut ThreadDice::new()),
+    };
+    let catalog = SeedDataSource::default().skills().map_err(|e| e.to_string())?.entries;
+    skill_check::skill_check(&character, &skill, &catalog, die).map_err(|e| e.to_string())
+}
+
 /// Rolls `notation` with the OS RNG, or builds the result from faces read off
 /// physical dice (`manual`).
 #[tauri::command]
@@ -759,6 +778,7 @@ pub fn run() {
             rules_info,
             set_content_lang,
             list_skills,
+            skill_check,
             list_armor,
             list_weapons,
             list_npc_templates,

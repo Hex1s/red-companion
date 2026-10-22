@@ -438,6 +438,13 @@
     "death_save_passed": "жив",
     "death_save_failed": "мёртв"
   },
+  "skill_check": {
+      "tooltip": "Проверка навыка: СТАТ + навык + d10",
+      "roll": "Бросить",
+      "total_hint": "Итог кубика с физического d10 (с учётом 10 и 1)",
+      "total_label": "Итог d10",
+      "formula": "{{stat}} {{statValue}} + навык {{level}} + d10 {{die}}"
+  },
   "stabilize": {
     "title": "Стабилизировать",
     "helper": "Кто помогает",
