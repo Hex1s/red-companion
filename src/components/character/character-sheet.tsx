@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { BedDouble } from "lucide-react";
+import { BedDouble, BrainCircuit, HeartPulse } from "lucide-react";
 import { useForm, type Path } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import type { Character } from "@/bindings/Character";
@@ -62,6 +62,10 @@ type CharacterSheetProps = {
   onHeal: (injury: CriticalInjury, kind: HealKind) => void;
   /** Opens the rest window. */
   onRest: () => void;
+  /** Opens the humanity loss window. */
+  onLoseHumanity: () => void;
+  /** Opens the therapy window. */
+  onTherapy: () => void;
 };
 
 type SectionProps = { title: string; children: ReactNode };
@@ -95,6 +99,8 @@ export function CharacterSheet({
   injuryTable,
   onHeal,
   onRest,
+  onLoseHumanity,
+  onTherapy,
 }: CharacterSheetProps) {
   const { t } = useTranslation();
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -350,6 +356,44 @@ export function CharacterSheet({
             <StatTile label={t("characters.humanity")} value={derived.max_humanity} />
           </div>
         </div>
+      </Section>
+
+      <Section title={t("glossary.humanity_full")}>
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="grid flex-1 grid-cols-3 gap-2">
+            <StatTile
+              label={t("glossary.humanity")}
+              value={`${derived.humanity} / ${derived.max_humanity}`}
+            />
+            <StatTile label={t("humanity.emp_now")} value={derived.effective_emp} />
+            <StatTile label={t("humanity.emp_base")} value={entry.character.stats.emp} />
+          </div>
+          <Hint label={t("humanity.loss_hint")}>
+            <Button type="button" size="sm" variant="outline" disabled={alive.dead} onClick={onLoseHumanity}>
+              <BrainCircuit />
+              {t("humanity.loss_button")}
+            </Button>
+          </Hint>
+          <Hint label={t("humanity.therapy_hint")}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={alive.dead || derived.humanity >= derived.max_humanity}
+              onClick={onTherapy}
+            >
+              <HeartPulse />
+              {t("humanity.therapy_button")}
+            </Button>
+          </Hint>
+        </div>
+        {derived.cyberpsychosis && (
+          <Hint label={t("humanity.cyberpsychosis_hint")}>
+            <p className="font-display text-sm font-semibold text-state-mortal uppercase">
+              {t("humanity.cyberpsychosis")}
+            </p>
+          </Hint>
+        )}
       </Section>
 
       <Section title={t("characters.section.armor")}>

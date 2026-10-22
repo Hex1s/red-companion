@@ -14,6 +14,18 @@ serious_threshold: number, wound_state: WoundState,
  */
 death_save: number, max_humanity: number, 
 /**
+ * Current humanity (can be negative).
+ */
+humanity: number, 
+/**
+ * EMP after humanity loss: one point per full 10 HUM lost.
+ */
+effective_emp: number, 
+/**
+ * HUM is below zero (p. 80).
+ */
+cyberpsychosis: boolean, 
+/**
  * DV of stabilising the character in their current wound state (p. 186); `None` when
  * there is nothing to stabilise (healthy, dead).
  */

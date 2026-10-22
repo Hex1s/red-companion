@@ -12,7 +12,9 @@ import { EncountersPage } from "@/components/encounter/encounters-page";
 import { CombatBar } from "@/components/combat/combat-bar";
 import { DamageDialog } from "@/components/combat/damage-dialog";
 import { HealDialog, type HealTarget } from "@/components/combat/heal-dialog";
+import { LoseHumanityDialog } from "@/components/combat/humanity-dialog";
 import { RestDialog } from "@/components/combat/rest-dialog";
+import { TherapyDialog } from "@/components/combat/therapy-dialog";
 import type { HealKind } from "@/bindings/HealKind";
 import { StabilizeDialog } from "@/components/combat/stabilize-dialog";
 import { ReferencePage } from "@/components/reference/reference-page";
@@ -52,6 +54,8 @@ export default function App() {
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [stabilizeTargetId, setStabilizeTargetId] = useState<number | null>(null);
   const [restTargetId, setRestTargetId] = useState<number | null>(null);
+  const [humanityLossTargetId, setHumanityLossTargetId] = useState<number | null>(null);
+  const [therapyTargetId, setTherapyTargetId] = useState<number | null>(null);
   const [healTarget, setHealTarget] = useState<{ id: number; injuryId: string; kind: HealKind } | null>(null);
   const [importFiles, setImportFiles] = useState<ExportFile[] | null>(null);
   const [encounterImportFiles, setEncounterImportFiles] = useState<ExportFile[] | null>(null);
@@ -410,6 +414,8 @@ export default function App() {
                     setHealTarget({ id: selected.id, injuryId: injury.id, kind })
                   }
                   onRest={() => setRestTargetId(selected.id)}
+                  onLoseHumanity={() => setHumanityLossTargetId(selected.id)}
+                  onTherapy={() => setTherapyTargetId(selected.id)}
                   onDelete={async () => {
                     try {
                       await remove(selected.id);
@@ -580,6 +586,42 @@ export default function App() {
                 });
               }}
               onClose={() => setRestTargetId(null)}
+            />
+            <LoseHumanityDialog
+              target={entries.find((e) => e.id === humanityLossTargetId) ?? null}
+              onDone={(applied) => {
+                void reload();
+                const { loss, character } = applied;
+                status.show({
+                  id: "humanity",
+                  kind: loss.became_cyberpsycho ? "error" : "success",
+                  text: t(loss.became_cyberpsycho ? "humanity.lost_psycho" : "humanity.lost", {
+                    name: character.character.name,
+                    from: loss.from,
+                    to: loss.to,
+                    emp: loss.emp_to,
+                  }),
+                });
+              }}
+              onClose={() => setHumanityLossTargetId(null)}
+            />
+            <TherapyDialog
+              target={entries.find((e) => e.id === therapyTargetId) ?? null}
+              onDone={(applied) => {
+                void reload();
+                if (!applied.result.success) return;
+                status.show({
+                  id: "humanity",
+                  kind: "success",
+                  text: t("humanity.done", {
+                    name: applied.character.character.name,
+                    restored: applied.result.restored,
+                    from: applied.result.from,
+                    to: applied.result.to,
+                  }),
+                });
+              }}
+              onClose={() => setTherapyTargetId(null)}
             />
             <HealDialog
               target={healDialogTarget}

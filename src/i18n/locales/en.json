@@ -622,7 +622,12 @@
   "encounters": {
     "tier_hint": "By stats closest to: {{tier}}",
     "tier_hint_hint": "An estimate from stats; you pick the tier. HP {{hp}}, SP {{sp}}, best combat skill {{skill}} (STAT + level). Thresholds are fitted to the book's 10 NPCs (p. 412-416): SP 10+ lieutenant, skill 13+ mini-boss, skill 16+ or HP 50+ boss. The book prints one boss, so its thresholds are the least certain.",
-    "tier_reason": {"baseline": "below the higher tiers' thresholds", "armor": "by SP", "skill": "by combat skill", "hp": "by HP"},
+    "tier_reason": {
+      "baseline": "below the higher tiers' thresholds",
+      "armor": "by SP",
+      "skill": "by combat skill",
+      "hp": "by HP"
+    },
     "export": "Export",
     "export_all": "Export all",
     "exported": "Exported: {{encounters}} encounters, {{templates}} templates. File: {{path}}",
@@ -672,5 +677,45 @@
       "strong": "strong",
       "very_strong": "very strong"
     }
+  },
+  "humanity": {
+    "loss_title": "Humanity loss",
+    "loss_amount": "HUM lost",
+    "loss_range": "Whole number from 1 to {{max}}",
+    "loss_roll": "Roll {{notation}} (arrow: other dice and typing in faces)",
+    "loss_apply": "Lose HUM",
+    "after": "HUM after: {{from}} → {{to}}",
+    "cyberpsychosis": "cyberpsychosis",
+    "cyberpsychosis_hint": "HUM below zero: emotional death, cyberpsychosis (p. 80). Symptoms: no self-preservation, disregard for others, impulsive and explosive behavior (p. 108). The app applies no penalties; the GM plays the state out.",
+    "emp_now": "Current EMP",
+    "emp_base": "EMP on the sheet",
+    "loss_button": "Humanity loss",
+    "loss_hint": "Take humanity off (an implant, a horrifying event)",
+    "therapy_button": "Therapy",
+    "therapy_hint": "A week of therapy with a Medtech: win back some humanity",
+    "therapy_title": "Therapy",
+    "kind": {
+      "standard": "Standard loss",
+      "extreme": "Extreme loss"
+    },
+    "dv": "Medtech check DV",
+    "restores": "Restores HUM",
+    "price": "Price of the week",
+    "materials": "Materials (lost on a failure)",
+    "eb": "eb",
+    "therapy_note": "A Medtech cannot treat themselves. The week is spent on therapy. HUM is capped by the sheet's EMP.",
+    "bonus": "Medtech bonus",
+    "bonus_hint": "Rank of the Medicine ability + stat; typed in by the GM",
+    "roll": "Roll",
+    "declare": "Success without a roll",
+    "declare_hint": "Count the check as passed without rolling (the HUM dice are still rolled)",
+    "faces_label": "Restoration dice",
+    "faces_hint": "Faces of {{dice}} from physical dice; empty = rolled in the app",
+    "faces_invalid": "Need the faces of {{dice}}, numbers 1 to 6",
+    "already_full": "Humanity is already full.",
+    "failed": "failed: the week and the materials are wasted",
+    "done": "{{name}}: therapy restored {{restored}} HUM ({{from}} → {{to}}).",
+    "lost": "{{name}}: HUM {{from}} → {{to}}, EMP {{emp}}.",
+    "lost_psycho": "{{name}}: HUM {{from}} → {{to}}. Cyberpsychosis!"
   }
 }

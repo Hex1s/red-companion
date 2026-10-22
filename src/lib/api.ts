@@ -31,6 +31,10 @@ import type { Skill } from "@/bindings/Skill";
 import type { SkillCheck } from "@/bindings/SkillCheck";
 import type { HealApplied } from "@/bindings/HealApplied";
 import type { HealKind } from "@/bindings/HealKind";
+import type { HumanityLossApplied } from "@/bindings/HumanityLossApplied";
+import type { TherapyApplied } from "@/bindings/TherapyApplied";
+import type { TherapyInfo } from "@/bindings/TherapyInfo";
+import type { TherapyKind } from "@/bindings/TherapyKind";
 import type { RestApplied } from "@/bindings/RestApplied";
 import type { RestPlan } from "@/bindings/RestPlan";
 import type { TreatmentSkill } from "@/bindings/TreatmentSkill";
@@ -152,6 +156,22 @@ export const api = {
   restPreview: (id: number, targetHp: number) => invoke<RestPlan>("rest_preview", { id, targetHp }),
   restCharacter: (id: number, targetHp: number) =>
     invoke<RestApplied>("rest_character", { id, targetHp }),
+  /** Takes humanity off; below zero is cyberpsychosis. */
+  loseHumanity: (id: number, loss: number) =>
+    invoke<HumanityLossApplied>("lose_humanity", { id, loss }),
+  listTherapies: () => invoke<TherapyInfo[]>("list_therapies"),
+  /**
+   * A week of therapy. `bonus` is the Medtech's typed-in modifier; `manualTotal` a physical d10
+   * for the check, `granted` declares it passed; `restoreFaces` the faces of the 2d6 / 4d6.
+   */
+  therapy: (
+    id: number,
+    kind: TherapyKind,
+    bonus: number,
+    manualTotal: number | null,
+    granted: boolean,
+    restoreFaces: number[] | null,
+  ) => invoke<TherapyApplied>("therapy", { id, kind, bonus, manualTotal, granted, restoreFaces }),
   listInjuries: () => invoke<CriticalInjury[]>("list_injuries"),
   /** Rolls `notation`, or builds the result from faces read off physical dice. */
   rollDice: (notation: string, manual: number[] | null) =>

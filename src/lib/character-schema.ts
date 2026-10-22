@@ -36,6 +36,7 @@ export const characterSchema = z.object({
   first_aided: z.array(z.string()),
   death_save_penalty: z.number().int().min(0),
   dead: z.boolean(),
+  humanity: z.number().int().nullable(),
   notes: z.string(),
   skills: z.record(z.string(), z.number().int().min(0).max(SKILL_MAX)),
 }) satisfies z.ZodType<Character>;

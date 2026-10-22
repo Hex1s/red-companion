@@ -17,6 +17,7 @@ use rules_core::scene::{CoverPreset, Scene, SceneRecord, SessionInfo, cover_pres
 use rules_core::encounter_transfer::{self, EncountersImported, EncountersSaved};
 use rules_core::transfer::{self, ExportFile, ExportSaved, ExportedCharacter};
 use rules_core::healing::{self, HealApplied, HealKind, RestApplied, RestPlan};
+use rules_core::humanity::{self, HumanityLossApplied, TherapyApplied, TherapyInfo, TherapyKind};
 use rules_core::catalog::TreatmentSkill;
 use rules_core::vitals::{self, DeathSaveApplied, STABILIZE_SKILLS, StabilizeApplied};
 use rules_core::encounter::{
@@ -1147,6 +1148,63 @@ fn rest_character(
     Ok(RestApplied { character: CharacterRecord::new(id, character), plan })
 }
 
+/// Takes humanity off a character (a number the GM decided on, or a roll the UI already made).
+/// Going below zero is cyberpsychosis; nothing else changes on the sheet.
+#[tauri::command]
+fn lose_humanity(
+    state: State<'_, AppStorage>,
+    id: i64,
+    loss: u32,
+) -> Result<HumanityLossApplied, String> {
+    let storage = lock(&state)?;
+    let mut character = require_character(&storage, id)?;
+    let loss = humanity::lose_humanity(&mut character, loss).map_err(|e| e.to_string())?;
+    store_character(&storage, id, &character)?;
+    Ok(HumanityLossApplied { character: CharacterRecord::new(id, character), loss })
+}
+
+/// The therapies that give humanity back, with their DV, dice and price.
+#[tauri::command]
+fn list_therapies() -> Vec<TherapyInfo> {
+    humanity::therapies()
+}
+
+/// One week of therapy. The Medtech's `bonus` is typed in (the Medicine ability is not a sheet
+/// skill); `manual_total` is a physical d10 for the check, `granted` declares it a success.
+/// `restore_faces` are the faces of the restoration dice (2d6 / 4d6) read off physical dice.
+#[tauri::command]
+fn therapy(
+    state: State<'_, AppStorage>,
+    id: i64,
+    kind: TherapyKind,
+    bonus: i32,
+    manual_total: Option<i32>,
+    granted: bool,
+    restore_faces: Option<Vec<u32>>,
+) -> Result<TherapyApplied, String> {
+    let storage = lock(&state)?;
+    let mut character = require_character(&storage, id)?;
+    let check = if granted {
+        None
+    } else {
+        Some(match manual_total {
+            Some(total) => check_total(total).map_err(|e| e.to_string())?,
+            None => roll_check(&mut ThreadDice::new()),
+        })
+    };
+    // The restoration is only rolled when the check succeeds, but a wrong set of faces should be
+    // refused before anything happens.
+    let notation: DiceNotation = kind.dice().parse().map_err(|e: DiceError| e.to_string())?;
+    let restore = match restore_faces {
+        Some(faces) => roll_manual(notation, &faces).map_err(|e| e.to_string())?,
+        None => roll(notation, &mut ThreadDice::new()),
+    };
+    let result = humanity::therapy(&mut character, kind, bonus, check, Some(restore))
+        .map_err(|e| e.to_string())?;
+    store_character(&storage, id, &character)?;
+    Ok(TherapyApplied { character: CharacterRecord::new(id, character), result })
+}
+
 fn injury_table() -> Result<Vec<CriticalInjury>, String> {
     SeedDataSource::default().critical_injuries().map(|c| c.entries).map_err(|e| e.to_string())
 }
@@ -1364,7 +1422,10 @@ pub fn run() {
             stabilize,
             heal_injury,
             rest_preview,
-            rest_character
+            rest_character,
+            lose_humanity,
+            list_therapies,
+            therapy
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

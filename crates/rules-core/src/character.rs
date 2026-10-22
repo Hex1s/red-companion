@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use ts_rs::TS;
 
+use crate::humanity;
 use crate::damage::{max_hp, wound_state, TargetState, WoundState};
 
 /// Current version of the character document.
@@ -109,6 +110,11 @@ pub struct Character {
     pub death_save_penalty: u8,
     #[serde(default)]
     pub dead: bool,
+    /// Current humanity (p. 80); `None` while untouched, which means full (EMP × 10). Can go
+    /// below zero: that is cyberpsychosis. See `humanity`.
+    #[serde(default)]
+    #[ts(type = "number | null")]
+    pub humanity: Option<i32>,
     #[serde(default)]
     pub notes: String,
     /// Skill levels by skill key; skills that are absent are at level 0. The key
@@ -130,6 +136,12 @@ pub struct Derived {
     /// Death save succeeds on d10 + penalty <= this (= BODY).
     pub death_save: u8,
     pub max_humanity: u32,
+    /// Current humanity (can be negative).
+    pub humanity: i32,
+    /// EMP after humanity loss: one point per full 10 HUM lost.
+    pub effective_emp: u8,
+    /// HUM is below zero (p. 80).
+    pub cyberpsychosis: bool,
     /// DV of stabilising the character in their current wound state (p. 186); `None` when
     /// there is nothing to stabilise (healthy, dead).
     pub stabilization_dv: Option<u8>,
@@ -194,6 +206,7 @@ impl Character {
             first_aided: Vec::new(),
             death_save_penalty: 0,
             dead: false,
+            humanity: None,
             notes: String::new(),
             skills: BTreeMap::new(),
         }
@@ -221,6 +234,7 @@ impl Character {
         c.first_aided.clear();
         c.death_save_penalty = 0;
         c.dead = false;
+        c.humanity = None;
         c
     }
 
@@ -236,6 +250,9 @@ impl Character {
             wound_state: self.wound_state(),
             death_save: self.stats.body,
             max_humanity: u32::from(self.stats.emp) * HUMANITY_PER_EMP,
+            humanity: humanity::current_humanity(self),
+            effective_emp: humanity::effective_emp(self),
+            cyberpsychosis: humanity::is_cyberpsycho(self),
             stabilization_dv: self.wound_state().stabilization_dv(),
         }
     }
@@ -326,6 +343,7 @@ mod tests {
         assert_eq!(d.wound_state, WoundState::Serious);
         assert_eq!(d.death_save, 7);
         assert_eq!(d.max_humanity, 40);
+        assert_eq!((d.humanity, d.effective_emp, d.cyberpsychosis), (40, 4, false));
         assert_eq!(d.stabilization_dv, Some(13)); // seriously wounded
     }
 
@@ -424,7 +442,7 @@ mod tests {
 
         // A document without the optional fields still loads.
         let mut value: serde_json::Value = serde_json::from_str(&json).unwrap();
-        for key in ["injuries", "first_aided", "death_save_penalty", "dead", "notes", "skills"] {
+        for key in ["injuries", "first_aided", "death_save_penalty", "dead", "humanity", "notes", "skills"] {
             value.as_object_mut().unwrap().remove(key);
         }
         let loaded: Character = serde_json::from_value(value).unwrap();

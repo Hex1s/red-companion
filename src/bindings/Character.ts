@@ -15,7 +15,12 @@ first_aided: Array<string>,
 /**
  * Accumulated death save penalty (p. 186).
  */
-death_save_penalty: number, dead: boolean, notes: string, 
+death_save_penalty: number, dead: boolean, 
+/**
+ * Current humanity (p. 80); `None` while untouched, which means full (EMP × 10). Can go
+ * below zero: that is cyberpsychosis. See `humanity`.
+ */
+humanity: number | null, notes: string, 
 /**
  * Skill levels by skill key; skills that are absent are at level 0. The key
  * is a catalog skill id, or `id:specialty` for skills taken several times

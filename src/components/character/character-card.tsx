@@ -192,6 +192,13 @@ export function CharacterCard({
         </span>
         <WoundBadge state={derived.wound_state} className="ml-auto text-xs" />
       </div>
+      {derived.cyberpsychosis && (
+        <Hint label={t("humanity.cyberpsychosis_hint")}>
+          <p className="font-display text-xs font-semibold text-state-mortal uppercase">
+            {t("humanity.cyberpsychosis")} <span className="num">{derived.humanity}</span>
+          </p>
+        </Hint>
+      )}
 
       <div className="flex items-center gap-1.5">
         {mortal && (
