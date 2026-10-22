@@ -17,6 +17,8 @@ import type { NpcTier } from "@/bindings/NpcTier";
 import type { ExportFile } from "@/bindings/ExportFile";
 import type { UserTemplateRecord } from "@/bindings/UserTemplateRecord";
 import type { ExportSaved } from "@/bindings/ExportSaved";
+import type { EncountersImported } from "@/bindings/EncountersImported";
+import type { EncountersSaved } from "@/bindings/EncountersSaved";
 import type { DeathSaveApplied } from "@/bindings/DeathSaveApplied";
 import type { InjuryRoll } from "@/bindings/InjuryRoll";
 import type { RollResult } from "@/bindings/RollResult";
@@ -78,6 +80,17 @@ export const api = {
   /** Imports one file of the exports folder as new characters; rejects the whole file if anything is invalid. */
   importExportFile: (name: string) => invoke<CharacterRecord[]>("import_export_file", { name }),
   openExportsFolder: () => invoke<void>("open_exports_folder"),
+  /**
+   * Writes encounters and own NPC templates into a new `.redencounters.json` file; the own
+   * templates an encounter uses go along with it.
+   */
+  exportEncounters: (encounterIds: number[], templateIds: number[]) =>
+    invoke<EncountersSaved>("export_encounters", { encounterIds, templateIds }),
+  /** Encounter files in the exports folder, the newest first. */
+  listEncounterExports: () => invoke<ExportFile[]>("list_encounter_exports"),
+  /** Imports one encounters file as new templates and encounters; rejects the whole file if anything is invalid. */
+  importEncounterFile: (name: string) =>
+    invoke<EncountersImported>("import_encounter_file", { name }),
   getScene: () => invoke<SceneRecord>("get_scene"),
   listCoverPresets: (lang: string) =>
     inLanguage(lang, () => invoke<CoverPreset[]>("list_cover_presets")),

@@ -36,6 +36,10 @@ type EncountersPageProps = {
   onDeleteEncounter: (id: number) => Promise<unknown>;
   onDeleteTemplate: (id: number) => Promise<unknown>;
   onSetTemplateTier: (id: number, tier: NpcTier) => Promise<unknown>;
+  /** Writes the encounters and own templates into a file; an encounter takes its templates along. */
+  onExport: (encounterIds: number[], templateIds: number[]) => Promise<void>;
+  /** Starts the import: the app lists the encounter files of its export folder. */
+  onImport: () => void;
   /** Clones every NPC of the encounter into the session. */
   onLaunch: (encounter: EncounterRecord) => Promise<void>;
   /** Clones one NPC of the GM's own template into the session. */
@@ -87,6 +91,8 @@ export function EncountersPage({
   onDeleteEncounter,
   onDeleteTemplate,
   onSetTemplateTier,
+  onExport,
+  onImport,
   onLaunch,
   onCloneTemplate,
 }: EncountersPageProps) {
@@ -170,6 +176,24 @@ export function EncountersPage({
           {t("encounters.new")}
         </Button>
       </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="outline" size="xs" disabled={!hasBackend} onClick={onImport}>
+          {t("characters.import")}
+        </Button>
+        <Button
+          variant="outline"
+          size="xs"
+          disabled={!hasBackend || (encounters.length === 0 && userTemplates.length === 0)}
+          onClick={() =>
+            void run(
+              () => onExport(encounters.map((e) => e.id), userTemplates.map((x) => x.id)),
+              "transfer:encounters",
+            )
+          }
+        >
+          {t("encounters.export_all")}
+        </Button>
+      </div>
 
       <section className="space-y-2">
         <h3 className="text-sm text-muted-foreground">{t("encounters.section_encounters")}</h3>
@@ -205,6 +229,13 @@ export function EncountersPage({
                   </Button>
                   <Button size="xs" variant="outline" onClick={() => setEditing({ record })}>
                     {t("encounters.edit")}
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    onClick={() => void run(() => onExport([record.id], []), "transfer:encounters")}
+                  >
+                    {t("encounters.export")}
                   </Button>
                   <Button
                     size="xs"
@@ -267,6 +298,13 @@ export function EncountersPage({
                     }
                   >
                     {t("npc.clone")}
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    onClick={() => void run(() => onExport([], [template.id]), "transfer:encounters")}
+                  >
+                    {t("encounters.export")}
                   </Button>
                   <Button
                     size="xs"

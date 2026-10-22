@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { FolderOpen } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { CharacterRecord } from "@/bindings/CharacterRecord";
 import type { ExportFile } from "@/bindings/ExportFile";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,18 +11,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { errorMessage } from "@/hooks/use-characters";
-import { api } from "@/lib/api";
 
 type ImportDialogProps = {
   /** Files of the exports folder; the window is open while the list is set. */
   files: ExportFile[] | null;
-  onImported: (records: CharacterRecord[]) => void;
+  /** Imports the picked file; a rejection is shown in the window, which stays open. */
+  onImport: (name: string) => Promise<void>;
   onOpenFolder: () => void;
   onClose: () => void;
 };
 
 /** Import: pick one of the files in the app's export folder. Errors stay in the window. */
-export function ImportDialog({ files, onImported, onOpenFolder, onClose }: ImportDialogProps) {
+export function ImportDialog({ files, onImport, onOpenFolder, onClose }: ImportDialogProps) {
   const { t } = useTranslation();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +31,7 @@ export function ImportDialog({ files, onImported, onOpenFolder, onClose }: Impor
     setBusy(name);
     setError(null);
     try {
-      onImported(await api.importExportFile(name));
+      await onImport(name);
       onClose();
     } catch (e) {
       setError(t("transfer.error", { error: errorMessage(e) }));
@@ -58,7 +57,7 @@ export function ImportDialog({ files, onImported, onOpenFolder, onClose }: Impor
                 disabled={busy !== null}
                 onClick={() => void pick(file.name)}
               >
-                <span className="truncate">{file.name.replace(/\.redcompanion\.json$/, "")}</span>
+                <span className="truncate">{file.name.replace(/\.(redcompanion|redencounters)\.json$/, "")}</span>
                 <span className="num text-xs text-muted-foreground">
                   {new Date(file.modified_ms).toLocaleString()}
                 </span>

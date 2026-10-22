@@ -14,6 +14,7 @@ use rules_core::dice::{
 };
 use rules_core::skill_check::{self, SkillCheck};
 use rules_core::scene::{CoverPreset, Scene, SceneRecord, cover_presets};
+use rules_core::encounter_transfer::{self, EncountersImported, EncountersSaved};
 use rules_core::transfer::{self, ExportFile, ExportSaved, ExportedCharacter};
 use rules_core::vitals::{self, DeathSaveApplied, STABILIZE_SKILLS, StabilizeApplied};
 use rules_core::encounter::{
@@ -365,13 +366,13 @@ fn save_character(
 }
 
 /// `name.redcompanion.json`, or `name (2).redcompanion.json` and so on when it already exists.
-fn free_export_name(dir: &std::path::Path, name: String) -> String {
+fn free_export_name(dir: &std::path::Path, name: String, suffix: &str) -> String {
     if !dir.join(&name).exists() {
         return name;
     }
-    let stem = name.strip_suffix(transfer::EXPORT_SUFFIX).unwrap_or(&name).to_string();
+    let stem = name.strip_suffix(suffix).unwrap_or(&name).to_string();
     (2..)
-        .map(|n| format!("{stem} ({n}){}", transfer::EXPORT_SUFFIX))
+        .map(|n| format!("{stem} ({n}){suffix}"))
         .find(|candidate| !dir.join(candidate).exists())
         .expect("an unused file name exists")
 }
@@ -402,22 +403,21 @@ fn export_characters(
     };
     let json = transfer::export(items).map_err(|e| e.to_string())?;
     std::fs::create_dir_all(&dir.0).map_err(|e| e.to_string())?;
-    let name = free_export_name(&dir.0, transfer::export_file_name(&base));
+    let name = free_export_name(&dir.0, transfer::export_file_name(&base), transfer::EXPORT_SUFFIX);
     let path = dir.0.join(&name);
     std::fs::write(&path, json).map_err(|e| e.to_string())?;
     Ok(ExportSaved { name, path: path.display().to_string(), count })
 }
 
-/// Export files in the exports folder, the newest first.
-#[tauri::command]
-fn list_exports(dir: State<'_, ExportsDir>) -> Result<Vec<ExportFile>, String> {
-    let Ok(entries) = std::fs::read_dir(&dir.0) else { return Ok(Vec::new()) };
+/// Files of the exports folder accepted by `is_name`, the newest first.
+fn list_files(dir: &std::path::Path, is_name: fn(&str) -> bool) -> Result<Vec<ExportFile>, String> {
+    let Ok(entries) = std::fs::read_dir(dir) else { return Ok(Vec::new()) };
     let mut files: Vec<ExportFile> = entries
         .filter_map(|entry| {
             let entry = entry.ok()?;
             let meta = entry.metadata().ok()?;
             let name = entry.file_name().into_string().ok()?;
-            if !meta.is_file() || !transfer::is_export_file_name(&name) {
+            if !meta.is_file() || !is_name(&name) {
                 return None;
             }
             let modified_ms = meta
@@ -430,6 +430,112 @@ fn list_exports(dir: State<'_, ExportsDir>) -> Result<Vec<ExportFile>, String> {
         .collect();
     files.sort_by(|a, b| b.modified_ms.cmp(&a.modified_ms).then_with(|| a.name.cmp(&b.name)));
     Ok(files)
+}
+
+/// Character export files in the exports folder, the newest first.
+#[tauri::command]
+fn list_exports(dir: State<'_, ExportsDir>) -> Result<Vec<ExportFile>, String> {
+    list_files(&dir.0, transfer::is_export_file_name)
+}
+
+/// Writes the chosen encounters and own templates into a new `.redencounters.json` file. An
+/// encounter always takes the own templates it uses along, so the file stands on its own.
+#[tauri::command]
+fn export_encounters(
+    state: State<'_, AppStorage>,
+    dir: State<'_, ExportsDir>,
+    encounter_ids: Vec<i64>,
+    template_ids: Vec<i64>,
+) -> Result<EncountersSaved, String> {
+    let storage = lock(&state)?;
+    let encounters: Vec<Encounter> = storage
+        .list_docs(DocTable::Encounters)
+        .map_err(|e| e.to_string())?
+        .iter()
+        .filter(|row| encounter_ids.contains(&row.id))
+        .map(|row| encounter_record(row).map(|r| r.encounter))
+        .collect::<Result<_, _>>()?;
+    let mut wanted = template_ids;
+    for id in encounter_transfer::used_template_ids(&encounters) {
+        if !wanted.contains(&id) {
+            wanted.push(id);
+        }
+    }
+    let templates: Vec<(i64, NpcTier, Character)> = storage
+        .list_docs(DocTable::UserTemplates)
+        .map_err(|e| e.to_string())?
+        .iter()
+        .filter(|row| wanted.contains(&row.id))
+        .map(|row| user_template_record(row).map(|r| (r.id, r.tier, r.character)))
+        .collect::<Result<_, _>>()?;
+    if encounters.is_empty() && templates.is_empty() {
+        return Err("nothing to export".to_string());
+    }
+    let counts = (
+        u32::try_from(encounters.len()).unwrap_or(u32::MAX),
+        u32::try_from(templates.len()).unwrap_or(u32::MAX),
+    );
+    // One encounter or one template is named after itself, anything more after "encounters".
+    let base = match (encounters.as_slice(), templates.as_slice()) {
+        ([only], []) => only.name.clone(),
+        ([], [(_, _, only)]) => only.name.clone(),
+        _ => String::new(),
+    };
+    let json = encounter_transfer::export(templates, encounters).map_err(|e| e.to_string())?;
+    std::fs::create_dir_all(&dir.0).map_err(|e| e.to_string())?;
+    let name = free_export_name(&dir.0, encounter_transfer::file_name(&base), encounter_transfer::SUFFIX);
+    let path = dir.0.join(&name);
+    std::fs::write(&path, json).map_err(|e| e.to_string())?;
+    Ok(EncountersSaved {
+        name,
+        path: path.display().to_string(),
+        encounters: counts.0,
+        templates: counts.1,
+    })
+}
+
+/// Encounter files in the exports folder, the newest first.
+#[tauri::command]
+fn list_encounter_exports(dir: State<'_, ExportsDir>) -> Result<Vec<ExportFile>, String> {
+    list_files(&dir.0, encounter_transfer::is_file_name)
+}
+
+/// Imports an encounters file of the exports folder as new templates and encounters (nothing is
+/// merged by name). The whole file is validated before anything is stored.
+#[tauri::command]
+fn import_encounter_file(
+    state: State<'_, AppStorage>,
+    dir: State<'_, ExportsDir>,
+    name: String,
+) -> Result<EncountersImported, String> {
+    if !encounter_transfer::is_file_name(&name) {
+        return Err(format!("{name:?} is not an encounters file name"));
+    }
+    let json = std::fs::read_to_string(dir.0.join(&name)).map_err(|e| e.to_string())?;
+    let file = encounter_transfer::parse_import(&json, &SeedDataSource::default())
+        .map_err(|e| e.to_string())?;
+    let storage = lock(&state)?;
+    let mut new_ids = std::collections::HashMap::new();
+    let mut templates = Vec::new();
+    for t in file.templates {
+        let doc = UserTemplateDoc { tier: t.tier, character: t.character };
+        let data = serde_json::to_string(&doc).map_err(|e| e.to_string())?;
+        let id = storage
+            .insert_doc(DocTable::UserTemplates, &doc.character.name, &data)
+            .map_err(|e| e.to_string())?;
+        new_ids.insert(t.key, id);
+        templates.push(UserTemplateRecord { id, tier: doc.tier, character: doc.character });
+    }
+    let mut encounters = Vec::new();
+    for mut encounter in file.encounters {
+        encounter_transfer::remap_templates(&mut encounter, &new_ids);
+        let data = serde_json::to_string(&encounter).map_err(|e| e.to_string())?;
+        let id = storage
+            .insert_doc(DocTable::Encounters, &encounter.name, &data)
+            .map_err(|e| e.to_string())?;
+        encounters.push(EncounterRecord { id, encounter });
+    }
+    Ok(EncountersImported { templates, encounters })
 }
 
 /// Imports a file of the exports folder as new characters; the whole file is validated
@@ -982,6 +1088,9 @@ pub fn run() {
             delete_character,
             export_characters,
             list_exports,
+            export_encounters,
+            list_encounter_exports,
+            import_encounter_file,
             import_export_file,
             open_exports_folder,
             get_scene,

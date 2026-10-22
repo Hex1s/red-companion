@@ -43,6 +43,7 @@ export default function App() {
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [stabilizeTargetId, setStabilizeTargetId] = useState<number | null>(null);
   const [importFiles, setImportFiles] = useState<ExportFile[] | null>(null);
+  const [encounterImportFiles, setEncounterImportFiles] = useState<ExportFile[] | null>(null);
   const [lastSave, setLastSave] = useState<{ id: number; save: DeathSave } | null>(null);
   const damageTarget = entries.find((e) => e.id === damageTargetId) ?? null;
   const selected = entries.find((e) => e.id === selectedCharacterId) ?? null;
@@ -198,6 +199,45 @@ export default function App() {
     }
   };
 
+  /** Writes encounters and own templates into one file; the file takes the templates its encounters use. */
+  const exportEncounters = async (encounterIds: number[], templateIds: number[]) => {
+    try {
+      const saved = await api.exportEncounters(encounterIds, templateIds);
+      status.show({
+        id: "transfer:encounters",
+        kind: "success",
+        text: t("encounters.exported", {
+          encounters: saved.encounters,
+          templates: saved.templates,
+          path: saved.path,
+        }),
+        action: { label: t("transfer.open_folder"), run: () => void openExportsFolder() },
+        autoHideMs: 9000,
+      });
+    } catch (e) {
+      status.error(t("transfer.error", { error: errorMessage(e) }), "transfer:encounters");
+    }
+  };
+
+  const startEncounterImport = async () => {
+    try {
+      const files = await api.listEncounterExports();
+      if (files.length === 0) {
+        status.show({
+          id: "transfer:encounters",
+          kind: "info",
+          text: t("encounters.import_empty"),
+          action: { label: t("transfer.open_folder"), run: () => void openExportsFolder() },
+          autoHideMs: 9000,
+        });
+      } else {
+        setEncounterImportFiles(files);
+      }
+    } catch (e) {
+      status.error(t("transfer.error", { error: errorMessage(e) }), "transfer:encounters");
+    }
+  };
+
   const undoDamage = async () => {
     try {
       const result = await api.undoDamage();
@@ -321,6 +361,8 @@ export default function App() {
               onDeleteEncounter={encounterState.deleteEncounter}
               onDeleteTemplate={encounterState.deleteTemplate}
               onSetTemplateTier={encounterState.setTemplateTier}
+              onExport={exportEncounters}
+              onImport={() => void startEncounterImport()}
               onLaunch={launchEncounter}
               onCloneTemplate={async (template) => {
                 const id = await cloneUserTemplate(template, entries.map((e) => e.character.name));
@@ -406,7 +448,8 @@ export default function App() {
             />
             <ImportDialog
               files={importFiles}
-              onImported={(records) => {
+              onImport={async (name) => {
+                const records = await api.importExportFile(name);
                 void reload();
                 if (records.length === 1) selectCharacter(records[0].id);
                 status.show({
@@ -417,6 +460,23 @@ export default function App() {
               }}
               onOpenFolder={() => void openExportsFolder()}
               onClose={() => setImportFiles(null)}
+            />
+            <ImportDialog
+              files={encounterImportFiles}
+              onImport={async (name) => {
+                const added = await api.importEncounterFile(name);
+                await encounterState.reload();
+                status.show({
+                  id: "transfer:encounters",
+                  kind: "success",
+                  text: t("encounters.imported", {
+                    encounters: added.encounters.length,
+                    templates: added.templates.length,
+                  }),
+                });
+              }}
+              onOpenFolder={() => void openExportsFolder()}
+              onClose={() => setEncounterImportFiles(null)}
             />
             <StabilizeDialog
               target={entries.find((e) => e.id === stabilizeTargetId) ?? null}
