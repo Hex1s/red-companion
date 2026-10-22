@@ -54,6 +54,13 @@ pub struct SceneRow {
     pub data: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SessionRow {
+    pub id: i64,
+    pub name: String,
+    pub active: bool,
+}
+
 /// A named JSON document (user template or encounter).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DocRow {
@@ -183,6 +190,61 @@ impl Storage {
         Ok(self.conn.last_insert_rowid())
     }
 
+    pub fn list_sessions(&self) -> Result<Vec<SessionRow>> {
+        let mut stmt = self.conn.prepare("SELECT id, name, active FROM sessions ORDER BY id")?;
+        let rows = stmt.query_map([], |r| {
+            Ok(SessionRow { id: r.get(0)?, name: r.get(1)?, active: r.get::<_, i64>(2)? != 0 })
+        })?;
+        Ok(rows.collect::<std::result::Result<_, _>>()?)
+    }
+
+    pub fn rename_session(&self, id: i64, name: &str) -> Result<bool> {
+        Ok(self.conn.execute("UPDATE sessions SET name = ?2 WHERE id = ?1", params![id, name])? > 0)
+    }
+
+    /// Makes `id` the only active session; false (and no change) when it does not exist.
+    pub fn set_active_session(&self, id: i64) -> Result<bool> {
+        let tx = self.conn.unchecked_transaction()?;
+        let found = tx.execute("UPDATE sessions SET active = 1 WHERE id = ?1", [id])? > 0;
+        if found {
+            tx.execute("UPDATE sessions SET active = 0 WHERE id <> ?1", [id])?;
+            tx.commit()?;
+        }
+        Ok(found)
+    }
+
+    pub fn active_session(&self) -> Result<Option<i64>> {
+        Ok(self
+            .conn
+            .query_row("SELECT id FROM sessions WHERE active = 1 LIMIT 1", [], |r| r.get(0))
+            .optional()?)
+    }
+
+    /// The characters taking part in a session, in the order they joined.
+    pub fn session_members(&self, session_id: i64) -> Result<Vec<i64>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT character_id FROM session_characters WHERE session_id = ?1 ORDER BY rowid",
+        )?;
+        let rows = stmt.query_map([session_id], |r| r.get(0))?;
+        Ok(rows.collect::<std::result::Result<_, _>>()?)
+    }
+
+    /// Adds a character to a session; adding an existing member changes nothing.
+    pub fn add_member(&self, session_id: i64, character_id: i64) -> Result<()> {
+        self.conn.execute(
+            "INSERT OR IGNORE INTO session_characters (session_id, character_id) VALUES (?1, ?2)",
+            params![session_id, character_id],
+        )?;
+        Ok(())
+    }
+
+    pub fn remove_member(&self, session_id: i64, character_id: i64) -> Result<bool> {
+        Ok(self.conn.execute(
+            "DELETE FROM session_characters WHERE session_id = ?1 AND character_id = ?2",
+            params![session_id, character_id],
+        )? > 0)
+    }
+
     pub fn set_session_notes(&self, id: i64, notes: &str) -> Result<bool> {
         Ok(self.conn.execute("UPDATE sessions SET notes = ?2 WHERE id = ?1", params![id, notes])? > 0)
     }
@@ -225,12 +287,23 @@ impl Storage {
         Ok(rows.collect::<std::result::Result<_, _>>()?)
     }
 
-    /// The most recently created scene: the one the app works with.
-    pub fn latest_scene(&self) -> Result<Option<SceneRow>> {
+    /// Every scene of every session (used to clean up after a deleted character).
+    pub fn all_scenes(&self) -> Result<Vec<SceneRow>> {
+        let mut stmt =
+            self.conn.prepare("SELECT id, session_id, name, data FROM scenes ORDER BY id")?;
+        let rows = stmt.query_map([], |r| {
+            Ok(SceneRow { id: r.get(0)?, session_id: r.get(1)?, name: r.get(2)?, data: r.get(3)? })
+        })?;
+        Ok(rows.collect::<std::result::Result<_, _>>()?)
+    }
+
+    /// The first scene of the active session: the one the app works with.
+    pub fn active_scene(&self) -> Result<Option<SceneRow>> {
         Ok(self
             .conn
             .query_row(
-                "SELECT id, session_id, name, data FROM scenes ORDER BY id DESC LIMIT 1",
+                "SELECT s.id, s.session_id, s.name, s.data FROM scenes s \
+                 JOIN sessions n ON n.id = s.session_id WHERE n.active = 1 ORDER BY s.id LIMIT 1",
                 [],
                 |r| {
                     Ok(SceneRow {
@@ -316,13 +389,64 @@ mod tests {
     }
 
     #[test]
-    fn latest_scene_is_the_newest() {
+    fn active_session_owns_the_working_scene() {
         let s = Storage::open_in_memory().unwrap();
-        assert!(s.latest_scene().unwrap().is_none());
-        let session = s.create_session("Night 1").unwrap();
-        s.create_scene(session, "first", "{}").unwrap();
-        let second = s.create_scene(session, "second", "{}").unwrap();
-        assert_eq!(s.latest_scene().unwrap().unwrap().id, second);
+        assert!(s.active_scene().unwrap().is_none());
+        assert!(s.active_session().unwrap().is_none());
+
+        let one = s.create_session("One").unwrap();
+        let two = s.create_session("Two").unwrap();
+        let scene_one = s.create_scene(one, "Scene", "{}").unwrap();
+        let scene_two = s.create_scene(two, "Scene", "{}").unwrap();
+        // Nothing is active until one is chosen.
+        assert!(s.active_scene().unwrap().is_none());
+
+        assert!(s.set_active_session(one).unwrap());
+        assert_eq!(s.active_scene().unwrap().unwrap().id, scene_one);
+        assert!(s.set_active_session(two).unwrap());
+        assert_eq!(s.active_scene().unwrap().unwrap().id, scene_two);
+        assert_eq!(s.active_session().unwrap(), Some(two));
+        let sessions = s.list_sessions().unwrap();
+        assert_eq!(sessions.iter().filter(|x| x.active).count(), 1);
+
+        // An unknown id changes nothing.
+        assert!(!s.set_active_session(999).unwrap());
+        assert_eq!(s.active_session().unwrap(), Some(two));
+
+        assert!(s.rename_session(two, "Renamed").unwrap());
+        assert_eq!(s.list_sessions().unwrap()[1].name, "Renamed");
+    }
+
+    #[test]
+    fn members_are_per_session_and_cascade() {
+        let s = Storage::open_in_memory().unwrap();
+        let one = s.create_session("One").unwrap();
+        let two = s.create_session("Two").unwrap();
+        let v = s.insert_character(CharacterKind::Pc, "V", "{}").unwrap();
+        let gang = s.insert_character(CharacterKind::Npc, "Gang", "{}").unwrap();
+
+        s.add_member(one, v).unwrap();
+        s.add_member(one, gang).unwrap();
+        s.add_member(one, v).unwrap(); // joining twice changes nothing
+        s.add_member(two, v).unwrap();
+        assert_eq!(s.session_members(one).unwrap(), vec![v, gang]);
+        assert_eq!(s.session_members(two).unwrap(), vec![v]);
+
+        // Leaving a session does not delete the character.
+        assert!(s.remove_member(one, gang).unwrap());
+        assert!(!s.remove_member(one, gang).unwrap());
+        assert!(s.get_character(gang).unwrap().is_some());
+
+        // Deleting a character removes it from every session.
+        s.delete_character(v).unwrap();
+        assert!(s.session_members(one).unwrap().is_empty());
+        assert!(s.session_members(two).unwrap().is_empty());
+
+        // Deleting a session keeps its characters.
+        s.add_member(two, gang).unwrap();
+        s.delete_session(two).unwrap();
+        assert!(s.get_character(gang).unwrap().is_some());
+        assert!(s.session_members(two).unwrap().is_empty());
     }
 
     #[test]

@@ -110,6 +110,17 @@ pub struct SceneRecord {
     pub scene: Scene,
 }
 
+/// A session as the UI lists it: a named folder with its own scene and members.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct SessionInfo {
+    #[ts(type = "number")]
+    pub id: i64,
+    pub name: String,
+    /// The session the app is working with; exactly one is active.
+    pub active: bool,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum SceneError {
     #[error("cover {0} not found")]

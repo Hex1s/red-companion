@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { ChevronDown, ChevronUp, Dices, RotateCcw, Swords } from "lucide-react";
+import { ChevronDown, ChevronUp, Dices, RotateCcw, Swords, UserMinus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { DeathSave } from "@/bindings/DeathSave";
 import { WoundBadge } from "@/components/character/wound-badge";
@@ -41,6 +41,8 @@ type CharacterCardProps = {
   onRevive: () => void;
   /** Resolves `true` when the save was made. */
   onDeathSave: (manual: number | null) => Promise<boolean>;
+  /** Takes the character out of the session (the character itself is kept). */
+  onLeave: () => void;
 };
 
 /** Parses a whole number (may be negative); `null` for empty or invalid text. */
@@ -68,6 +70,7 @@ export function CharacterCard({
   onStabilize,
   onRevive,
   onDeathSave,
+  onLeave,
 }: CharacterCardProps) {
   const { t } = useTranslation();
   const { character, derived } = entry;
@@ -162,6 +165,17 @@ export function CharacterCard({
         <span className="min-w-0 flex-1 truncate font-display text-sm font-semibold uppercase">
           {character.name}
         </span>
+        <Hint label={t("sessions.leave")}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            aria-label={t("sessions.leave")}
+            onClick={onLeave}
+          >
+            <UserMinus />
+          </Button>
+        </Hint>
       </div>
 
       <HpBar current={character.hp} max={derived.max_hp} />

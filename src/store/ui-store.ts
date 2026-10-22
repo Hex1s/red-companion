@@ -11,9 +11,6 @@ type UiState = {
   damageTargetId: number | null;
   referenceSection: ReferenceSection;
   referenceQuery: string;
-  /** Edgerunners in the group an encounter is compared with. */
-  encounterPlayers: number;
-  setEncounterPlayers: (players: number) => void;
   setReferenceSection: (section: ReferenceSection) => void;
   setReferenceQuery: (query: string) => void;
   openDamage: (id: number | null) => void;
@@ -27,8 +24,6 @@ export const useUiStore = create<UiState>((set) => ({
   damageTargetId: null,
   referenceSection: "injuries",
   referenceQuery: "",
-  encounterPlayers: 4,
-  setEncounterPlayers: (encounterPlayers) => set({ encounterPlayers }),
   setReferenceSection: (referenceSection) => set({ referenceSection }),
   setReferenceQuery: (referenceQuery) => set({ referenceQuery }),
   openDamage: (id) => set({ damageTargetId: id }),

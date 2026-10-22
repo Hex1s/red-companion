@@ -8,20 +8,26 @@ import { status } from "@/store/status-store";
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
-/** Working scene (cover objects) and cover presets from the Rust backend. */
-export function useScene() {
+/** Scene (cover objects, fight) of the active session and cover presets from the Rust backend. */
+export function useScene(sessionId: number | null) {
   const { i18n } = useTranslation();
   const [scene, setScene] = useState<Scene | null>(null);
   const [presets, setPresets] = useState<CoverPreset[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  // Every session has its own scene: it is reloaded when the active session changes.
   useEffect(() => {
-    if (!hasBackend) return;
-    api
-      .getScene()
-      .then((record) => setScene(record.scene))
-      .catch((e: unknown) => setError(message(e)));
-  }, []);
+    if (!hasBackend || sessionId === null) return;
+    let cancelled = false;
+    setScene(null);
+    api.getScene().then(
+      (record) => !cancelled && setScene(record.scene),
+      (e: unknown) => !cancelled && setError(message(e)),
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId]);
 
   // Presets are server content: names follow the language.
   useEffect(() => {

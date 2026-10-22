@@ -10,25 +10,38 @@ export type CharacterEntry = CharacterRecord & { kind: CharacterKind };
 
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
-/** Loads all characters from the Rust backend and wraps the CRUD commands. */
-export function useCharacters() {
+/**
+ * Loads all characters from the Rust backend and wraps the CRUD commands. `members` are the ids
+ * of the active session's characters; nothing is asked until a session is active (`sessionId`),
+ * and everything is reloaded when it changes.
+ */
+export function useCharacters(sessionId: number | null) {
   const [entries, setEntries] = useState<CharacterEntry[]>([]);
+  const [members, setMembers] = useState<number[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
-    if (!hasBackend) return;
+    if (!hasBackend || sessionId === null) return;
     try {
-      const lists = await Promise.all(KINDS.map((kind) => api.listCharacters(kind)));
+      const [lists, ids] = await Promise.all([
+        Promise.all(KINDS.map((kind) => api.listCharacters(kind))),
+        api.sessionMembers(),
+      ]);
       setEntries(lists.flatMap((records, i) => records.map((r) => ({ ...r, kind: KINDS[i] }))));
+      setMembers(ids);
       setError(null);
     } catch (e) {
       setError(message(e));
     }
-  }, []);
+  }, [sessionId]);
 
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  const addToSession = useCallback(async (id: number) => {
+    setMembers(await api.addToSession(id));
+  }, []);
 
   const create = useCallback(
     async (kind: CharacterKind, name: string) => {
@@ -56,7 +69,7 @@ export function useCharacters() {
     [reload],
   );
 
-  return { entries, error, create, save, remove, reload };
+  return { entries, members, error, create, save, remove, reload, addToSession };
 }
 
 export { message as errorMessage };

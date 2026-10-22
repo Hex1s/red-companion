@@ -4,6 +4,7 @@ import type { CharacterKind } from "@/bindings/CharacterKind";
 import type { DeathSave } from "@/bindings/DeathSave";
 import type { ExportFile } from "@/bindings/ExportFile";
 import { CharacterCard } from "@/components/character/character-card";
+import { CharacterList } from "@/components/character/character-list";
 import { CharacterSheet } from "@/components/character/character-sheet";
 import { ImportDialog } from "@/components/character/import-dialog";
 import { NpcTemplateDialog, type CloneRequest } from "@/components/character/npc-template-dialog";
@@ -13,6 +14,7 @@ import { DamageDialog } from "@/components/combat/damage-dialog";
 import { StabilizeDialog } from "@/components/combat/stabilize-dialog";
 import { ReferencePage } from "@/components/reference/reference-page";
 import { AppShell } from "@/components/layout/app-shell";
+import { SessionSwitcher } from "@/components/layout/session-switcher";
 import { CoverPicker } from "@/components/scene/cover-picker";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,6 +24,7 @@ import { useEncounters } from "@/hooks/use-encounters";
 import { useInjuries } from "@/hooks/use-injuries";
 import { useNpcTemplates } from "@/hooks/use-npc-templates";
 import { useScene } from "@/hooks/use-scene";
+import { useSessions } from "@/hooks/use-sessions";
 import { api, hasBackend } from "@/lib/api";
 import { coverLabel } from "@/lib/cover-label";
 import { cloneNames, npcNotes, templateKey } from "@/lib/encounter";
@@ -35,8 +38,11 @@ export default function App() {
   const { t, i18n } = useTranslation();
   const { tab, setTab, selectedCharacterId, selectCharacter, damageTargetId, openDamage } =
     useUiStore();
-  const { entries, error, create, save, remove, reload } = useCharacters();
-  const sceneState = useScene();
+  const sessionState = useSessions();
+  const sessionId = sessionState.active?.id ?? null;
+  const { entries, members, error, create, save, remove, reload, addToSession } =
+    useCharacters(sessionId);
+  const sceneState = useScene(sessionId);
   const injuries = useInjuries();
   const npcTemplates = useNpcTemplates();
   const encounterState = useEncounters();
@@ -66,13 +72,42 @@ export default function App() {
   // A death save result is shown until the turn moves on.
   useEffect(() => setLastSave(null), [combat?.active, combat?.round]);
 
-  // Fighters first, in acting order; everyone else keeps the database order.
+  // The rail shows the session's characters only: fighters first, in acting order, then the
+  // others in the order they joined.
+  const sessionEntries = members.flatMap((id) => entries.filter((e) => e.id === id));
   const railEntries = combat
     ? [
-        ...combat.combatants.flatMap((c) => entries.filter((e) => e.id === c.character_id)),
-        ...entries.filter((e) => !combat.combatants.some((c) => c.character_id === e.id)),
+        ...combat.combatants.flatMap((c) => sessionEntries.filter((e) => e.id === c.character_id)),
+        ...sessionEntries.filter((e) => !combat.combatants.some((c) => c.character_id === e.id)),
       ]
-    : entries;
+    : sessionEntries;
+  // The group an encounter is compared with: the session's player characters.
+  const players = sessionEntries.filter((e) => e.kind === "pc").length;
+
+  // Dialogs and one-off results belong to the session they were opened in.
+  useEffect(() => {
+    openDamage(null);
+    setStabilizeTargetId(null);
+    setLastSave(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
+
+  const leaveSession = async (id: number) => {
+    try {
+      sceneState.replaceScene(await api.removeFromSession(id));
+      await reload();
+    } catch (e) {
+      status.error(errorMessage(e), "session:leave");
+    }
+  };
+
+  const joinSession = async (id: number) => {
+    try {
+      await addToSession(id);
+    } catch (e) {
+      status.error(errorMessage(e), "session:join");
+    }
+  };
 
   const createCharacter = async (kind: CharacterKind) => {
     const record = await create(kind, t(`characters.default_name_${kind}`));
@@ -161,7 +196,7 @@ export default function App() {
     api.openExportsFolder().catch((e: unknown) => status.error(errorMessage(e), "transfer:open"));
 
   /** Writes `ids` (or everyone) into the app's export folder and says where the file went. */
-  const exportCharacters = async (ids: number[] | null) => {
+  const exportCharacters = async (ids: number[]) => {
     try {
       const saved = await api.exportCharacters(ids);
       status.show({
@@ -274,6 +309,14 @@ export default function App() {
                 <TabsTrigger value="rules">{t("nav.rules")}</TabsTrigger>
               </TabsList>
             </Tabs>
+            <SessionSwitcher
+              sessions={sessionState.sessions}
+              disabled={!hasBackend}
+              onSwitch={(id) => void sessionState.switchTo(id)}
+              onCreate={(name) => sessionState.create(name)}
+              onRename={sessionState.rename}
+              onDelete={sessionState.remove}
+            />
             <div className="flex gap-1">
               {SUPPORTED_LANGUAGES.map((lng) => (
                 <Button
@@ -315,20 +358,28 @@ export default function App() {
                   variant="outline"
                   size="xs"
                   disabled={!hasBackend || !selected}
-                  onClick={() => exportCharacters(selected ? [selected.id] : null)}
+                  onClick={() => selected && exportCharacters([selected.id])}
                 >
                   {t("characters.export_selected")}
                 </Button>
                 <Button
                   variant="outline"
                   size="xs"
-                  disabled={!hasBackend || entries.length === 0}
-                  onClick={() => exportCharacters(null)}
+                  disabled={!hasBackend || members.length === 0}
+                  onClick={() => exportCharacters(members)}
                 >
                   {t("characters.export_all")}
                 </Button>
               </div>
               {!hasBackend && <p className="text-muted-foreground">{t("characters.no_backend")}</p>}
+              <CharacterList
+                entries={entries}
+                members={members}
+                selectedId={selectedCharacterId}
+                onSelect={selectCharacter}
+                onAdd={(id) => void joinSession(id)}
+                onLeave={(id) => void leaveSession(id)}
+              />
               {selected ? (
                 <CharacterSheet
                   key={selected.id}
@@ -357,6 +408,7 @@ export default function App() {
               bookTemplates={npcTemplates}
               userTemplates={encounterState.templates}
               encounters={encounterState.encounters}
+              players={players}
               onSaveEncounter={encounterState.saveEncounter}
               onDeleteEncounter={encounterState.deleteEncounter}
               onDeleteTemplate={encounterState.deleteTemplate}
@@ -379,7 +431,7 @@ export default function App() {
             {combat && (
               <CombatBar
                 combat={combat}
-                hasCharacters={entries.length > 0}
+                hasCharacters={sessionEntries.length > 0}
                 lastDamage={scene?.last_damage ?? null}
                 onStart={() => void sceneState.combatStart()}
                 onNextTurn={() => void sceneState.combatNextTurn()}
@@ -436,9 +488,13 @@ export default function App() {
                     )
                   }
                   onDeathSave={(manual) => deathSave(e.id, manual)}
+                  onLeave={() => void leaveSession(e.id)}
                 />
               );
             })}
+            {sessionEntries.length === 0 && sessionState.active && (
+              <p className="p-2 text-sm text-muted-foreground">{t("sessions.empty_rail")}</p>
+            )}
             <NpcTemplateDialog
               open={templatesOpen}
               templates={npcTemplates}
@@ -480,7 +536,7 @@ export default function App() {
             />
             <StabilizeDialog
               target={entries.find((e) => e.id === stabilizeTargetId) ?? null}
-              helpers={entries}
+              helpers={sessionEntries}
               onDone={() => void reload()}
               onClose={() => setStabilizeTargetId(null)}
             />

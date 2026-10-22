@@ -24,6 +24,7 @@ import type { DeathSaveApplied } from "@/bindings/DeathSaveApplied";
 import type { InjuryRoll } from "@/bindings/InjuryRoll";
 import type { RollResult } from "@/bindings/RollResult";
 import type { SceneRecord } from "@/bindings/SceneRecord";
+import type { SessionInfo } from "@/bindings/SessionInfo";
 import type { StabilizeApplied } from "@/bindings/StabilizeApplied";
 import type { NpcTemplate } from "@/bindings/NpcTemplate";
 import type { Skill } from "@/bindings/Skill";
@@ -94,6 +95,19 @@ export const api = {
   /** Imports one encounters file as new templates and encounters; rejects the whole file if anything is invalid. */
   importEncounterFile: (name: string) =>
     invoke<EncountersImported>("import_encounter_file", { name }),
+  listSessions: () => invoke<SessionInfo[]>("list_sessions"),
+  /** Creates a session with an empty scene and switches to it; answers with the updated list. */
+  createSession: (name: string) => invoke<SessionInfo[]>("create_session", { name }),
+  renameSession: (id: number, name: string) => invoke<SessionInfo[]>("rename_session", { id, name }),
+  switchSession: (id: number) => invoke<SessionInfo[]>("switch_session", { id }),
+  /** Deletes a session with its scene and fight; its characters stay. The list is empty after the last one. */
+  deleteSession: (id: number) => invoke<SessionInfo[]>("delete_session", { id }),
+  /** Ids of the active session's characters. */
+  sessionMembers: () => invoke<number[]>("session_members"),
+  addToSession: (characterId: number) => invoke<number[]>("add_to_session", { characterId }),
+  /** Takes a character out of the active session (covers and fight too); the character is kept. */
+  removeFromSession: (characterId: number) =>
+    invoke<SceneRecord>("remove_from_session", { characterId }),
   getScene: () => invoke<SceneRecord>("get_scene"),
   listCoverPresets: (lang: string) =>
     inLanguage(lang, () => invoke<CoverPreset[]>("list_cover_presets")),

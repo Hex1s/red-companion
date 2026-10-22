@@ -17,14 +17,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FieldBadge } from "@/components/ui/field-badge";
 import { Hint } from "@/components/ui/hint";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { errorMessage } from "@/hooks/use-characters";
 import { api } from "@/lib/api";
-import { useUiStore } from "@/store/ui-store";
 import { templateKey, templateLabel } from "@/lib/encounter";
 import { hasBackend } from "@/lib/api";
 import { status } from "@/store/status-store";
@@ -33,6 +29,8 @@ type EncountersPageProps = {
   bookTemplates: NpcTemplate[];
   userTemplates: UserTemplateRecord[];
   encounters: EncounterRecord[];
+  /** Player characters in the active session: the group encounters are compared with. */
+  players: number;
   onSaveEncounter: (id: number | null, encounter: Encounter) => Promise<unknown>;
   onDeleteEncounter: (id: number) => Promise<unknown>;
   onDeleteTemplate: (id: number) => Promise<unknown>;
@@ -48,7 +46,6 @@ type EncountersPageProps = {
 };
 
 const TIERS: NpcTier[] = ["mook", "lieutenant", "mini_boss", "boss"];
-const PLAYERS_MAX = 12;
 const VERDICT_STYLE = {
   weak: "text-muted-foreground",
   fair: "text-state-ok",
@@ -109,6 +106,7 @@ export function EncountersPage({
   bookTemplates,
   userTemplates,
   encounters,
+  players,
   onSaveEncounter,
   onDeleteEncounter,
   onDeleteTemplate,
@@ -121,17 +119,16 @@ export function EncountersPage({
   const { t } = useTranslation();
   const [editing, setEditing] = useState<{ record: EncounterRecord | null } | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
-  const { encounterPlayers: players, setEncounterPlayers } = useUiStore();
   const [assessments, setAssessments] = useState<Record<number, Assessment>>({});
   const [hints, setHints] = useState<Record<number, TierHint>>({});
-  const [playersInput, setPlayersInput] = useState(String(players));
-  const playersNumber = Number(playersInput);
-  const playersValid =
-    Number.isInteger(playersNumber) && playersNumber >= 1 && playersNumber <= PLAYERS_MAX;
 
   // The assessment is computed in Rust; it is redone when the group, the lines or the tiers change.
   useEffect(() => {
     let cancelled = false;
+    if (players < 1) {
+      setAssessments({});
+      return;
+    }
     Promise.all(
       encounters.map((e) =>
         api.assessEncounter(e.encounter, players).then((a) => [e.id, a] as const),
@@ -183,36 +180,16 @@ export function EncountersPage({
     <div className="space-y-6">
       <div className="flex items-center gap-2">
         <h2 className="mr-auto text-2xl font-bold">{t("encounters.title")}</h2>
-        <Label htmlFor="encounter-players" className="font-normal">
-          <Hint label={t("encounters.players_hint")}>
-            <span>{t("encounters.players")}</span>
-          </Hint>
-          <FieldBadge
-            className="ml-2 inline-block"
-            error={playersValid ? null : t("validation.count", { max: PLAYERS_MAX })}
-          >
-            {(invalid) => (
-              <Input
-                id="encounter-players"
-                type="number"
-                min={1}
-                max={PLAYERS_MAX}
-                value={playersInput}
-                onChange={(e) => {
-                  setPlayersInput(e.target.value);
-                  const n = Number(e.target.value);
-                  if (Number.isInteger(n) && n >= 1 && n <= PLAYERS_MAX) setEncounterPlayers(n);
-                }}
-                aria-invalid={invalid}
-                className="num inline-block h-8 w-16"
-              />
-            )}
-          </FieldBadge>
-        </Label>
+        <Hint label={t("encounters.players_hint")}>
+          <span className="num cursor-help text-xs text-muted-foreground">
+            {t("encounters.players", { count: players })}
+          </span>
+        </Hint>
         <Button disabled={!hasBackend} onClick={() => setEditing({ record: null })}>
           {t("encounters.new")}
         </Button>
       </div>
+      {players < 1 && <p className="text-xs text-muted-foreground">{t("encounters.no_players")}</p>}
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="outline" size="xs" disabled={!hasBackend} onClick={onImport}>
           {t("characters.import")}
