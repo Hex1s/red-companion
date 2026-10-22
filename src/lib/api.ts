@@ -19,6 +19,7 @@ import type { SceneRecord } from "@/bindings/SceneRecord";
 import type { StabilizeApplied } from "@/bindings/StabilizeApplied";
 import type { NpcTemplate } from "@/bindings/NpcTemplate";
 import type { Skill } from "@/bindings/Skill";
+import type { Weapon } from "@/bindings/Weapon";
 
 /**
  * Server content (cover, armor, NPCs...) comes in the content language, which
@@ -34,6 +35,7 @@ export const hasBackend = "__TAURI_INTERNALS__" in globalThis;
 
 export const api = {
   listArmor: (lang: string) => inLanguage(lang, () => invoke<Armor[]>("list_armor")),
+  listWeapons: (lang: string) => inLanguage(lang, () => invoke<Weapon[]>("list_weapons")),
   listSkills: () => invoke<Skill[]>("list_skills"),
   listNpcTemplates: (lang: string) =>
     inLanguage(lang, () => invoke<NpcTemplate[]>("list_npc_templates")),

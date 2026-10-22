@@ -6,7 +6,7 @@ use thiserror::Error;
 use ts_rs::TS;
 
 use crate::catalog::{
-    Armor, Collection, CollectionVersion, CoverMaterial, CriticalInjury, NpcTemplate, Shield, Skill,
+    Armor, Collection, CollectionVersion, CoverMaterial, CriticalInjury, NpcTemplate, Shield, Skill, Weapon,
 };
 
 #[derive(Debug, Error)]
@@ -22,6 +22,7 @@ pub trait DataSource {
     fn cover_materials(&self) -> DataResult<Collection<CoverMaterial>>;
     fn armor(&self) -> DataResult<Collection<Armor>>;
     fn shields(&self) -> DataResult<Collection<Shield>>;
+    fn weapons(&self) -> DataResult<Collection<Weapon>>;
     fn skills(&self) -> DataResult<Collection<Skill>>;
     fn npc_templates(&self) -> DataResult<Collection<NpcTemplate>>;
 
@@ -32,6 +33,7 @@ pub trait DataSource {
             self.cover_materials()?.version_info(),
             self.armor()?.version_info(),
             self.shields()?.version_info(),
+            self.weapons()?.version_info(),
             self.skills()?.version_info(),
             self.npc_templates()?.version_info(),
         ])
@@ -103,6 +105,9 @@ impl DataSource for SeedDataSource {
     fn shields(&self) -> DataResult<Collection<Shield>> {
         content!(self.lang, "shields")
     }
+    fn weapons(&self) -> DataResult<Collection<Weapon>> {
+        content!(self.lang, "weapons")
+    }
     fn skills(&self) -> DataResult<Collection<Skill>> {
         parse("skills", include_str!("../data/seed/skills.json"))
     }
@@ -122,6 +127,7 @@ mod tests {
         assert_eq!(ds.cover_materials().unwrap().name, "cover_materials");
         assert_eq!(ds.armor().unwrap().name, "armor");
         assert_eq!(ds.shields().unwrap().name, "shields");
+        assert_eq!(ds.weapons().unwrap().name, "weapons");
         assert_eq!(ds.skills().unwrap().name, "skills");
         assert_eq!(ds.npc_templates().unwrap().name, "npc_templates");
     }
@@ -129,7 +135,7 @@ mod tests {
     #[test]
     fn manifest_lists_all_collections() {
         let names: Vec<_> = SeedDataSource::default().versions().unwrap().into_iter().map(|v| v.name).collect();
-        assert_eq!(names, ["critical_injuries", "cover_materials", "armor", "shields", "skills", "npc_templates"]);
+        assert_eq!(names, ["critical_injuries", "cover_materials", "armor", "shields", "weapons", "skills", "npc_templates"]);
     }
 
     #[test]
@@ -174,9 +180,14 @@ mod tests {
             match v {
                 serde_json::Value::Object(m) => {
                     for (k, x) in m.iter_mut() {
-                        if matches!(k.as_str(), "name" | "armor_name" | "gear" | "notes") && x.is_string() {
+                        if matches!(k.as_str(), "name" | "armor_name" | "gear" | "notes" | "examples" | "ammo" | "description") && x.is_string() {
                             assert!(!x.as_str().unwrap().is_empty(), "empty text {k}");
                             *x = "".into();
+                        } else if k == "features" {
+                            // Texts of a list: same number of items, blanked.
+                            if let Some(a) = x.as_array_mut() {
+                                a.iter_mut().for_each(|i| *i = "".into());
+                            }
                         } else {
                             blank(x);
                         }
@@ -191,6 +202,7 @@ mod tests {
                 serde_json::to_value(ds.cover_materials().unwrap()).unwrap(),
                 serde_json::to_value(ds.armor().unwrap()).unwrap(),
                 serde_json::to_value(ds.shields().unwrap()).unwrap(),
+                serde_json::to_value(ds.weapons().unwrap()).unwrap(),
                 serde_json::to_value(ds.npc_templates().unwrap()).unwrap(),
             ];
             all.iter_mut().for_each(blank);
@@ -209,6 +221,7 @@ mod tests {
         let mut ids: Vec<String> = ds.cover_materials().unwrap().entries.into_iter().map(|e| e.uuid).collect();
         ids.extend(ds.armor().unwrap().entries.into_iter().map(|e| e.uuid));
         ids.extend(ds.shields().unwrap().entries.into_iter().map(|e| e.uuid));
+        ids.extend(ds.weapons().unwrap().entries.into_iter().map(|e| e.uuid));
         ids.extend(ds.npc_templates().unwrap().entries.into_iter().map(|e| e.uuid));
         let n = ids.len();
         ids.sort();
@@ -224,6 +237,7 @@ mod tests {
         assert_eq!(validate_cover_materials(&ds.cover_materials().unwrap()), Ok(()));
         assert_eq!(validate_armor(&ds.armor().unwrap()), Ok(()));
         assert_eq!(validate_shields(&ds.shields().unwrap()), Ok(()));
+        assert_eq!(validate_weapons(&ds.weapons().unwrap(), &ds.skills().unwrap()), Ok(()));
         assert_eq!(validate_skills(&ds.skills().unwrap()), Ok(()));
         assert_eq!(
             validate_npc_templates(&ds.npc_templates().unwrap(), &ds.skills().unwrap()),
@@ -396,5 +410,23 @@ mod tests {
         }
         let glyphs = source.lines().filter(|l| l.starts_with("  ") && !l.starts_with("   ") && l.contains(": ") && l.trim_end().trim_end_matches(',').ends_with(['(', '>'])).count();
         assert_eq!(glyphs, ids.len(), "icons and injuries differ in number");
+    }
+
+    /// Weapon tables of the book (p. 92, 94, 95): counts and a few printed rows.
+    #[test]
+    fn weapons_match_the_book() {
+        use crate::catalog::WeaponKind;
+        let w = SeedDataSource::default().weapons().unwrap().entries;
+        let count = |k| w.iter().filter(|e| e.kind == k).count();
+        assert_eq!((count(WeaponKind::Melee), count(WeaponKind::Ranged), count(WeaponKind::Exotic)), (4, 11, 14));
+        let get = |c: &str| w.iter().find(|e| e.code == c).unwrap();
+        let ar = get("assault_rifle");
+        assert_eq!((ar.damage.as_deref(), ar.magazine, ar.rof, ar.hands, ar.price), (Some("5d6"), Some(25), Some(1), Some(2), 500));
+        assert_eq!(ar.features.len(), 2);
+        let pistol = get("very_heavy_pistol");
+        assert_eq!((pistol.damage.as_deref(), pistol.magazine, pistol.concealable), (Some("4d6"), Some(8), Some(false)));
+        assert_eq!(get("rocket_launcher").damage.as_deref(), Some("8d6"));
+        assert_eq!(get("light_melee").concealable, Some(true));
+        assert_eq!(get("malorian_3516").price, 10000);
     }
 }

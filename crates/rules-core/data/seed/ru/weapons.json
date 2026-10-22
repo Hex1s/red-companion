@@ -1,0 +1,603 @@
+{
+  "name": "weapons",
+  "version": 1,
+  "entries": [
+    {
+      "uuid": "f64c9320-6196-5037-9b02-eaadad57c157",
+      "code": "light_melee",
+      "name": "Лёгкое оружие ближнего боя",
+      "kind": "melee",
+      "examples": "Нож, Томагавк",
+      "skill": "melee_weapon",
+      "damage": "1d6",
+      "magazine": null,
+      "ammo": null,
+      "rof": 2,
+      "hands": null,
+      "concealable": true,
+      "features": [],
+      "description": null,
+      "price": 50,
+      "source": {
+        "page": 92
+      }
+    },
+    {
+      "uuid": "38fee6f3-f543-54bd-a027-bc645fca23a1",
+      "code": "medium_melee",
+      "name": "Среднее оружие ближнего боя",
+      "kind": "melee",
+      "examples": "Бейсбольная бита, Лом, Мачете",
+      "skill": "melee_weapon",
+      "damage": "2d6",
+      "magazine": null,
+      "ammo": null,
+      "rof": 2,
+      "hands": null,
+      "concealable": false,
+      "features": [],
+      "description": null,
+      "price": 50,
+      "source": {
+        "page": 92
+      }
+    },
+    {
+      "uuid": "b6411876-a5f3-56c7-a28d-68d55d30fb2c",
+      "code": "heavy_melee",
+      "name": "Тяжёлое оружие ближнего боя",
+      "kind": "melee",
+      "examples": "Труба, Меч, Шипастая дубина",
+      "skill": "melee_weapon",
+      "damage": "3d6",
+      "magazine": null,
+      "ammo": null,
+      "rof": 2,
+      "hands": null,
+      "concealable": false,
+      "features": [],
+      "description": null,
+      "price": 100,
+      "source": {
+        "page": 92
+      }
+    },
+    {
+      "uuid": "5d7b1eb5-feb0-5ea1-9447-2fccaadbc6f6",
+      "code": "very_heavy_melee",
+      "name": "Очень тяжёлое оружие ближнего боя",
+      "kind": "melee",
+      "examples": "Бензопила, Лопасть вертолёта, Нагината, Кувалда",
+      "skill": "melee_weapon",
+      "damage": "4d6",
+      "magazine": null,
+      "ammo": null,
+      "rof": 1,
+      "hands": null,
+      "concealable": false,
+      "features": [],
+      "description": null,
+      "price": 500,
+      "source": {
+        "page": 92
+      }
+    },
+    {
+      "uuid": "c5e6ca4c-7822-5d97-a5f0-cecf2754ae99",
+      "code": "medium_pistol",
+      "name": "Средний пистолет",
+      "kind": "ranged",
+      "examples": null,
+      "skill": "handgun",
+      "damage": "2d6",
+      "magazine": 12,
+      "ammo": "Средний пистолет",
+      "rof": 2,
+      "hands": 1,
+      "concealable": true,
+      "features": [],
+      "description": null,
+      "price": 50,
+      "source": {
+        "page": 94
+      }
+    },
+    {
+      "uuid": "95eb7118-1faa-59da-a52e-3dca14ecd949",
+      "code": "heavy_pistol",
+      "name": "Тяжёлый пистолет",
+      "kind": "ranged",
+      "examples": null,
+      "skill": "handgun",
+      "damage": "3d6",
+      "magazine": 8,
+      "ammo": "Тяжёлый пистолет",
+      "rof": 2,
+      "hands": 1,
+      "concealable": true,
+      "features": [],
+      "description": null,
+      "price": 100,
+      "source": {
+        "page": 94
+      }
+    },
+    {
+      "uuid": "dda755ad-ac0f-57b8-a67d-13a1fe119a8e",
+      "code": "very_heavy_pistol",
+      "name": "Очень тяжёлый пистолет",
+      "kind": "ranged",
+      "examples": null,
+      "skill": "handgun",
+      "damage": "4d6",
+      "magazine": 8,
+      "ammo": "Очень тяжёлый пистолет",
+      "rof": 1,
+      "hands": 1,
+      "concealable": false,
+      "features": [],
+      "description": null,
+      "price": 100,
+      "source": {
+        "page": 94
+      }
+    },
+    {
+      "uuid": "7e7646fd-2dff-512f-a58d-a019d5fd88b8",
+      "code": "submachine_gun",
+      "name": "Пистолет-пулемёт",
+      "kind": "ranged",
+      "examples": null,
+      "skill": "handgun",
+      "damage": "2d6",
+      "magazine": 30,
+      "ammo": "Средний пистолет",
+      "rof": 1,
+      "hands": 1,
+      "concealable": true,
+      "features": [
+        "Стрельба очередями (3)",
+        "Огонь на подавление"
+      ],
+      "description": null,
+      "price": 100,
+      "source": {
+        "page": 94
+      }
+    },
+    {
+      "uuid": "ba968734-8665-5080-af4f-20f5c593f1c2",
+      "code": "heavy_submachine_gun",
+      "name": "Тяжёлый пистолет-пулемёт",
+      "kind": "ranged",
+      "examples": null,
+      "skill": "handgun",
+      "damage": "3d6",
+      "magazine": 40,
+      "ammo": "Тяжёлый пистолет",
+      "rof": 1,
+      "hands": 1,
+      "concealable": false,
+      "features": [
+        "Стрельба очередями (3)",
+        "Огонь на подавление"
+      ],
+      "description": null,
+      "price": 100,
+      "source": {
+        "page": 94
+      }
+    },
+    {
+      "uuid": "bf5b428f-fd9f-5d0a-b958-1f46475bb788",
+      "code": "shotgun",
+      "name": "Дробовик",
+      "kind": "ranged",
+      "examples": null,
+      "skill": "shoulder_arms",
+      "damage": "5d6",
+      "magazine": 4,
+      "ammo": "Жакан",
+      "rof": 1,
+      "hands": 2,
+      "concealable": false,
+      "features": [
+        "Выстрел дробью"
+      ],
+      "description": null,
+      "price": 500,
+      "source": {
+        "page": 94
+      }
+    },
+    {
+      "uuid": "22ec7209-0bd6-56ff-87b1-959f3317fb3d",
+      "code": "assault_rifle",
+      "name": "Штурмовая винтовка",
+      "kind": "ranged",
+      "examples": null,
+      "skill": "shoulder_arms",
+      "damage": "5d6",
+      "magazine": 25,
+      "ammo": "Винтовочные патроны",
+      "rof": 1,
+      "hands": 2,
+      "concealable": false,
+      "features": [
+        "Стрельба очередями (4)",
+        "Огонь на подавление"
+      ],
+      "description": null,
+      "price": 500,
+      "source": {
+        "page": 94
+      }
+    },
+    {
+      "uuid": "4808c140-aae4-56f2-9e1f-46b8a68d594a",
+      "code": "sniper_rifle",
+      "name": "Снайперская винтовка",
+      "kind": "ranged",
+      "examples": null,
+      "skill": "shoulder_arms",
+      "damage": "5d6",
+      "magazine": 4,
+      "ammo": "Винтовочные патроны",
+      "rof": 1,
+      "hands": 2,
+      "concealable": false,
+      "features": [],
+      "description": null,
+      "price": 500,
+      "source": {
+        "page": 94
+      }
+    },
+    {
+      "uuid": "7fb39a4c-68ea-5711-8258-35029db6bb6c",
+      "code": "bow_crossbow",
+      "name": "Луки и арбалеты",
+      "kind": "ranged",
+      "examples": null,
+      "skill": "archery",
+      "damage": "4d6",
+      "magazine": null,
+      "ammo": "Стрелы",
+      "rof": 1,
+      "hands": 2,
+      "concealable": false,
+      "features": [
+        "Стрелы"
+      ],
+      "description": null,
+      "price": 100,
+      "source": {
+        "page": 94
+      }
+    },
+    {
+      "uuid": "1bac593e-c29c-5a09-ae75-63ffc722b264",
+      "code": "grenade_launcher",
+      "name": "Гранатомёт",
+      "kind": "ranged",
+      "examples": null,
+      "skill": "heavy_weapons",
+      "damage": "6d6",
+      "magazine": 2,
+      "ammo": "Гранаты",
+      "rof": 1,
+      "hands": 2,
+      "concealable": false,
+      "features": [
+        "Взрывы"
+      ],
+      "description": null,
+      "price": 500,
+      "source": {
+        "page": 94
+      }
+    },
+    {
+      "uuid": "76d0fa58-5267-562b-86c7-b2b35556eda8",
+      "code": "rocket_launcher",
+      "name": "Ракетомёт",
+      "kind": "ranged",
+      "examples": null,
+      "skill": "heavy_weapons",
+      "damage": "8d6",
+      "magazine": 1,
+      "ammo": "Ракеты",
+      "rof": 1,
+      "hands": 2,
+      "concealable": false,
+      "features": [
+        "Взрывы"
+      ],
+      "description": null,
+      "price": 500,
+      "source": {
+        "page": 94
+      }
+    },
+    {
+      "uuid": "37078c52-b0c9-56c9-80b9-d3c58c1f2860",
+      "code": "pneumatic_pistol",
+      "name": "Пневматический пистолет",
+      "kind": "exotic",
+      "examples": null,
+      "skill": null,
+      "damage": null,
+      "magazine": null,
+      "ammo": null,
+      "rof": null,
+      "hands": null,
+      "concealable": null,
+      "features": [],
+      "description": "Средний пистолет, стреляющий шарами с краской (и кислотой!)",
+      "price": 100,
+      "source": {
+        "page": 95
+      }
+    },
+    {
+      "uuid": "287b95bf-c55c-5cfe-9387-afc5da9811df",
+      "code": "combat_glove",
+      "name": "Боевая перчатка",
+      "kind": "exotic",
+      "examples": null,
+      "skill": null,
+      "damage": null,
+      "magazine": null,
+      "ammo": null,
+      "rof": null,
+      "hands": null,
+      "concealable": null,
+      "features": [],
+      "description": "Тяжёлая перчатка, содержит 3 слота для кибер-руки/конечности",
+      "price": 1000,
+      "source": {
+        "page": 95
+      }
+    },
+    {
+      "uuid": "f41a5c76-deb6-57a3-a958-3973ff8f74ab",
+      "code": "hurricane",
+      "name": "Штурмовое оружие Constitution Arms Hurricane",
+      "kind": "exotic",
+      "examples": null,
+      "skill": null,
+      "damage": null,
+      "magazine": null,
+      "ammo": null,
+      "rof": null,
+      "hands": null,
+      "concealable": null,
+      "features": [],
+      "description": "Дробовик с 2 СКА. Для стрельбы нужно ТЕЛ 11+",
+      "price": 5000,
+      "source": {
+        "page": 95
+      }
+    },
+    {
+      "uuid": "5ae8a08a-4bad-524a-929c-574e0567c3f4",
+      "code": "dartgun",
+      "name": "Дартган",
+      "kind": "exotic",
+      "examples": null,
+      "skill": null,
+      "damage": null,
+      "magazine": null,
+      "ammo": null,
+      "rof": null,
+      "hands": null,
+      "concealable": null,
+      "features": [],
+      "description": "Очень тяжёлый пистолет, стреляющий стрелами",
+      "price": 100,
+      "source": {
+        "page": 95
+      }
+    },
+    {
+      "uuid": "73e695fd-5e69-5e86-af75-1b9fb855797b",
+      "code": "flamethrower",
+      "name": "Огнемёт",
+      "kind": "exotic",
+      "examples": null,
+      "skill": null,
+      "damage": null,
+      "magazine": null,
+      "ammo": null,
+      "rof": null,
+      "hands": null,
+      "concealable": null,
+      "features": [],
+      "description": "Дробовик с зажигательными снарядами. Нужен навык оружия кр. калибра",
+      "price": 500,
+      "source": {
+        "page": 95
+      }
+    },
+    {
+      "uuid": "1bc44b78-2568-5116-9512-ba30904666ef",
+      "code": "kendachi_mono_three",
+      "name": "Kendachi Mono-Three",
+      "kind": "exotic",
+      "examples": null,
+      "skill": null,
+      "damage": null,
+      "magazine": null,
+      "ammo": null,
+      "rof": null,
+      "hands": null,
+      "concealable": null,
+      "features": [],
+      "description": "Двуручное очень тяжёлое оружие ближнего боя. Игнорирует броню ниже 11",
+      "price": 5000,
+      "source": {
+        "page": 95
+      }
+    },
+    {
+      "uuid": "06b1e1dc-f721-53c7-9da8-747f4e75ca42",
+      "code": "malorian_3516",
+      "name": "Malorian Arms 3516",
+      "kind": "exotic",
+      "examples": null,
+      "skill": null,
+      "damage": null,
+      "magazine": null,
+      "ammo": null,
+      "rof": null,
+      "hands": null,
+      "concealable": null,
+      "features": [],
+      "description": "Очень тяжёлый пистолет отличного качества, которым владел Джонни Силверхенд. Наносит 5d6 урона",
+      "price": 10000,
+      "source": {
+        "page": 95
+      }
+    },
+    {
+      "uuid": "bca8ff01-7337-59d5-a015-a6a90db38bd3",
+      "code": "microwaver",
+      "name": "Микроволновка",
+      "kind": "exotic",
+      "examples": null,
+      "skill": null,
+      "damage": null,
+      "magazine": null,
+      "ammo": null,
+      "rof": null,
+      "hands": null,
+      "concealable": null,
+      "features": [],
+      "description": "Очень тяжёлый пистолет, отключающий киберснаряжение и электронику",
+      "price": 500,
+      "source": {
+        "page": 95
+      }
+    },
+    {
+      "uuid": "d0f9974e-2613-5cf5-b615-97caa8445a72",
+      "code": "militech_cowboy_u56",
+      "name": "Гранатомёт Милитех «Ковбой» U-56",
+      "kind": "exotic",
+      "examples": null,
+      "skill": null,
+      "damage": null,
+      "magazine": null,
+      "ammo": null,
+      "rof": null,
+      "hands": null,
+      "concealable": null,
+      "features": [],
+      "description": "Гранатомёт с 2 СКА. Для стрельбы требуется ТЕЛ 11+",
+      "price": 5000,
+      "source": {
+        "page": 95
+      }
+    },
+    {
+      "uuid": "0febfc2d-4cef-5035-b311-66d8ecf58bf5",
+      "code": "rhinemetall_emg86",
+      "name": "Рейлган Rhinemetall EMG-86",
+      "kind": "exotic",
+      "examples": null,
+      "skill": null,
+      "damage": null,
+      "magazine": null,
+      "ammo": null,
+      "rof": null,
+      "hands": null,
+      "concealable": null,
+      "features": [],
+      "description": "Штурмовая винтовка, игнорирующая броню ниже 11. Нужен навык оружия кр. калибра. Требуется ТЕЛ 11+",
+      "price": 5000,
+      "source": {
+        "page": 95
+      }
+    },
+    {
+      "uuid": "e5ce8353-ef5c-52e3-b764-6dbdcf0b8846",
+      "code": "vizgun",
+      "name": "Визгун",
+      "kind": "exotic",
+      "examples": null,
+      "skill": null,
+      "damage": null,
+      "magazine": null,
+      "ammo": null,
+      "rof": null,
+      "hands": null,
+      "concealable": null,
+      "features": [],
+      "description": "Очень тяжёлый пистолет, вызывающий критическое повреждение органов слуха",
+      "price": 500,
+      "source": {
+        "page": 95
+      }
+    },
+    {
+      "uuid": "d8198559-a88c-57a6-8569-53db423842d7",
+      "code": "shock_baton",
+      "name": "Дубинка-шокер",
+      "kind": "exotic",
+      "examples": null,
+      "skill": null,
+      "damage": null,
+      "magazine": null,
+      "ammo": null,
+      "rof": null,
+      "hands": null,
+      "concealable": null,
+      "features": [],
+      "description": "«Несмертельное» оружие ближнего боя",
+      "price": 100,
+      "source": {
+        "page": 95
+      }
+    },
+    {
+      "uuid": "43959185-7ab9-576e-ab29-b13e745eb314",
+      "code": "taser",
+      "name": "Тазер",
+      "kind": "exotic",
+      "examples": null,
+      "skill": null,
+      "damage": null,
+      "magazine": null,
+      "ammo": null,
+      "rof": null,
+      "hands": null,
+      "concealable": null,
+      "features": [],
+      "description": "«Несмертельный» тяжёлый пистолет",
+      "price": 100,
+      "source": {
+        "page": 95
+      }
+    },
+    {
+      "uuid": "8941ea9d-25e2-5bac-8e60-83a2792b8b51",
+      "code": "tsunami_helix",
+      "name": "Tsunami Arms Helix",
+      "kind": "exotic",
+      "examples": null,
+      "skill": null,
+      "damage": null,
+      "magazine": null,
+      "ammo": null,
+      "rof": null,
+      "hands": null,
+      "concealable": null,
+      "features": [],
+      "description": "Штурмовая винтовка, стреляющая только в автоматическом режиме (множитель попаданий 5, урон 2d6 за пулю). Требуется ТЕЛ 11+",
+      "price": 5000,
+      "source": {
+        "page": 95
+      }
+    }
+  ]
+}

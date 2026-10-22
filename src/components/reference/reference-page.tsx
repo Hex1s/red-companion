@@ -5,12 +5,16 @@ import type { CoverPreset } from "@/bindings/CoverPreset";
 import type { CriticalInjury } from "@/bindings/CriticalInjury";
 import type { NpcTemplate } from "@/bindings/NpcTemplate";
 import type { Skill } from "@/bindings/Skill";
+import type { Weapon } from "@/bindings/Weapon";
+import type { WeaponKind } from "@/bindings/WeaponKind";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, hasBackend } from "@/lib/api";
 import { useUiStore, type ReferenceSection } from "@/store/ui-store";
 
-const SECTIONS: ReferenceSection[] = ["injuries", "cover", "armor", "skills", "npc"];
+const SECTIONS: ReferenceSection[] = ["injuries", "cover", "armor", "weapons", "skills", "npc"];
 
 type Entry = {
   id: string;
@@ -19,17 +23,25 @@ type Entry = {
   detail: string;
   /** Short number shown on the right (roll, HP, SP). */
   value: string;
+  /** Fields the section filters work on. */
+  weaponKind?: WeaponKind;
+  concealable?: boolean;
+  penalty?: number;
+  sp?: number;
 };
+
+const WEAPON_KINDS: WeaponKind[] = ["melee", "ranged", "exotic"];
 
 type Data = {
   injuries: CriticalInjury[];
   cover: CoverPreset[];
   armor: Armor[];
+  weapons: Weapon[];
   skills: Skill[];
   npc: NpcTemplate[];
 };
 
-const EMPTY: Data = { injuries: [], cover: [], armor: [], skills: [], npc: [] };
+const EMPTY: Data = { injuries: [], cover: [], armor: [], weapons: [], skills: [], npc: [] };
 
 /** Case-insensitive search that treats "ё" as "е". */
 const fold = (text: string) => text.toLowerCase().replace(/ё/g, "е");
@@ -39,6 +51,11 @@ export function ReferencePage() {
   const { t, i18n } = useTranslation();
   const { referenceSection, setReferenceSection, referenceQuery, setReferenceQuery } = useUiStore();
   const [data, setData] = useState<Data>(EMPTY);
+  // Section filters; they are plain view state and reset with the page.
+  const [weaponKind, setWeaponKind] = useState<WeaponKind | null>(null);
+  const [onlyConcealable, setOnlyConcealable] = useState(false);
+  const [noPenalty, setNoPenalty] = useState(false);
+  const [minSp, setMinSp] = useState("");
 
   useEffect(() => {
     if (!hasBackend) return;
@@ -46,10 +63,12 @@ export function ReferencePage() {
       api.listInjuries(),
       api.listCoverPresets(i18n.language),
       api.listArmor(i18n.language),
+      api.listWeapons(i18n.language),
       api.listSkills(),
       api.listNpcTemplates(i18n.language),
     ]).then(
-      ([injuries, cover, armor, skills, npc]) => setData({ injuries, cover, armor, skills, npc }),
+      ([injuries, cover, armor, weapons, skills, npc]) =>
+        setData({ injuries, cover, armor, weapons, skills, npc }),
       () => setData(EMPTY),
     );
   }, [i18n.language]);
@@ -76,6 +95,25 @@ export function ReferencePage() {
           name: a.name,
           detail: a.penalty > 0 ? t("reference.penalty", { value: a.penalty }) : "",
           value: String(a.sp),
+          penalty: a.penalty,
+          sp: a.sp,
+        }));
+      case "weapons":
+        return data.weapons.map((w) => ({
+          id: w.code,
+          name: w.name,
+          detail: [
+            w.skill ? t(`skill.items.${w.skill}`) : t("reference.weapon.kind.exotic"),
+            w.examples,
+            w.ammo,
+            ...w.features,
+            w.description,
+          ]
+            .filter(Boolean)
+            .join(" · "),
+          value: w.damage ?? `${w.price} ${t("reference.eb")}`,
+          weaponKind: w.kind,
+          concealable: w.concealable ?? undefined,
         }));
       case "skills":
         return data.skills.map((s) => ({
@@ -95,9 +133,19 @@ export function ReferencePage() {
   }, [data, referenceSection, t]);
 
   const query = fold(referenceQuery.trim());
-  const shown = query
-    ? entries.filter((e) => fold(`${e.name} ${e.detail}`).includes(query))
-    : entries;
+  const spFrom = Number(minSp) || 0;
+  const shown = entries.filter((e) => {
+    if (query && !fold(`${e.name} ${e.detail}`).includes(query)) return false;
+    if (referenceSection === "weapons") {
+      if (weaponKind && e.weaponKind !== weaponKind) return false;
+      if (onlyConcealable && !e.concealable) return false;
+    }
+    if (referenceSection === "armor") {
+      if (noPenalty && (e.penalty ?? 0) > 0) return false;
+      if ((e.sp ?? 0) < spFrom) return false;
+    }
+    return true;
+  });
 
   return (
     <div className="space-y-4">
@@ -120,6 +168,44 @@ export function ReferencePage() {
         placeholder={t("reference.search")}
         aria-label={t("reference.search")}
       />
+      {referenceSection === "weapons" && (
+        <div className="flex flex-wrap items-center gap-2">
+          {[null, ...WEAPON_KINDS].map((k) => (
+            <Button
+              key={k ?? "all"}
+              size="sm"
+              variant={weaponKind === k ? "default" : "outline"}
+              onClick={() => setWeaponKind(k)}
+            >
+              {t(k ? `reference.weapon.kind.${k}` : "reference.filter.all")}
+            </Button>
+          ))}
+          <label className="flex items-center gap-2 text-sm whitespace-nowrap">
+            <Checkbox
+              checked={onlyConcealable}
+              onCheckedChange={(v) => setOnlyConcealable(v === true)}
+            />
+            {t("reference.filter.concealable")}
+          </label>
+        </div>
+      )}
+      {referenceSection === "armor" && (
+        <div className="flex flex-wrap items-center gap-4">
+          <label className="flex items-center gap-2 text-sm whitespace-nowrap">
+            <Checkbox checked={noPenalty} onCheckedChange={(v) => setNoPenalty(v === true)} />
+            {t("reference.filter.no_penalty")}
+          </label>
+          <label className="flex items-center gap-2 text-sm whitespace-nowrap">
+            {t("reference.filter.sp_from")}
+            <Input
+              className="num w-16"
+              inputMode="numeric"
+              value={minSp}
+              onChange={(e) => setMinSp(e.target.value.replace(/\D/g, ""))}
+            />
+          </label>
+        </div>
+      )}
       {!hasBackend ? (
         <p className="text-muted-foreground">{t("characters.no_backend")}</p>
       ) : shown.length === 0 ? (

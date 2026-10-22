@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 use rules_core::RulesInfo;
-use rules_core::catalog::{Armor, BodyArea, CriticalInjury, NpcTemplate, Skill};
+use rules_core::catalog::{Armor, BodyArea, CriticalInjury, NpcTemplate, Skill, Weapon};
 use rules_core::character::{Character, CharacterKind, CharacterRecord, Derived};
 use rules_core::damage::DamageOutcome;
 use rules_core::damage::WoundState;
@@ -57,6 +57,11 @@ fn list_skills() -> Result<Vec<Skill>, String> {
 #[tauri::command]
 fn list_armor(lang: State<'_, ContentLang>) -> Result<Vec<Armor>, String> {
     content(&lang)?.armor().map(|c| c.entries).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn list_weapons(lang: State<'_, ContentLang>) -> Result<Vec<Weapon>, String> {
+    content(&lang)?.weapons().map(|c| c.entries).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -755,6 +760,7 @@ pub fn run() {
             set_content_lang,
             list_skills,
             list_armor,
+            list_weapons,
             list_npc_templates,
             create_npc_from_template,
             list_characters,

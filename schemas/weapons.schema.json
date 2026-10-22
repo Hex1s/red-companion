@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Collection",
+  "description": "A versioned set of entries of one type, the unit of sync with the future API.",
+  "type": "object",
+  "properties": {
+    "entries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Weapon"
+      }
+    },
+    "name": {
+      "description": "Collection name, e.g. `critical_injuries`.",
+      "type": "string"
+    },
+    "version": {
+      "description": "Bumped by hand whenever the content changes.",
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "name",
+    "version",
+    "entries"
+  ],
+  "$defs": {
+    "Source": {
+      "description": "Where a value comes from in the rulebook.",
+      "type": "object",
+      "properties": {
+        "page": {
+          "description": "Printed page number (PDF page minus one).",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "page"
+      ]
+    },
+    "Weapon": {
+      "description": "Weapon type from the tables on p. 92 (melee), p. 94 (ranged) and p. 95\n(exotic). The book lists classes of weapons, not models. Hit, range and DV\nare not calculated by the app, so only what the damage window and the\ncatalog need is kept.",
+      "type": "object",
+      "properties": {
+        "ammo": {
+          "description": "Ammunition type in the content language.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "code": {
+          "type": "string"
+        },
+        "concealable": {
+          "description": "Can be hidden under clothes; `None` for exotic weapons.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "damage": {
+          "description": "Damage dice of one hit or shot as printed, e.g. `3d6`; `None` for exotic weapons.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "description": {
+          "description": "What an exotic weapon is, in the content language.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "examples": {
+          "description": "Example weapons of a melee type, as printed.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "features": {
+          "description": "Alternative fire modes and features as printed, in the content language.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "hands": {
+          "description": "Hands needed; `None` when it depends on the weapon (melee) or is unlisted.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "kind": {
+          "$ref": "#/$defs/WeaponKind"
+        },
+        "magazine": {
+          "description": "Standard magazine; `None` for melee, exotic and bows.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "name": {
+          "type": "string"
+        },
+        "price": {
+          "description": "Price in eurobucks.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "rof": {
+          "description": "Attacks per action (ROF, \"СКА\"); `None` for exotic weapons.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "skill": {
+          "description": "Skill `id` of the weapon; `None` for exotic weapons.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "uuid": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "uuid",
+        "code",
+        "name",
+        "kind",
+        "features",
+        "price",
+        "source"
+      ]
+    },
+    "WeaponKind": {
+      "description": "Kind of weapon entry (book p. 91-95).",
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "melee",
+            "ranged"
+          ]
+        },
+        {
+          "description": "Specialised weapon listed with a description only (p. 95).",
+          "type": "string",
+          "const": "exotic"
+        }
+      ]
+    }
+  }
+}

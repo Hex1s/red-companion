@@ -529,8 +529,23 @@
       "injuries": "Травмы",
       "cover": "Укрытия",
       "armor": "Броня",
+      "weapons": "Оружие",
       "skills": "Навыки",
       "npc": "NPC"
+    },
+    "eb": "eb",
+    "filter": {
+      "all": "Всё",
+      "concealable": "Можно скрыть",
+      "no_penalty": "Без штрафа",
+      "sp_from": "ОС от"
+    },
+    "weapon": {
+      "kind": {
+        "melee": "Ближний бой",
+        "ranged": "Дальний бой",
+        "exotic": "Экзотика"
+      }
     },
     "area": {
       "body": "Тело",

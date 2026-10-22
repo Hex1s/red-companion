@@ -127,6 +127,53 @@ pub struct Shield {
     pub source: Source,
 }
 
+/// Kind of weapon entry (book p. 91-95).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+#[serde(rename_all = "snake_case")]
+pub enum WeaponKind {
+    Melee,
+    Ranged,
+    /// Specialised weapon listed with a description only (p. 95).
+    Exotic,
+}
+
+/// Weapon type from the tables on p. 92 (melee), p. 94 (ranged) and p. 95
+/// (exotic). The book lists classes of weapons, not models. Hit, range and DV
+/// are not calculated by the app, so only what the damage window and the
+/// catalog need is kept.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+pub struct Weapon {
+    pub uuid: String,
+    pub code: String,
+    pub name: String,
+    pub kind: WeaponKind,
+    /// Example weapons of a melee type, as printed.
+    pub examples: Option<String>,
+    /// Skill `id` of the weapon; `None` for exotic weapons.
+    pub skill: Option<String>,
+    /// Damage dice of one hit or shot as printed, e.g. `3d6`; `None` for exotic weapons.
+    pub damage: Option<String>,
+    /// Standard magazine; `None` for melee, exotic and bows.
+    pub magazine: Option<u32>,
+    /// Ammunition type in the content language.
+    pub ammo: Option<String>,
+    /// Attacks per action (ROF, "СКА"); `None` for exotic weapons.
+    pub rof: Option<u8>,
+    /// Hands needed; `None` when it depends on the weapon (melee) or is unlisted.
+    pub hands: Option<u8>,
+    /// Can be hidden under clothes; `None` for exotic weapons.
+    pub concealable: Option<bool>,
+    /// Alternative fire modes and features as printed, in the content language.
+    pub features: Vec<String>,
+    /// What an exotic weapon is, in the content language.
+    pub description: Option<String>,
+    /// Price in eurobucks.
+    pub price: u32,
+    pub source: Source,
+}
+
 /// Stat a skill is linked to (same names as the fields of `character::Stats`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
 #[ts(export)]
@@ -352,6 +399,45 @@ pub fn validate_shields(c: &Collection<Shield>) -> Result<(), CatalogError> {
     }
 }
 
+/// Printed pages of the weapon tables.
+pub const WEAPON_PAGES: std::ops::RangeInclusive<u32> = 92..=95;
+
+pub fn validate_weapons(c: &Collection<Weapon>, skills: &Collection<Skill>) -> Result<(), CatalogError> {
+    check_ids(c.entries.iter().map(|e| (e.code.as_str(), e.name.as_str(), e.source.page)))?;
+    for e in &c.entries {
+        let bad = |why: &str| CatalogError::OutOfRange(format!("{} ({why})", e.code));
+        if !WEAPON_PAGES.contains(&e.source.page) || e.price == 0 {
+            return Err(bad("page or price"));
+        }
+        if e.kind == WeaponKind::Exotic {
+            let described = e.description.as_deref().is_some_and(|d| !d.is_empty());
+            if !described || e.damage.is_some() || e.skill.is_some() || e.rof.is_some() {
+                return Err(bad("exotic fields"));
+            }
+            continue;
+        }
+        let dice: crate::dice::DiceNotation =
+            e.damage.as_deref().ok_or_else(|| bad("damage"))?.parse().map_err(|_| bad("damage dice"))?;
+        if dice.sides != 6 || dice.modifier != 0 || !(1..=8).contains(&dice.count) {
+            return Err(bad("damage dice"));
+        }
+        let skill = e.skill.as_deref().ok_or_else(|| bad("skill"))?;
+        if !skills.entries.iter().any(|s| s.id == skill) {
+            return Err(bad("unknown skill"));
+        }
+        if !e.rof.is_some_and(|r| (1..=2).contains(&r)) || e.concealable.is_none() {
+            return Err(bad("rof or concealable"));
+        }
+        if e.hands.is_some_and(|h| !(1..=2).contains(&h)) || e.magazine == Some(0) {
+            return Err(bad("hands or magazine"));
+        }
+        if (e.kind == WeaponKind::Melee) != (e.skill.as_deref() == Some("melee_weapon")) {
+            return Err(bad("kind and skill"));
+        }
+    }
+    Ok(())
+}
+
 /// The Russian edition lists 66 skills (p. 131-142).
 pub const SKILL_COUNT: usize = 66;
 
@@ -469,6 +555,7 @@ pub fn json_schemas() -> Vec<(&'static str, schemars::Schema)> {
         ("cover_materials", schema_for!(Collection<CoverMaterial>)),
         ("armor", schema_for!(Collection<Armor>)),
         ("shields", schema_for!(Collection<Shield>)),
+        ("weapons", schema_for!(Collection<Weapon>)),
         ("skills", schema_for!(Collection<Skill>)),
         ("npc_templates", schema_for!(Collection<NpcTemplate>)),
         ("collection_version", schema_for!(CollectionVersion)),

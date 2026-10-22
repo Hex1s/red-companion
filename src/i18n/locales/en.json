@@ -529,8 +529,23 @@
       "injuries": "Injuries",
       "cover": "Cover",
       "armor": "Armor",
+      "weapons": "Weapons",
       "skills": "Skills",
       "npc": "NPCs"
+    },
+    "eb": "eb",
+    "filter": {
+      "all": "All",
+      "concealable": "Concealable",
+      "no_penalty": "No penalty",
+      "sp_from": "SP from"
+    },
+    "weapon": {
+      "kind": {
+        "melee": "Melee",
+        "ranged": "Ranged",
+        "exotic": "Exotic"
+      }
     },
     "area": {
       "body": "Body",
