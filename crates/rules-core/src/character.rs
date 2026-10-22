@@ -22,6 +22,8 @@ pub const SCHEMA_VERSION: u32 = 1;
 /// LUCK is 0 for the book's filler NPCs ("—" in their stat blocks, p. 412).
 pub const STAT_MIN: u8 = 1;
 pub const STAT_MAX: u8 = 99;
+/// Reputation runs 1..=10 (p. 193); negative values are the same scale after cowardice.
+pub const REPUTATION_MAX: i8 = 10;
 /// Armor SP range accepted on the sheet (best armor in the book is 18).
 pub const SP_MAX: u8 = 20;
 /// Humanity per point of EMP (p. 79).
@@ -115,6 +117,10 @@ pub struct Character {
     #[serde(default)]
     #[ts(type = "number | null")]
     pub humanity: Option<i32>,
+    /// Reputation (p. 193): 0 for most characters, 1..=10 for a known one, negative when it
+    /// comes from cowardice or other shameful deeds (the sign is kept: p. 194).
+    #[serde(default)]
+    pub reputation: i8,
     #[serde(default)]
     pub notes: String,
     /// Skill levels by skill key; skills that are absent are at level 0. The key
@@ -186,6 +192,8 @@ pub enum CharacterError {
     SkillOutOfRange { skill: String, level: u8 },
     #[error("first aid is recorded for {0:?}, which the character does not have")]
     FirstAidWithoutInjury(String),
+    #[error("reputation {0} is out of range")]
+    ReputationOutOfRange(i8),
     #[error("unsupported schema version {0}")]
     UnsupportedVersion(u32),
 }
@@ -207,6 +215,7 @@ impl Character {
             death_save_penalty: 0,
             dead: false,
             humanity: None,
+            reputation: 0,
             notes: String::new(),
             skills: BTreeMap::new(),
         }
@@ -278,6 +287,9 @@ impl Character {
         }
         if let Some(id) = self.first_aided.iter().find(|id| !self.injuries.contains(id)) {
             return Err(CharacterError::FirstAidWithoutInjury(id.clone()));
+        }
+        if !(-REPUTATION_MAX..=REPUTATION_MAX).contains(&self.reputation) {
+            return Err(CharacterError::ReputationOutOfRange(self.reputation));
         }
         let s = &self.stats;
         for (stat, value) in [
@@ -427,6 +439,20 @@ mod tests {
     }
 
     #[test]
+    fn reputation_is_limited_to_ten_either_way() {
+        let mut c = Character::quick("V");
+        assert_eq!(c.reputation, 0);
+        for ok in [-10, -1, 0, 4, 10] {
+            c.reputation = ok;
+            assert_eq!(c.validate(), Ok(()));
+        }
+        for bad in [-11, 11] {
+            c.reputation = bad;
+            assert_eq!(c.validate(), Err(CharacterError::ReputationOutOfRange(bad)));
+        }
+    }
+
+    #[test]
     fn skill_keys_split_into_id_and_specialty() {
         assert_eq!(skill_base_id("language:native"), "language");
         assert_eq!(skill_specialty("language:native"), Some("native"));
@@ -442,7 +468,7 @@ mod tests {
 
         // A document without the optional fields still loads.
         let mut value: serde_json::Value = serde_json::from_str(&json).unwrap();
-        for key in ["injuries", "first_aided", "death_save_penalty", "dead", "humanity", "notes", "skills"] {
+        for key in ["injuries", "first_aided", "death_save_penalty", "dead", "humanity", "reputation", "notes", "skills"] {
             value.as_object_mut().unwrap().remove(key);
         }
         let loaded: Character = serde_json::from_value(value).unwrap();

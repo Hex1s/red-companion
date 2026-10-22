@@ -14,7 +14,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, hasBackend } from "@/lib/api";
 import { useUiStore, type ReferenceSection } from "@/store/ui-store";
 
-const SECTIONS: ReferenceSection[] = ["injuries", "cover", "armor", "weapons", "skills", "npc"];
+const SECTIONS: ReferenceSection[] = ["injuries", "cover", "armor", "weapons", "skills", "npc", "reputation"];
 
 type Entry = {
   id: string;
@@ -122,6 +122,21 @@ export function ReferencePage() {
           detail: `${t(`stats.${s.stat}`)} · ${t(`skill.category.${s.category}`)}`,
           value: s.double_cost ? "×2" : "",
         }));
+      case "reputation":
+        return [
+          ...["how", "negative", "intimidation"].map((rule) => ({
+            id: `rule_${rule}`,
+            name: t(`reputation.rule.${rule}.name`),
+            detail: t(`reputation.rule.${rule}.detail`),
+            value: "",
+          })),
+          ...Array.from({ length: 10 }, (_, i) => ({
+            id: `level_${i + 1}`,
+            name: t("reputation.level", { level: i + 1 }),
+            detail: t(`reputation.levels.${i + 1}`),
+            value: String(i + 1),
+          })),
+        ];
       case "npc":
         return data.npc.map((n) => ({
           id: n.code,

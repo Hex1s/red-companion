@@ -20,7 +20,12 @@ death_save_penalty: number, dead: boolean,
  * Current humanity (p. 80); `None` while untouched, which means full (EMP × 10). Can go
  * below zero: that is cyberpsychosis. See `humanity`.
  */
-humanity: number | null, notes: string, 
+humanity: number | null, 
+/**
+ * Reputation (p. 193): 0 for most characters, 1..=10 for a known one, negative when it
+ * comes from cowardice or other shameful deeds (the sign is kept: p. 194).
+ */
+reputation: number, notes: string, 
 /**
  * Skill levels by skill key; skills that are absent are at level 0. The key
  * is a catalog skill id, or `id:specialty` for skills taken several times

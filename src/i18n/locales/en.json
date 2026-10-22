@@ -587,7 +587,8 @@
       "armor": "Armor",
       "weapons": "Weapons",
       "skills": "Skills",
-      "npc": "NPCs"
+      "npc": "NPCs",
+      "reputation": "Reputation"
     },
     "eb": "eb",
     "filter": {
@@ -725,5 +726,38 @@
     "done": "{{name}}: therapy restored {{restored}} HUM ({{from}} → {{to}}).",
     "lost": "{{name}}: HUM {{from}} → {{to}}, EMP {{emp}}.",
     "lost_psycho": "{{name}}: HUM {{from}} → {{to}}. Cyberpsychosis!"
+  },
+  "reputation": {
+    "title": "Reputation",
+    "level": "Level {{level}}",
+    "field": "Reputation",
+    "field_hint": "−10 to 10; most characters have 0. Negative for cowardice and shameful deeds (p. 193). Intimidation and \"have they heard of them\" are the GM's call.",
+    "validation": "From −10 to 10",
+    "rule": {
+      "how": {
+        "name": "How it works",
+        "detail": "The GM awards reputation for deeds; a new deed replaces the old reputation only if its level is higher. On meeting a stranger, roll d10: below the level means they have heard of you (p. 193)."
+      },
+      "negative": {
+        "name": "Negative reputation",
+        "detail": "For cowardice and the like the GM may award a negative reputation: people who heard of you are not impressed, and it works against you (p. 193)."
+      },
+      "intimidation": {
+        "name": "Intimidation",
+        "detail": "Both sides roll COOL + Reputation + d10; if the reputation came from cowardice it counts as negative. A tie does nothing. The loser backs down or takes −2 to all actions against that opponent until they beat them once (p. 194). The app does not calculate it: the GM rolls and decides."
+      }
+    },
+    "levels": {
+      "1": "Anyone who was there knows.",
+      "2": "Reached your closest friends.",
+      "3": "Coworkers and acquaintances know.",
+      "4": "Stories spread around the district.",
+      "5": "People outside the district know your name.",
+      "6": "People outside the district know your face.",
+      "7": "A couple of news pieces were written.",
+      "8": "Now and then in headlines and screamsheets.",
+      "9": "Constantly in the news and on TV.",
+      "10": "Known all over the world."
+    }
   }
 }

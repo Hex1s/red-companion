@@ -28,7 +28,7 @@ import { Label } from "@/components/ui/label";
 import { errorMessage, type CharacterEntry } from "@/hooks/use-characters";
 import { useSkills } from "@/hooks/use-skills";
 import { api } from "@/lib/api";
-import { characterSchema, SP_MAX, STAT_MAX, STAT_MIN } from "@/lib/character-schema";
+import { characterSchema, REPUTATION_MAX, SP_MAX, STAT_MAX, STAT_MIN } from "@/lib/character-schema";
 import { status } from "@/store/status-store";
 
 /** Pause after the last edit before the sheet saves itself / asks Rust for the derived numbers. */
@@ -317,6 +317,26 @@ export function CharacterSheet({
               </FieldBadge>
             </div>
           ))}
+          <div className="cut [--cut:6px] space-y-1 p-3">
+            <Hint label={t("reputation.field_hint")}>
+              <Label htmlFor="reputation" className="text-xs text-muted-foreground">
+                {t("reputation.field")}
+              </Label>
+            </Hint>
+            <FieldBadge error={errors.reputation ? t("reputation.validation") : null}>
+              {(invalid) => (
+                <Input
+                  id="reputation"
+                  type="number"
+                  min={-REPUTATION_MAX}
+                  max={REPUTATION_MAX}
+                  className="num text-lg font-bold"
+                  aria-invalid={invalid}
+                  {...num("reputation")}
+                />
+              )}
+            </FieldBadge>
+          </div>
         </div>
       </Section>
 

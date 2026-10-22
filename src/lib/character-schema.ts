@@ -7,6 +7,7 @@ export const STAT_MIN = 1;
 // Stats may legitimately exceed the usual 1..10 (gear, cyberware); 99 only catches typos.
 export const STAT_MAX = 99;
 export const SP_MAX = 20;
+export const REPUTATION_MAX = 10;
 export const SKILL_MAX = 10;
 
 const stat = z.number().int().min(STAT_MIN).max(STAT_MAX);
@@ -37,6 +38,7 @@ export const characterSchema = z.object({
   death_save_penalty: z.number().int().min(0),
   dead: z.boolean(),
   humanity: z.number().int().nullable(),
+  reputation: z.number().int().min(-REPUTATION_MAX).max(REPUTATION_MAX),
   notes: z.string(),
   skills: z.record(z.string(), z.number().int().min(0).max(SKILL_MAX)),
 }) satisfies z.ZodType<Character>;
