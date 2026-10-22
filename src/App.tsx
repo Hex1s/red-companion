@@ -11,6 +11,9 @@ import { NpcTemplateDialog, type CloneRequest } from "@/components/character/npc
 import { EncountersPage } from "@/components/encounter/encounters-page";
 import { CombatBar } from "@/components/combat/combat-bar";
 import { DamageDialog } from "@/components/combat/damage-dialog";
+import { HealDialog, type HealTarget } from "@/components/combat/heal-dialog";
+import { RestDialog } from "@/components/combat/rest-dialog";
+import type { HealKind } from "@/bindings/HealKind";
 import { StabilizeDialog } from "@/components/combat/stabilize-dialog";
 import { ReferencePage } from "@/components/reference/reference-page";
 import { AppShell } from "@/components/layout/app-shell";
@@ -48,11 +51,21 @@ export default function App() {
   const encounterState = useEncounters();
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [stabilizeTargetId, setStabilizeTargetId] = useState<number | null>(null);
+  const [restTargetId, setRestTargetId] = useState<number | null>(null);
+  const [healTarget, setHealTarget] = useState<{ id: number; injuryId: string; kind: HealKind } | null>(null);
   const [importFiles, setImportFiles] = useState<ExportFile[] | null>(null);
   const [encounterImportFiles, setEncounterImportFiles] = useState<ExportFile[] | null>(null);
   const [lastSave, setLastSave] = useState<{ id: number; save: DeathSave } | null>(null);
   const damageTarget = entries.find((e) => e.id === damageTargetId) ?? null;
   const selected = entries.find((e) => e.id === selectedCharacterId) ?? null;
+
+  // The healer may be anyone in the session, or the patient themselves (self-help is allowed).
+  const healPatient = healTarget ? (entries.find((e) => e.id === healTarget.id) ?? null) : null;
+  const healInjury = healTarget ? injuries.find((i) => i.id === healTarget.injuryId) : undefined;
+  const healDialogTarget: HealTarget | null =
+    healTarget && healPatient && healInjury
+      ? { character: healPatient, injury: healInjury, kind: healTarget.kind }
+      : null;
 
   const scene = sceneState.scene;
   const combat = scene?.combat ?? null;
@@ -75,6 +88,10 @@ export default function App() {
   // The rail shows the session's characters only: fighters first, in acting order, then the
   // others in the order they joined.
   const sessionEntries = members.flatMap((id) => entries.filter((e) => e.id === id));
+  const healHelpers =
+    healPatient && !sessionEntries.some((e) => e.id === healPatient.id)
+      ? [healPatient, ...sessionEntries]
+      : sessionEntries;
   const railEntries = combat
     ? [
         ...combat.combatants.flatMap((c) => sessionEntries.filter((e) => e.id === c.character_id)),
@@ -88,6 +105,8 @@ export default function App() {
   useEffect(() => {
     openDamage(null);
     setStabilizeTargetId(null);
+    setRestTargetId(null);
+    setHealTarget(null);
     setLastSave(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
@@ -386,6 +405,11 @@ export default function App() {
                   entry={selected}
                   onSave={(character) => save(selected.id, character)}
                   onSaveAsTemplate={() => saveAsTemplate(selected.id)}
+                  injuryTable={injuries}
+                  onHeal={(injury, kind) =>
+                    setHealTarget({ id: selected.id, injuryId: injury.id, kind })
+                  }
+                  onRest={() => setRestTargetId(selected.id)}
                   onDelete={async () => {
                     try {
                       await remove(selected.id);
@@ -481,6 +505,7 @@ export default function App() {
                   onRollInitiative={() => void sceneState.combatRoll(e.id)}
                   onShift={(delta) => void sceneState.combatShift(e.id, delta)}
                   onStabilize={() => setStabilizeTargetId(e.id)}
+                  onRest={() => setRestTargetId(e.id)}
                   onRevive={() =>
                     api.reviveCharacter(e.id).then(
                       () => reload(),
@@ -539,6 +564,41 @@ export default function App() {
               helpers={sessionEntries}
               onDone={() => void reload()}
               onClose={() => setStabilizeTargetId(null)}
+            />
+            <RestDialog
+              target={entries.find((e) => e.id === restTargetId) ?? null}
+              onDone={(applied) => {
+                void reload();
+                status.show({
+                  id: "rest",
+                  kind: "success",
+                  text: t("rest.done", {
+                    name: applied.character.character.name,
+                    days: applied.plan.days,
+                    hp: applied.plan.final_hp,
+                  }),
+                });
+              }}
+              onClose={() => setRestTargetId(null)}
+            />
+            <HealDialog
+              target={healDialogTarget}
+              helpers={healHelpers}
+              onDone={(applied) => {
+                void reload();
+                if (!applied.result.success) return;
+                status.show({
+                  id: "heal",
+                  kind: "success",
+                  text: t(applied.result.removed ? "heal.success_removed" : "heal.success_lifted", {
+                    name: applied.character.character.name,
+                    injury: t(`injury.${applied.result.injury_id}.name`, {
+                      defaultValue: applied.result.injury_id,
+                    }),
+                  }),
+                });
+              }}
+              onClose={() => setHealTarget(null)}
             />
             <DamageDialog
               target={damageTarget}

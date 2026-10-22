@@ -100,6 +100,10 @@ pub struct Character {
     /// Ids of active critical injuries (see `catalog::CriticalInjury`).
     #[serde(default)]
     pub injuries: Vec<String>,
+    /// Injuries whose effect first aid has lifted until the end of the day (p. 223); a subset of
+    /// `injuries`. A day of rest ends the day and clears it.
+    #[serde(default)]
+    pub first_aided: Vec<String>,
     /// Accumulated death save penalty (p. 186).
     #[serde(default)]
     pub death_save_penalty: u8,
@@ -168,6 +172,8 @@ pub enum CharacterError {
     HpAboveMax { hp: u32, max_hp: u32 },
     #[error("skill {skill} level {level} is out of range")]
     SkillOutOfRange { skill: String, level: u8 },
+    #[error("first aid is recorded for {0:?}, which the character does not have")]
+    FirstAidWithoutInjury(String),
     #[error("unsupported schema version {0}")]
     UnsupportedVersion(u32),
 }
@@ -185,6 +191,7 @@ impl Character {
             armor_head: ArmorSlot::NONE,
             armor_body: ArmorSlot::NONE,
             injuries: Vec::new(),
+            first_aided: Vec::new(),
             death_save_penalty: 0,
             dead: false,
             notes: String::new(),
@@ -211,6 +218,7 @@ impl Character {
         c.armor_head.sp = c.armor_head.max_sp;
         c.armor_body.sp = c.armor_body.max_sp;
         c.injuries.clear();
+        c.first_aided.clear();
         c.death_save_penalty = 0;
         c.dead = false;
         c
@@ -250,6 +258,9 @@ impl Character {
         }
         if self.name.trim().is_empty() {
             return Err(CharacterError::EmptyName);
+        }
+        if let Some(id) = self.first_aided.iter().find(|id| !self.injuries.contains(id)) {
+            return Err(CharacterError::FirstAidWithoutInjury(id.clone()));
         }
         let s = &self.stats;
         for (stat, value) in [
@@ -413,7 +424,7 @@ mod tests {
 
         // A document without the optional fields still loads.
         let mut value: serde_json::Value = serde_json::from_str(&json).unwrap();
-        for key in ["injuries", "death_save_penalty", "dead", "notes", "skills"] {
+        for key in ["injuries", "first_aided", "death_save_penalty", "dead", "notes", "skills"] {
             value.as_object_mut().unwrap().remove(key);
         }
         let loaded: Character = serde_json::from_value(value).unwrap();

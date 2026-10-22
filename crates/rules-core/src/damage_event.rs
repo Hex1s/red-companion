@@ -246,6 +246,7 @@ pub fn undo_character(character: &mut Character, event: &DamageEvent) {
     let slot = slot_mut(character, event.request.area);
     slot.sp = event.sp_before.min(slot.max_sp);
     character.injuries.retain(|i| !event.added_injuries.contains(i));
+    character.first_aided.retain(|i| character.injuries.contains(i));
     character.death_save_penalty = event.death_save_penalty_before;
 }
 

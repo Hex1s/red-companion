@@ -29,6 +29,11 @@ import type { StabilizeApplied } from "@/bindings/StabilizeApplied";
 import type { NpcTemplate } from "@/bindings/NpcTemplate";
 import type { Skill } from "@/bindings/Skill";
 import type { SkillCheck } from "@/bindings/SkillCheck";
+import type { HealApplied } from "@/bindings/HealApplied";
+import type { HealKind } from "@/bindings/HealKind";
+import type { RestApplied } from "@/bindings/RestApplied";
+import type { RestPlan } from "@/bindings/RestPlan";
+import type { TreatmentSkill } from "@/bindings/TreatmentSkill";
 import type { Weapon } from "@/bindings/Weapon";
 
 /**
@@ -118,6 +123,35 @@ export const api = {
   removeCover: (coverId: number) => invoke<SceneRecord>("remove_cover", { coverId }),
   setCharacterCover: (characterId: number, coverId: number | null) =>
     invoke<SceneRecord>("set_character_cover", { characterId, coverId }),
+  /**
+   * One attempt to heal an injury with `skill` (a way its table row offers). First aid and
+   * paramedic use the healer's TECH + level; surgery needs the typed-in `bonus`. `manualTotal`
+   * is a physical d10, `granted` counts it as a success without a roll.
+   */
+  healInjury: (
+    targetId: number,
+    helperId: number,
+    injuryId: string,
+    kind: HealKind,
+    skill: TreatmentSkill,
+    bonus: number | null,
+    manualTotal: number | null,
+    granted: boolean,
+  ) =>
+    invoke<HealApplied>("heal_injury", {
+      targetId,
+      helperId,
+      injuryId,
+      kind,
+      skill,
+      bonus,
+      manualTotal,
+      granted,
+    }),
+  /** Days of rest needed to reach `targetHp`; changes nothing. */
+  restPreview: (id: number, targetHp: number) => invoke<RestPlan>("rest_preview", { id, targetHp }),
+  restCharacter: (id: number, targetHp: number) =>
+    invoke<RestApplied>("rest_character", { id, targetHp }),
   listInjuries: () => invoke<CriticalInjury[]>("list_injuries"),
   /** Rolls `notation`, or builds the result from faces read off physical dice. */
   rollDice: (notation: string, manual: number[] | null) =>

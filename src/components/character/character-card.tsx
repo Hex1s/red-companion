@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { ChevronDown, ChevronUp, Dices, RotateCcw, Swords, UserMinus } from "lucide-react";
+import { BedDouble, ChevronDown, ChevronUp, Dices, RotateCcw, Swords, UserMinus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { DeathSave } from "@/bindings/DeathSave";
 import { WoundBadge } from "@/components/character/wound-badge";
@@ -37,6 +37,8 @@ type CharacterCardProps = {
   onRollInitiative: () => void;
   onShift: (delta: number) => void;
   onStabilize: () => void;
+  /** Opens the rest window (HP back over days of rest). */
+  onRest: () => void;
   /** Brings a dead character back (1 HP, no penalty, no injuries). */
   onRevive: () => void;
   /** Resolves `true` when the save was made. */
@@ -68,6 +70,7 @@ export function CharacterCard({
   onRollInitiative,
   onShift,
   onStabilize,
+  onRest,
   onRevive,
   onDeathSave,
   onLeave,
@@ -195,6 +198,14 @@ export function CharacterCard({
           <Button type="button" size="xs" variant="outline" onClick={onStabilize}>
             {t("initiative.stabilize")}
           </Button>
+        )}
+        {!dead && !mortal && character.hp < derived.max_hp && (
+          <Hint label={t("rest.hint")}>
+            <Button type="button" size="xs" variant="outline" onClick={onRest}>
+              <BedDouble />
+              {t("rest.button")}
+            </Button>
+          </Hint>
         )}
         {dead && (
           <Hint label={t("card.revive_hint")}>

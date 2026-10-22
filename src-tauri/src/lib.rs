@@ -16,6 +16,8 @@ use rules_core::skill_check::{self, SkillCheck};
 use rules_core::scene::{CoverPreset, Scene, SceneRecord, SessionInfo, cover_presets};
 use rules_core::encounter_transfer::{self, EncountersImported, EncountersSaved};
 use rules_core::transfer::{self, ExportFile, ExportSaved, ExportedCharacter};
+use rules_core::healing::{self, HealApplied, HealKind, RestApplied, RestPlan};
+use rules_core::catalog::TreatmentSkill;
 use rules_core::vitals::{self, DeathSaveApplied, STABILIZE_SKILLS, StabilizeApplied};
 use rules_core::encounter::{
     self, Assessment, Encounter, EncounterRecord, TemplateSource, UserTemplateDoc, UserTemplateRecord,
@@ -1067,6 +1069,84 @@ fn stabilize(
     Ok(StabilizeApplied { character: CharacterRecord::new(target_id, target), result })
 }
 
+/// One attempt to heal an injury of `target_id`: `kind` first aid or treatment, with `skill`
+/// (a way the injury's table row offers). The healer's bonus is TECH + skill level for first aid
+/// and paramedic; surgery is a role ability not kept on the sheet, so its `bonus` is typed in.
+/// `manual_total` is a physical d10 (explosion already added), `granted` declares success.
+#[tauri::command]
+fn heal_injury(
+    state: State<'_, AppStorage>,
+    target_id: i64,
+    helper_id: i64,
+    injury_id: String,
+    kind: HealKind,
+    skill: TreatmentSkill,
+    bonus: Option<i32>,
+    manual_total: Option<i32>,
+    granted: bool,
+) -> Result<HealApplied, String> {
+    let storage = lock(&state)?;
+    let mut target = require_character(&storage, target_id)?;
+    let injury = injury_table()?
+        .into_iter()
+        .find(|i| i.id == injury_id)
+        .ok_or_else(|| format!("unknown injury: {injury_id}"))?;
+    let (bonus, roll) = if granted {
+        (0, None)
+    } else {
+        let bonus = match skill {
+            TreatmentSkill::Surgery => bonus.ok_or("surgery needs a bonus")?,
+            TreatmentSkill::FirstAid | TreatmentSkill::Paramedic => {
+                let id = if skill == TreatmentSkill::FirstAid { "first_aid" } else { "paramedic" };
+                let helper = if helper_id == target_id {
+                    target.clone()
+                } else {
+                    require_character(&storage, helper_id)?
+                };
+                let catalog =
+                    SeedDataSource::default().skills().map_err(|e| e.to_string())?.entries;
+                let (_, stat, level) =
+                    skill_check::skill_bonus(&helper, id, &catalog).map_err(|e| e.to_string())?;
+                i32::from(stat) + i32::from(level)
+            }
+        };
+        let die = match manual_total {
+            Some(total) => check_total(total).map_err(|e| e.to_string())?,
+            None => roll_check(&mut ThreadDice::new()),
+        };
+        (bonus, Some(die))
+    };
+    let result = healing::heal_injury(&mut target, &injury, kind, skill, bonus, roll)
+        .map_err(|e| e.to_string())?;
+    store_character(&storage, target_id, &target)?;
+    Ok(HealApplied { character: CharacterRecord::new(target_id, target), result })
+}
+
+/// Days of rest needed to reach `target_hp` (computed by the rules, nothing is changed).
+#[tauri::command]
+fn rest_preview(
+    state: State<'_, AppStorage>,
+    id: i64,
+    target_hp: u32,
+) -> Result<RestPlan, String> {
+    let character = require_character(&*lock(&state)?, id)?;
+    healing::rest_plan(&character, target_hp).map_err(|e| e.to_string())
+}
+
+/// Rests until `target_hp` is reached; first aid wears off with the day.
+#[tauri::command]
+fn rest_character(
+    state: State<'_, AppStorage>,
+    id: i64,
+    target_hp: u32,
+) -> Result<RestApplied, String> {
+    let storage = lock(&state)?;
+    let mut character = require_character(&storage, id)?;
+    let plan = healing::rest(&mut character, target_hp).map_err(|e| e.to_string())?;
+    store_character(&storage, id, &character)?;
+    Ok(RestApplied { character: CharacterRecord::new(id, character), plan })
+}
+
 fn injury_table() -> Result<Vec<CriticalInjury>, String> {
     SeedDataSource::default().critical_injuries().map(|c| c.entries).map_err(|e| e.to_string())
 }
@@ -1281,7 +1361,10 @@ pub fn run() {
             combat_next_turn,
             combat_end,
             death_save,
-            stabilize
+            stabilize,
+            heal_injury,
+            rest_preview,
+            rest_character
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

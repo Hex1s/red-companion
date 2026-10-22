@@ -8,6 +8,11 @@ export type Character = { schema_version: number, name: string, stats: Stats, hp
  */
 injuries: Array<string>, 
 /**
+ * Injuries whose effect first aid has lifted until the end of the day (p. 223); a subset of
+ * `injuries`. A day of rest ends the day and clears it.
+ */
+first_aided: Array<string>, 
+/**
  * Accumulated death save penalty (p. 186).
  */
 death_save_penalty: number, dead: boolean, notes: string, 

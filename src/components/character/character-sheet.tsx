@@ -1,8 +1,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { BedDouble } from "lucide-react";
 import { useForm, type Path } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import type { Character } from "@/bindings/Character";
+import type { CriticalInjury } from "@/bindings/CriticalInjury";
+import type { HealKind } from "@/bindings/HealKind";
 import type { Derived } from "@/bindings/Derived";
 import type { Stats } from "@/bindings/Stats";
 import { InjuryIcon } from "@/components/combat/injury-icons";
@@ -19,6 +22,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { FieldBadge } from "@/components/ui/field-badge";
+import { Hint } from "@/components/ui/hint";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { errorMessage, type CharacterEntry } from "@/hooks/use-characters";
@@ -52,6 +56,12 @@ type CharacterSheetProps = {
   onDelete: () => Promise<unknown>;
   /** Saves a copy of this NPC as one of the GM's own templates; only NPCs offer it. */
   onSaveAsTemplate: () => Promise<unknown>;
+  /** Critical injury table, to offer the ways each injury can be healed. */
+  injuryTable: CriticalInjury[];
+  /** Opens the healing window for one injury of this character. */
+  onHeal: (injury: CriticalInjury, kind: HealKind) => void;
+  /** Opens the rest window. */
+  onRest: () => void;
 };
 
 type SectionProps = { title: string; children: ReactNode };
@@ -77,11 +87,23 @@ function StatTile({ label, value }: StatTileProps) {
 }
 
 /** Editable character sheet. Derived numbers come from Rust (saved record). */
-export function CharacterSheet({ entry, onSave, onDelete, onSaveAsTemplate }: CharacterSheetProps) {
+export function CharacterSheet({
+  entry,
+  onSave,
+  onDelete,
+  onSaveAsTemplate,
+  injuryTable,
+  onHeal,
+  onRest,
+}: CharacterSheetProps) {
   const { t } = useTranslation();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [derived, setDerived] = useState<Derived>(entry.derived);
   const skills = useSkills();
+  const alive = { dead: derived.wound_state === "dead" };
+  // Rest needs a living character who is not mortally wounded (stabilise first) and not at full HP.
+  const canRest =
+    !alive.dead && derived.wound_state !== "mortal" && entry.character.hp < derived.max_hp;
 
   // Every plain catalog skill gets an input; missing levels start at 0. Skills with
   // specialties (languages, areas...) only have the rows that were added.
@@ -312,6 +334,14 @@ export function CharacterSheet({ entry, onSave, onDelete, onSaveAsTemplate }: Ch
             </div>
             <HpBar current={Number(watch("hp")) || 0} max={derived.max_hp} className="flex-1 pb-3" />
             <WoundBadge state={derived.wound_state} className="pb-2" />
+            {canRest && (
+              <Hint label={t("rest.hint")}>
+                <Button type="button" size="sm" variant="outline" className="mb-1.5" onClick={onRest}>
+                  <BedDouble />
+                  {t("rest.button")}
+                </Button>
+              </Hint>
+            )}
           </div>
           <div className="grid grid-cols-4 gap-2">
             <StatTile label={t("characters.max_hp")} value={derived.max_hp} />
@@ -334,12 +364,48 @@ export function CharacterSheet({ entry, onSave, onDelete, onSaveAsTemplate }: Ch
           <p className="text-sm text-muted-foreground">{t("characters.no_injuries")}</p>
         ) : (
           <ul className="space-y-1 text-sm">
-            {entry.character.injuries.map((id) => (
-              <li key={id} className="cut flex items-center gap-2 px-3 py-1.5 [--cut:4px]">
-                <InjuryIcon id={id} className="size-5 text-primary" />
-                {t(`injury.${id}.name`, { defaultValue: id })}
-              </li>
-            ))}
+            {entry.character.injuries.map((id) => {
+              const injury = injuryTable.find((i) => i.id === id);
+              const aided = entry.character.first_aided.includes(id);
+              const quick = injury?.quick_fix_removes_effect === true;
+              const canFirstAid = injury && !alive.dead && injury.first_aid.length > 0 && !aided;
+              const canTreat = injury && !alive.dead && injury.treatment.length > 0;
+              return (
+                <li key={id} className="cut flex items-center gap-2 px-3 py-1.5 [--cut:4px]">
+                  <InjuryIcon id={id} className="size-5 text-primary" />
+                  <span className="flex-1">
+                    {t(`injury.${id}.name`, { defaultValue: id })}
+                    {aided && (
+                      <span className="ml-2 text-xs text-state-ok">{t("heal.lifted_badge")}</span>
+                    )}
+                  </span>
+                  {canFirstAid && (
+                    <Hint label={quick ? t("heal.quick_fix_hint") : t("heal.first_aid_hint")}>
+                      <Button
+                        type="button"
+                        size="xs"
+                        variant="outline"
+                        onClick={() => onHeal(injury, "first_aid")}
+                      >
+                        {quick ? t("heal.quick_fix") : t("heal.first_aid")}
+                      </Button>
+                    </Hint>
+                  )}
+                  {canTreat && (
+                    <Hint label={t("heal.treatment_hint")}>
+                      <Button
+                        type="button"
+                        size="xs"
+                        variant="outline"
+                        onClick={() => onHeal(injury, "treatment")}
+                      >
+                        {t("heal.treatment")}
+                      </Button>
+                    </Hint>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </Section>

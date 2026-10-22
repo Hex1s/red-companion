@@ -11,6 +11,7 @@ pub mod data_source;
 pub mod dice;
 pub mod encounter;
 pub mod encounter_transfer;
+pub mod healing;
 pub mod initiative;
 pub mod scene;
 pub mod skill_check;

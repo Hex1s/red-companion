@@ -33,6 +33,7 @@ export const characterSchema = z.object({
   armor_head: armorSlot,
   armor_body: armorSlot,
   injuries: z.array(z.string()),
+  first_aided: z.array(z.string()),
   death_save_penalty: z.number().int().min(0),
   dead: z.boolean(),
   notes: z.string(),
