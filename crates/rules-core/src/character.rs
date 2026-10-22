@@ -204,6 +204,18 @@ impl Character {
         }
     }
 
+    /// A fresh copy of the sheet for use as a template: full HP and armor, no wounds, no injuries.
+    pub fn as_fresh(&self) -> Self {
+        let mut c = self.clone();
+        c.hp = c.max_hp();
+        c.armor_head.sp = c.armor_head.max_sp;
+        c.armor_body.sp = c.armor_body.max_sp;
+        c.injuries.clear();
+        c.death_save_penalty = 0;
+        c.dead = false;
+        c
+    }
+
     pub fn wound_state(&self) -> WoundState {
         wound_state(self.hp, self.max_hp(), self.dead)
     }

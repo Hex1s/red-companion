@@ -14,6 +14,7 @@ import {
 import { FieldBadge } from "@/components/ui/field-badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cloneNames, npcNotes } from "@/lib/encounter";
 import { cn } from "@/lib/utils";
 
 const TIERS: NpcTier[] = ["mook", "lieutenant", "mini_boss", "boss"];
@@ -36,17 +37,6 @@ type NpcTemplateDialogProps = {
   onClone: (request: CloneRequest) => Promise<void>;
   onClose: () => void;
 };
-
-/** Escapes text for use inside a RegExp. */
-const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-/** "Booster" for the first one alone, otherwise "Booster 2", "Booster 3"... after the existing ones. */
-function cloneNames(base: string, count: number, existing: string[]): string[] {
-  const same = new RegExp(`^${escapeRegExp(base)}( \\d+)?$`);
-  const taken = existing.filter((n) => same.test(n)).length;
-  if (taken === 0 && count === 1) return [base];
-  return Array.from({ length: count }, (_, i) => `${base} ${taken + i + 1}`);
-}
 
 /** Picker for the ready-made NPCs (book p. 412-416): clone one or several, optionally straight into the fight. */
 export function NpcTemplateDialog({
@@ -72,17 +62,6 @@ export function NpcTemplateDialog({
     [templates],
   );
 
-  const notesOf = (template: NpcTemplate) =>
-    [
-      `${t("npc.notes.weapons")}: ${template.weapons
-        .map((w) => `${w.name} ${w.damage}`)
-        .join(", ")}`,
-      `${t("npc.notes.gear")}: ${template.gear}`,
-      template.notes,
-    ]
-      .filter(Boolean)
-      .join("\n");
-
   const clone = async () => {
     if (!selected || !countValid) return;
     setBusy(true);
@@ -91,7 +70,7 @@ export function NpcTemplateDialog({
       await onClone({
         templateId: selected.code,
         names: cloneNames(selected.name, countValue, existingNames),
-        notes: notesOf(selected),
+        notes: npcNotes(t, selected),
       });
       onClose();
     } catch (e) {
@@ -141,7 +120,7 @@ export function NpcTemplateDialog({
         </div>
 
         {selected && (
-          <p className="whitespace-pre-line text-xs text-muted-foreground">{notesOf(selected)}</p>
+          <p className="whitespace-pre-line text-xs text-muted-foreground">{npcNotes(t, selected)}</p>
         )}
         {error && <p className="text-sm text-destructive">{error}</p>}
 

@@ -50,6 +50,8 @@ type CharacterSheetProps = {
   entry: CharacterEntry;
   onSave: (character: Character) => Promise<unknown>;
   onDelete: () => Promise<unknown>;
+  /** Saves a copy of this NPC as one of the GM's own templates; only NPCs offer it. */
+  onSaveAsTemplate: () => Promise<unknown>;
 };
 
 type SectionProps = { title: string; children: ReactNode };
@@ -75,7 +77,7 @@ function StatTile({ label, value }: StatTileProps) {
 }
 
 /** Editable character sheet. Derived numbers come from Rust (saved record). */
-export function CharacterSheet({ entry, onSave, onDelete }: CharacterSheetProps) {
+export function CharacterSheet({ entry, onSave, onDelete, onSaveAsTemplate }: CharacterSheetProps) {
   const { t } = useTranslation();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [derived, setDerived] = useState<Derived>(entry.derived);
@@ -251,6 +253,11 @@ export function CharacterSheet({ entry, onSave, onDelete }: CharacterSheetProps)
         <span className="pb-2 text-xs text-muted-foreground uppercase">
           {t(`characters.kind.${entry.kind}`)}
         </span>
+        {entry.kind === "npc" && (
+          <Button type="button" variant="outline" onClick={() => void onSaveAsTemplate()}>
+            {t("encounters.save_as_template")}
+          </Button>
+        )}
         <Button type="button" variant="outline" onClick={() => setConfirmDelete(true)}>
           {t("characters.delete")}
         </Button>

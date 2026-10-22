@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 use rules_core::RulesInfo;
-use rules_core::catalog::{Armor, BodyArea, CriticalInjury, NpcTemplate, Skill, Weapon};
+use rules_core::catalog::{Armor, BodyArea, CriticalInjury, NpcTemplate, NpcTier, Skill, Weapon};
 use rules_core::character::{Character, CharacterKind, CharacterRecord, Derived};
 use rules_core::damage::DamageOutcome;
 use rules_core::damage::WoundState;
@@ -16,7 +16,10 @@ use rules_core::skill_check::{self, SkillCheck};
 use rules_core::scene::{CoverPreset, Scene, SceneRecord, cover_presets};
 use rules_core::transfer::{self, ExportFile, ExportSaved, ExportedCharacter};
 use rules_core::vitals::{self, DeathSaveApplied, STABILIZE_SKILLS, StabilizeApplied};
-use storage::{CharacterRow, Storage};
+use rules_core::encounter::{
+    self, Assessment, Encounter, EncounterRecord, TemplateSource, UserTemplateDoc, UserTemplateRecord,
+};
+use storage::{CharacterRow, DocRow, DocTable, Storage};
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_opener::OpenerExt;
 
@@ -95,6 +98,187 @@ fn create_npc_from_template(
         .insert_character(storage::CharacterKind::Npc, &character.name, &data)
         .map_err(|e| e.to_string())?;
     Ok(CharacterRecord::new(id, character))
+}
+
+fn user_template_record(row: &DocRow) -> Result<UserTemplateRecord, String> {
+    let doc: UserTemplateDoc = serde_json::from_str(&row.data).map_err(|e| e.to_string())?;
+    Ok(UserTemplateRecord { id: row.id, tier: doc.tier, character: doc.character })
+}
+
+fn encounter_record(row: &DocRow) -> Result<EncounterRecord, String> {
+    let encounter: Encounter = serde_json::from_str(&row.data).map_err(|e| e.to_string())?;
+    Ok(EncounterRecord { id: row.id, encounter })
+}
+
+#[tauri::command]
+fn list_user_templates(state: State<'_, AppStorage>) -> Result<Vec<UserTemplateRecord>, String> {
+    let rows = lock(&state)?.list_docs(DocTable::UserTemplates).map_err(|e| e.to_string())?;
+    rows.iter().map(user_template_record).collect()
+}
+
+/// Saves a copy of a character's sheet as the GM's own NPC template (fresh HP and armor, no
+/// injuries). With `template_id` the existing template is overwritten instead of adding a new one.
+#[tauri::command]
+fn save_character_as_template(
+    state: State<'_, AppStorage>,
+    character_id: i64,
+    template_id: Option<i64>,
+) -> Result<UserTemplateRecord, String> {
+    let storage = lock(&state)?;
+    let row = storage
+        .get_character(character_id)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("character {character_id} not found"))?;
+    let character = parse_row(&row)?.as_fresh();
+    character.validate().map_err(|e| e.to_string())?;
+    // Overwriting keeps the tier the GM already chose.
+    let tier = match template_id {
+        Some(id) => storage
+            .get_doc(DocTable::UserTemplates, id)
+            .map_err(|e| e.to_string())?
+            .map(|row| user_template_record(&row))
+            .transpose()?
+            .map_or(NpcTier::Mook, |t| t.tier),
+        None => NpcTier::Mook,
+    };
+    let data = serde_json::to_string(&UserTemplateDoc { tier, character: character.clone() })
+        .map_err(|e| e.to_string())?;
+    let id = match template_id {
+        Some(id) => {
+            if !storage
+                .update_doc(DocTable::UserTemplates, id, &character.name, &data)
+                .map_err(|e| e.to_string())?
+            {
+                return Err(format!("template {id} not found"));
+            }
+            id
+        }
+        None => storage
+            .insert_doc(DocTable::UserTemplates, &character.name, &data)
+            .map_err(|e| e.to_string())?,
+    };
+    Ok(UserTemplateRecord { id, tier, character })
+}
+
+/// Files an own template under a tier (it counts for that much in the encounter assessment).
+#[tauri::command]
+fn set_user_template_tier(
+    state: State<'_, AppStorage>,
+    id: i64,
+    tier: NpcTier,
+) -> Result<UserTemplateRecord, String> {
+    let storage = lock(&state)?;
+    let row = storage
+        .get_doc(DocTable::UserTemplates, id)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("template {id} not found"))?;
+    let record = user_template_record(&row)?;
+    let data = serde_json::to_string(&UserTemplateDoc { tier, character: record.character.clone() })
+        .map_err(|e| e.to_string())?;
+    storage.update_doc(DocTable::UserTemplates, id, &row.name, &data).map_err(|e| e.to_string())?;
+    Ok(UserTemplateRecord { id, tier, character: record.character })
+}
+
+/// How strong an encounter is against `players` edgerunners (information only). Lines whose
+/// template no longer exists are left out and counted in `skipped`.
+#[tauri::command]
+fn assess_encounter(
+    state: State<'_, AppStorage>,
+    lang: State<'_, ContentLang>,
+    encounter: Encounter,
+    players: u32,
+) -> Result<Assessment, String> {
+    let book = content(&lang)?.npc_templates().map_err(|e| e.to_string())?;
+    let storage = lock(&state)?;
+    let (mut weight, mut skipped) = (0, 0);
+    for line in &encounter.entries {
+        let tier = match line.source {
+            TemplateSource::Book => {
+                book.entries.iter().find(|t| t.code == line.template).map(|t| t.tier)
+            }
+            TemplateSource::Custom => match line.template.parse::<i64>() {
+                Ok(id) => storage
+                    .get_doc(DocTable::UserTemplates, id)
+                    .map_err(|e| e.to_string())?
+                    .map(|row| user_template_record(&row))
+                    .transpose()?
+                    .map(|t| t.tier),
+                Err(_) => None,
+            },
+        };
+        match tier {
+            Some(tier) => weight += encounter::tier_weight(tier) * line.count,
+            None => skipped += line.count,
+        }
+    }
+    encounter::assess(weight, players, skipped).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn delete_user_template(state: State<'_, AppStorage>, id: i64) -> Result<(), String> {
+    lock(&state)?.delete_doc(DocTable::UserTemplates, id).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// Clones the GM's own template into a new NPC sheet under `name`.
+#[tauri::command]
+fn create_npc_from_user_template(
+    state: State<'_, AppStorage>,
+    template_id: i64,
+    name: String,
+) -> Result<CharacterRecord, String> {
+    let storage = lock(&state)?;
+    let row = storage
+        .get_doc(DocTable::UserTemplates, template_id)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("template {template_id} not found"))?;
+    let mut character = user_template_record(&row)?.character.as_fresh();
+    character.name = name.trim().to_string();
+    character.validate().map_err(|e| e.to_string())?;
+    let data = serde_json::to_string(&character).map_err(|e| e.to_string())?;
+    let id = storage
+        .insert_character(storage::CharacterKind::Npc, &character.name, &data)
+        .map_err(|e| e.to_string())?;
+    Ok(CharacterRecord::new(id, character))
+}
+
+#[tauri::command]
+fn list_encounters(state: State<'_, AppStorage>) -> Result<Vec<EncounterRecord>, String> {
+    let rows = lock(&state)?.list_docs(DocTable::Encounters).map_err(|e| e.to_string())?;
+    rows.iter().map(encounter_record).collect()
+}
+
+/// Creates an encounter (`id` is `None`) or overwrites an existing one.
+#[tauri::command]
+fn save_encounter(
+    state: State<'_, AppStorage>,
+    id: Option<i64>,
+    mut encounter: Encounter,
+) -> Result<EncounterRecord, String> {
+    encounter.normalize().map_err(|e| e.to_string())?;
+    let data = serde_json::to_string(&encounter).map_err(|e| e.to_string())?;
+    let storage = lock(&state)?;
+    let id = match id {
+        Some(id) => {
+            if !storage
+                .update_doc(DocTable::Encounters, id, &encounter.name, &data)
+                .map_err(|e| e.to_string())?
+            {
+                return Err(format!("encounter {id} not found"));
+            }
+            id
+        }
+        None => storage
+            .insert_doc(DocTable::Encounters, &encounter.name, &data)
+            .map_err(|e| e.to_string())?,
+    };
+    Ok(EncounterRecord { id, encounter })
+}
+
+#[tauri::command]
+fn delete_encounter(state: State<'_, AppStorage>, id: i64) -> Result<(), String> {
+    lock(&state)?.delete_doc(DocTable::Encounters, id).map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 fn storage_kind(kind: CharacterKind) -> storage::CharacterKind {
@@ -783,6 +967,15 @@ pub fn run() {
             list_weapons,
             list_npc_templates,
             create_npc_from_template,
+            list_user_templates,
+            save_character_as_template,
+            delete_user_template,
+            set_user_template_tier,
+            assess_encounter,
+            create_npc_from_user_template,
+            list_encounters,
+            save_encounter,
+            delete_encounter,
             list_characters,
             create_character,
             save_character,

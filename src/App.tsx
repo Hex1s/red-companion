@@ -7,6 +7,7 @@ import { CharacterCard } from "@/components/character/character-card";
 import { CharacterSheet } from "@/components/character/character-sheet";
 import { ImportDialog } from "@/components/character/import-dialog";
 import { NpcTemplateDialog, type CloneRequest } from "@/components/character/npc-template-dialog";
+import { EncountersPage } from "@/components/encounter/encounters-page";
 import { CombatBar } from "@/components/combat/combat-bar";
 import { DamageDialog } from "@/components/combat/damage-dialog";
 import { StabilizeDialog } from "@/components/combat/stabilize-dialog";
@@ -17,11 +18,15 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { errorMessage, useCharacters } from "@/hooks/use-characters";
+import { useEncounters } from "@/hooks/use-encounters";
 import { useInjuries } from "@/hooks/use-injuries";
 import { useNpcTemplates } from "@/hooks/use-npc-templates";
 import { useScene } from "@/hooks/use-scene";
 import { api, hasBackend } from "@/lib/api";
 import { coverLabel } from "@/lib/cover-label";
+import { cloneNames, npcNotes, templateKey } from "@/lib/encounter";
+import type { EncounterRecord } from "@/bindings/EncounterRecord";
+import type { UserTemplateRecord } from "@/bindings/UserTemplateRecord";
 import { SUPPORTED_LANGUAGES } from "@/i18n";
 import { status } from "@/store/status-store";
 import { useUiStore, type AppTab } from "@/store/ui-store";
@@ -34,6 +39,7 @@ export default function App() {
   const sceneState = useScene();
   const injuries = useInjuries();
   const npcTemplates = useNpcTemplates();
+  const encounterState = useEncounters();
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [stabilizeTargetId, setStabilizeTargetId] = useState<number | null>(null);
   const [importFiles, setImportFiles] = useState<ExportFile[] | null>(null);
@@ -50,6 +56,11 @@ export default function App() {
   useEffect(() => {
     if (error) status.error(t("characters.load_error", { error }), "characters:load");
   }, [error, t]);
+  useEffect(() => {
+    if (encounterState.error) {
+      status.error(t("encounters.load_error", { error: encounterState.error }), "encounters:load");
+    }
+  }, [encounterState.error, t]);
 
   // A death save result is shown until the turn moves on.
   useEffect(() => setLastSave(null), [combat?.active, combat?.round]);
@@ -79,6 +90,70 @@ export default function App() {
       await reload();
     }
     if (last !== null) selectCharacter(last);
+  };
+
+  /** Clones one own template into the session; returns the new NPC's id. */
+  const cloneUserTemplate = async (template: UserTemplateRecord, taken: string[]) => {
+    const [name] = cloneNames(template.character.name, 1, taken);
+    const record = await api.createNpcFromUserTemplate(template.id, name);
+    taken.push(name);
+    return record.id;
+  };
+
+  /** Clones every NPC of an encounter into the session (all NPCs get their own HP and SP). */
+  const launchEncounter = async ({ encounter }: EncounterRecord) => {
+    const taken = entries.map((e) => e.character.name);
+    let last: number | null = null;
+    let created = 0;
+    let missing = 0;
+    try {
+      for (const line of encounter.entries) {
+        const key = templateKey(line.source, line.template);
+        const book = npcTemplates.find((x) => templateKey("book", x.code) === key);
+        const own = encounterState.templates.find((x) => templateKey("custom", String(x.id)) === key);
+        if (!book && !own) {
+          missing += line.count;
+          continue;
+        }
+        const base = book?.name ?? own?.character.name ?? "";
+        const names = cloneNames(base, line.count, taken);
+        for (const name of names) {
+          const record = book
+            ? await api.createNpcFromTemplate(book.code, name, npcNotes(t, book))
+            : await api.createNpcFromUserTemplate(own!.id, name);
+          taken.push(name);
+          last = record.id;
+          created += 1;
+        }
+      }
+    } finally {
+      // Even after a partial failure the clones that exist must show up.
+      await reload();
+    }
+    if (last !== null) selectCharacter(last);
+    status.show({
+      id: "encounter:launch",
+      kind: missing > 0 ? "info" : "success",
+      text: t(missing > 0 ? "encounters.launched_missing" : "encounters.launched", {
+        count: created,
+        missing,
+      }),
+      autoHideMs: 6000,
+    });
+  };
+
+  const saveAsTemplate = async (id: number) => {
+    try {
+      const saved = await api.saveCharacterAsTemplate(id, null);
+      await encounterState.reload();
+      status.show({
+        id: "encounter:template",
+        kind: "success",
+        text: t("encounters.template_saved", { name: saved.character.name }),
+      });
+    } catch (e) {
+      status.error(t("encounters.save_error", { error: errorMessage(e) }), "encounter:template");
+    }
   };
 
   const openExportsFolder = () =>
@@ -155,6 +230,7 @@ export default function App() {
             <Tabs value={tab} onValueChange={(v) => setTab(v as AppTab)} className="flex-1">
               <TabsList>
                 <TabsTrigger value="characters">{t("nav.characters")}</TabsTrigger>
+                <TabsTrigger value="encounters">{t("nav.encounters")}</TabsTrigger>
                 <TabsTrigger value="rules">{t("nav.rules")}</TabsTrigger>
               </TabsList>
             </Tabs>
@@ -218,6 +294,7 @@ export default function App() {
                   key={selected.id}
                   entry={selected}
                   onSave={(character) => save(selected.id, character)}
+                  onSaveAsTemplate={() => saveAsTemplate(selected.id)}
                   onDelete={async () => {
                     try {
                       await remove(selected.id);
@@ -235,6 +312,22 @@ export default function App() {
                 )
               )}
             </div>
+          ) : tab === "encounters" ? (
+            <EncountersPage
+              bookTemplates={npcTemplates}
+              userTemplates={encounterState.templates}
+              encounters={encounterState.encounters}
+              onSaveEncounter={encounterState.saveEncounter}
+              onDeleteEncounter={encounterState.deleteEncounter}
+              onDeleteTemplate={encounterState.deleteTemplate}
+              onSetTemplateTier={encounterState.setTemplateTier}
+              onLaunch={launchEncounter}
+              onCloneTemplate={async (template) => {
+                const id = await cloneUserTemplate(template, entries.map((e) => e.character.name));
+                await reload();
+                selectCharacter(id);
+              }}
+            />
           ) : (
             <ReferencePage />
           )

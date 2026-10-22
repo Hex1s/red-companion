@@ -54,6 +54,30 @@ pub struct SceneRow {
     pub data: String,
 }
 
+/// A named JSON document (user template or encounter).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DocRow {
+    pub id: i64,
+    pub name: String,
+    pub data: String,
+}
+
+/// The tables that hold `DocRow`s.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DocTable {
+    UserTemplates,
+    Encounters,
+}
+
+impl DocTable {
+    fn name(self) -> &'static str {
+        match self {
+            Self::UserTemplates => "user_templates",
+            Self::Encounters => "encounters",
+        }
+    }
+}
+
 pub struct Storage {
     conn: Connection,
 }
@@ -107,6 +131,51 @@ impl Storage {
 
     pub fn delete_character(&self, id: i64) -> Result<bool> {
         Ok(self.conn.execute("DELETE FROM characters WHERE id = ?1", [id])? > 0)
+    }
+
+    pub fn insert_doc(&self, table: DocTable, name: &str, data: &str) -> Result<i64> {
+        self.conn.execute(
+            &format!("INSERT INTO {} (name, data) VALUES (?1, ?2)", table.name()),
+            params![name, data],
+        )?;
+        Ok(self.conn.last_insert_rowid())
+    }
+
+    pub fn update_doc(&self, table: DocTable, id: i64, name: &str, data: &str) -> Result<bool> {
+        let n = self.conn.execute(
+            &format!(
+                "UPDATE {} SET name = ?2, data = ?3, updated_at = datetime('now') WHERE id = ?1",
+                table.name()
+            ),
+            params![id, name, data],
+        )?;
+        Ok(n > 0)
+    }
+
+    pub fn get_doc(&self, table: DocTable, id: i64) -> Result<Option<DocRow>> {
+        Ok(self
+            .conn
+            .query_row(
+                &format!("SELECT id, name, data FROM {} WHERE id = ?1", table.name()),
+                [id],
+                doc_row,
+            )
+            .optional()?)
+    }
+
+    pub fn list_docs(&self, table: DocTable) -> Result<Vec<DocRow>> {
+        let mut stmt = self
+            .conn
+            .prepare(&format!("SELECT id, name, data FROM {} ORDER BY name, id", table.name()))?;
+        let rows = stmt.query_map([], doc_row)?;
+        Ok(rows.collect::<std::result::Result<_, _>>()?)
+    }
+
+    pub fn delete_doc(&self, table: DocTable, id: i64) -> Result<bool> {
+        Ok(self
+            .conn
+            .execute(&format!("DELETE FROM {} WHERE id = ?1", table.name()), [id])?
+            > 0)
     }
 
     pub fn create_session(&self, name: &str) -> Result<i64> {
@@ -176,6 +245,10 @@ impl Storage {
     }
 }
 
+fn doc_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<DocRow> {
+    Ok(DocRow { id: r.get(0)?, name: r.get(1)?, data: r.get(2)? })
+}
+
 fn character_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<CharacterRow> {
     Ok(CharacterRow {
         id: r.get(0)?,
@@ -205,6 +278,26 @@ mod tests {
         assert!(s.delete_character(pc).unwrap());
         assert!(s.get_character(pc).unwrap().is_none());
         assert!(!s.delete_character(pc).unwrap());
+    }
+
+    #[test]
+    fn docs_live_in_separate_tables() {
+        let s = Storage::open_in_memory().unwrap();
+        let template = s.insert_doc(DocTable::UserTemplates, "Thug", r#"{"hp":20}"#).unwrap();
+        let encounter = s.insert_doc(DocTable::Encounters, "Ambush", "{}").unwrap();
+
+        assert_eq!(s.list_docs(DocTable::UserTemplates).unwrap().len(), 1);
+        assert_eq!(s.list_docs(DocTable::Encounters).unwrap().len(), 1);
+        assert_eq!(s.get_doc(DocTable::UserTemplates, template).unwrap().unwrap().name, "Thug");
+
+        assert!(s.update_doc(DocTable::Encounters, encounter, "Big ambush", "{\"a\":1}").unwrap());
+        let row = s.get_doc(DocTable::Encounters, encounter).unwrap().unwrap();
+        assert_eq!((row.name.as_str(), row.data.as_str()), ("Big ambush", "{\"a\":1}"));
+
+        assert!(s.delete_doc(DocTable::Encounters, encounter).unwrap());
+        assert!(!s.delete_doc(DocTable::Encounters, encounter).unwrap());
+        assert!(s.get_doc(DocTable::Encounters, encounter).unwrap().is_none());
+        assert_eq!(s.list_docs(DocTable::UserTemplates).unwrap().len(), 1);
     }
 
     #[test]

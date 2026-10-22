@@ -10,7 +10,12 @@ import type { DamageApplied } from "@/bindings/DamageApplied";
 import type { DamageOutcome } from "@/bindings/DamageOutcome";
 import type { DamageRequest } from "@/bindings/DamageRequest";
 import type { Derived } from "@/bindings/Derived";
+import type { Encounter } from "@/bindings/Encounter";
+import type { EncounterRecord } from "@/bindings/EncounterRecord";
+import type { Assessment } from "@/bindings/Assessment";
+import type { NpcTier } from "@/bindings/NpcTier";
 import type { ExportFile } from "@/bindings/ExportFile";
+import type { UserTemplateRecord } from "@/bindings/UserTemplateRecord";
 import type { ExportSaved } from "@/bindings/ExportSaved";
 import type { DeathSaveApplied } from "@/bindings/DeathSaveApplied";
 import type { InjuryRoll } from "@/bindings/InjuryRoll";
@@ -43,6 +48,23 @@ export const api = {
   /** Clones a ready-made NPC into a new NPC sheet; `notes` is the localized weapons and gear text. */
   createNpcFromTemplate: (templateId: string, name: string, notes: string) =>
     invoke<CharacterRecord>("create_npc_from_template", { templateId, name, notes }),
+  listUserTemplates: () => invoke<UserTemplateRecord[]>("list_user_templates"),
+  /** Copies a character's sheet (fresh HP and armor) into the GM's own templates; `templateId` overwrites one. */
+  saveCharacterAsTemplate: (characterId: number, templateId: number | null) =>
+    invoke<UserTemplateRecord>("save_character_as_template", { characterId, templateId }),
+  setUserTemplateTier: (id: number, tier: NpcTier) =>
+    invoke<UserTemplateRecord>("set_user_template_tier", { id, tier }),
+  /** How strong an encounter is against `players` edgerunners; information only. */
+  assessEncounter: (encounter: Encounter, players: number) =>
+    invoke<Assessment>("assess_encounter", { encounter, players }),
+  deleteUserTemplate: (id: number) => invoke<void>("delete_user_template", { id }),
+  createNpcFromUserTemplate: (templateId: number, name: string) =>
+    invoke<CharacterRecord>("create_npc_from_user_template", { templateId, name }),
+  listEncounters: () => invoke<EncounterRecord[]>("list_encounters"),
+  /** Creates an encounter (`id` null) or overwrites one. */
+  saveEncounter: (id: number | null, encounter: Encounter) =>
+    invoke<EncounterRecord>("save_encounter", { id, encounter }),
+  deleteEncounter: (id: number) => invoke<void>("delete_encounter", { id }),
   listCharacters: (kind: CharacterKind) => invoke<CharacterRecord[]>("list_characters", { kind }),
   createCharacter: (kind: CharacterKind, name: string) =>
     invoke<CharacterRecord>("create_character", { kind, name }),
