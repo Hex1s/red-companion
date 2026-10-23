@@ -14,6 +14,7 @@ pub mod encounter_transfer;
 pub mod healing;
 pub mod humanity;
 pub mod initiative;
+pub mod roles;
 pub mod scene;
 pub mod skill_check;
 pub mod transfer;

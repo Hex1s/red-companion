@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Collection",
+  "description": "A versioned set of entries of one type, the unit of sync with the future API.",
+  "type": "object",
+  "properties": {
+    "entries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Role"
+      }
+    },
+    "name": {
+      "description": "Collection name, e.g. `critical_injuries`.",
+      "type": "string"
+    },
+    "version": {
+      "description": "Bumped by hand whenever the content changes.",
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "name",
+    "version",
+    "entries"
+  ],
+  "$defs": {
+    "AbilityLevel": {
+      "type": "object",
+      "properties": {
+        "points": {
+          "description": "Points in the sub-ability at which the benefit is gained.",
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "points",
+        "summary"
+      ]
+    },
+    "AbilityOption": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "name",
+        "summary"
+      ]
+    },
+    "Role": {
+      "description": "A player role (book p. 27–42) with its role ability (p. 143–166). Server content: names and\nshort summaries only, the rules themselves live in `roles`.",
+      "type": "object",
+      "properties": {
+        "ability_code": {
+          "type": "string"
+        },
+        "ability_name": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "subabilities": {
+          "description": "Parts of the ability that rank points are spent on; empty until the role is filled in.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SubAbility"
+          }
+        },
+        "summary": {
+          "description": "What the role ability is about, one or two sentences of our own.",
+          "type": "string"
+        },
+        "uuid": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "uuid",
+        "code",
+        "name",
+        "ability_code",
+        "ability_name",
+        "summary",
+        "subabilities",
+        "source"
+      ]
+    },
+    "Source": {
+      "description": "Where a value comes from in the rulebook.",
+      "type": "object",
+      "properties": {
+        "page": {
+          "description": "Printed page number (PDF page minus one).",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "page"
+      ]
+    },
+    "SubAbility": {
+      "description": "A part of a role ability that gets points (e.g. Medicine: Surgery, Pharmaceuticals).",
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "levels": {
+          "description": "Benefits that arrive by themselves when the points reach a threshold.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AbilityLevel"
+          }
+        },
+        "max_points": {
+          "description": "Cap on the points that may be put here; `None` = only the rank limits it.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "name": {
+          "type": "string"
+        },
+        "options": {
+          "description": "Things the player picks, at most one per point (e.g. a drug).",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AbilityOption"
+          }
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "name",
+        "summary",
+        "options",
+        "levels"
+      ]
+    }
+  }
+}

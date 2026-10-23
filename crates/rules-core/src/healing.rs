@@ -158,6 +158,7 @@ pub fn rest(character: &mut Character, target_hp: u32) -> Result<RestPlan, Heali
     let plan = rest_plan(character, target_hp)?;
     character.hp = plan.final_hp;
     character.first_aided.clear();
+    crate::roles::end_of_day(character);
     Ok(plan)
 }
 

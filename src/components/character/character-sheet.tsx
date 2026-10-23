@@ -10,6 +10,7 @@ import type { Derived } from "@/bindings/Derived";
 import type { Stats } from "@/bindings/Stats";
 import { InjuryIcon } from "@/components/combat/injury-icons";
 import { HpBar } from "@/components/character/hp-bar";
+import { RolesSection } from "@/components/character/roles-section";
 import { SkillsSection } from "@/components/character/skills-section";
 import { WoundBadge } from "@/components/character/wound-badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ import { Hint } from "@/components/ui/hint";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { errorMessage, type CharacterEntry } from "@/hooks/use-characters";
+import { useRoles } from "@/hooks/use-roles";
 import { useSkills } from "@/hooks/use-skills";
 import { api } from "@/lib/api";
 import { characterSchema, REPUTATION_MAX, SP_MAX, STAT_MAX, STAT_MIN } from "@/lib/character-schema";
@@ -66,6 +68,8 @@ type CharacterSheetProps = {
   onLoseHumanity: () => void;
   /** Opens the therapy window. */
   onTherapy: () => void;
+  /** Opens the dose window: this character (a Medtech) gives a drug they picked. */
+  onAdminister: (drug: string) => void;
 };
 
 type SectionProps = { title: string; children: ReactNode };
@@ -101,11 +105,13 @@ export function CharacterSheet({
   onRest,
   onLoseHumanity,
   onTherapy,
+  onAdminister,
 }: CharacterSheetProps) {
   const { t } = useTranslation();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [derived, setDerived] = useState<Derived>(entry.derived);
   const skills = useSkills();
+  const roles = useRoles();
   const alive = { dead: derived.wound_state === "dead" };
   // Rest needs a living character who is not mortally wounded (stabilise first) and not at full HP.
   const canRest =
@@ -472,6 +478,10 @@ export function CharacterSheet({
             })}
           </ul>
         )}
+      </Section>
+
+      <Section title={t("characters.section.roles")}>
+        <RolesSection form={form} roles={roles} derived={derived} onAdminister={onAdminister} />
       </Section>
 
       <Section title={t("characters.section.skills")}>

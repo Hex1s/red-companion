@@ -157,6 +157,7 @@ pub fn parse_import(
     let skills: HashSet<String> = data.skills()?.entries.into_iter().map(|s| s.id).collect();
     let injuries: HashSet<String> =
         data.critical_injuries()?.entries.into_iter().map(|i| i.id).collect();
+    let roles = data.roles()?.entries;
     let book: HashSet<String> = data.npc_templates()?.entries.into_iter().map(|n| n.code).collect();
 
     let mut keys = HashSet::new();
@@ -175,6 +176,9 @@ pub fn parse_import(
         if let Some(injury) = c.injuries.iter().find(|k| !injuries.contains(*k)) {
             return Err(EncounterTransferError::UnknownInjury { name, injury: injury.clone() });
         }
+        crate::roles::validate_against(&c.roles, &roles).map_err(|e| {
+            EncounterTransferError::InvalidTemplate { name, source: e.into() }
+        })?;
     }
 
     for e in &mut file.encounters {

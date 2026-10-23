@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { Armor } from "@/bindings/Armor";
 import type { CoverPreset } from "@/bindings/CoverPreset";
 import type { CriticalInjury } from "@/bindings/CriticalInjury";
+import type { Role } from "@/bindings/Role";
 import type { NpcTemplate } from "@/bindings/NpcTemplate";
 import type { Skill } from "@/bindings/Skill";
 import type { Weapon } from "@/bindings/Weapon";
@@ -14,7 +15,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, hasBackend } from "@/lib/api";
 import { useUiStore, type ReferenceSection } from "@/store/ui-store";
 
-const SECTIONS: ReferenceSection[] = ["injuries", "cover", "armor", "weapons", "skills", "npc", "reputation"];
+const SECTIONS: ReferenceSection[] = ["injuries", "cover", "armor", "weapons", "skills", "npc", "roles", "reputation"];
 
 type Entry = {
   id: string;
@@ -39,9 +40,10 @@ type Data = {
   weapons: Weapon[];
   skills: Skill[];
   npc: NpcTemplate[];
+  roles: Role[];
 };
 
-const EMPTY: Data = { injuries: [], cover: [], armor: [], weapons: [], skills: [], npc: [] };
+const EMPTY: Data = { injuries: [], cover: [], armor: [], weapons: [], skills: [], npc: [], roles: [] };
 
 /** Case-insensitive search that treats "ё" as "е". */
 const fold = (text: string) => text.toLowerCase().replace(/ё/g, "е");
@@ -66,9 +68,10 @@ export function ReferencePage() {
       api.listWeapons(i18n.language),
       api.listSkills(),
       api.listNpcTemplates(i18n.language),
+      api.listRoles(i18n.language),
     ]).then(
-      ([injuries, cover, armor, weapons, skills, npc]) =>
-        setData({ injuries, cover, armor, weapons, skills, npc }),
+      ([injuries, cover, armor, weapons, skills, npc, roles]) =>
+        setData({ injuries, cover, armor, weapons, skills, npc, roles }),
       () => setData(EMPTY),
     );
   }, [i18n.language]);
@@ -137,6 +140,20 @@ export function ReferencePage() {
             value: String(i + 1),
           })),
         ];
+      case "roles":
+        return data.roles.map((r) => ({
+          id: r.code,
+          name: `${r.name} — ${r.ability_name}`,
+          detail: [
+            r.summary,
+            ...r.subabilities.flatMap((sub) => [
+              `${sub.name}: ${sub.summary}`,
+              ...sub.options.map((o) => `${o.name}: ${o.summary}`),
+              ...sub.levels.map((l) => `${sub.name} ${l.points}: ${l.summary}`),
+            ]),
+          ].join(" · "),
+          value: "",
+        }));
       case "npc":
         return data.npc.map((n) => ({
           id: n.code,

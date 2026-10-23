@@ -9,6 +9,11 @@ export const STAT_MAX = 99;
 export const SP_MAX = 20;
 export const REPUTATION_MAX = 10;
 export const SKILL_MAX = 10;
+export const RANK_MAX = 10;
+/** A new role may be taken once every role held is at this rank (p. 143). */
+export const MULTICLASS_MIN_RANK = 4;
+/** Rank of a starting character's first role (p. 142); later roles start at 1 (p. 143). */
+export const STARTING_RANK = 4;
 
 const stat = z.number().int().min(STAT_MIN).max(STAT_MAX);
 const armorSlot = z
@@ -40,5 +45,14 @@ export const characterSchema = z.object({
   humanity: z.number().int().nullable(),
   reputation: z.number().int().min(-REPUTATION_MAX).max(REPUTATION_MAX),
   notes: z.string(),
+  doses: z.array(z.string()),
+  roles: z.array(
+    z.object({
+      role: z.string().min(1),
+      rank: z.number().int().min(0).max(RANK_MAX),
+      points: z.record(z.string(), z.number().int().min(0).max(RANK_MAX)),
+      picks: z.array(z.string()),
+    }),
+  ),
   skills: z.record(z.string(), z.number().int().min(0).max(SKILL_MAX)),
 }) satisfies z.ZodType<Character>;

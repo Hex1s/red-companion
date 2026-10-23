@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
 export type AppTab = "characters" | "encounters" | "notes" | "rules";
-export type ReferenceSection = "injuries" | "cover" | "armor" | "weapons" | "skills" | "npc" | "reputation";
+export type ReferenceSection = "injuries" | "cover" | "armor" | "weapons" | "skills" | "npc" | "roles" | "reputation";
 
 /** UI state only: game data lives in Rust and comes through Tauri commands. */
 type UiState = {

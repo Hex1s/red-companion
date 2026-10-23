@@ -12,6 +12,7 @@ use thiserror::Error;
 use ts_rs::TS;
 
 use crate::humanity;
+use crate::roles::{self, RoleEntry, RoleError};
 use crate::damage::{max_hp, wound_state, TargetState, WoundState};
 
 /// Current version of the character document.
@@ -123,6 +124,12 @@ pub struct Character {
     pub reputation: i8,
     #[serde(default)]
     pub notes: String,
+    /// Drugs whose once-per-period benefit this character already got (p. 150); see `roles`.
+    #[serde(default)]
+    pub doses: Vec<String>,
+    /// Roles held (multiclass, p. 143) with their ranks; see `roles`.
+    #[serde(default)]
+    pub roles: Vec<RoleEntry>,
     /// Skill levels by skill key; skills that are absent are at level 0. The key
     /// is a catalog skill id, or `id:specialty` for skills taken several times
     /// with a specialty (see `skill_base_id`).
@@ -151,6 +158,10 @@ pub struct Derived {
     /// DV of stabilising the character in their current wound state (p. 186); `None` when
     /// there is nothing to stabilise (healthy, dead).
     pub stabilization_dv: Option<u8>,
+    /// Surgery skill from a Medtech's Medicine (0 without it).
+    pub surgery_skill: u8,
+    /// Medical Technology skill from a Medtech's Medicine (0 without it).
+    pub medical_tech_skill: u8,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -194,6 +205,10 @@ pub enum CharacterError {
     FirstAidWithoutInjury(String),
     #[error("reputation {0} is out of range")]
     ReputationOutOfRange(i8),
+    #[error(transparent)]
+    Role(#[from] RoleError),
+    #[error(transparent)]
+    Dose(#[from] roles::DrugError),
     #[error("unsupported schema version {0}")]
     UnsupportedVersion(u32),
 }
@@ -217,8 +232,15 @@ impl Character {
             humanity: None,
             reputation: 0,
             notes: String::new(),
+            doses: Vec::new(),
+            roles: Vec::new(),
             skills: BTreeMap::new(),
         }
+    }
+
+    /// The entry of one role, if the character holds it.
+    pub fn role(&self, code: &str) -> Option<&RoleEntry> {
+        self.roles.iter().find(|e| e.role == code)
     }
 
     pub fn max_hp(&self) -> u32 {
@@ -241,6 +263,7 @@ impl Character {
         c.armor_body.sp = c.armor_body.max_sp;
         c.injuries.clear();
         c.first_aided.clear();
+        c.doses.clear();
         c.death_save_penalty = 0;
         c.dead = false;
         c.humanity = None;
@@ -263,6 +286,8 @@ impl Character {
             effective_emp: humanity::effective_emp(self),
             cyberpsychosis: humanity::is_cyberpsycho(self),
             stabilization_dv: self.wound_state().stabilization_dv(),
+            surgery_skill: roles::surgery_skill(self),
+            medical_tech_skill: roles::medical_tech_skill(self),
         }
     }
 
@@ -291,6 +316,8 @@ impl Character {
         if !(-REPUTATION_MAX..=REPUTATION_MAX).contains(&self.reputation) {
             return Err(CharacterError::ReputationOutOfRange(self.reputation));
         }
+        roles::validate_entries(&self.roles)?;
+        roles::validate_doses(&self.doses)?;
         let s = &self.stats;
         for (stat, value) in [
             ("int", s.int),

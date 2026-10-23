@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 use rules_core::RulesInfo;
-use rules_core::catalog::{Armor, BodyArea, CriticalInjury, NpcTemplate, NpcTier, Skill, Weapon};
+use rules_core::catalog::{Armor, BodyArea, CriticalInjury, NpcTemplate, NpcTier, Role, Skill, Weapon};
 use rules_core::character::{Character, CharacterKind, CharacterRecord, Derived};
 use rules_core::damage::DamageOutcome;
 use rules_core::damage::WoundState;
@@ -60,6 +60,11 @@ fn rules_info() -> RulesInfo {
 #[tauri::command]
 fn list_skills() -> Result<Vec<Skill>, String> {
     SeedDataSource::default().skills().map(|c| c.entries).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn list_roles(lang: State<'_, ContentLang>) -> Result<Vec<Role>, String> {
+    content(&lang)?.roles().map(|c| c.entries).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -364,6 +369,8 @@ fn save_character(
 ) -> Result<CharacterRecord, String> {
     character.name = character.name.trim().to_string();
     character.validate().map_err(|e| e.to_string())?;
+    let role_catalog = SeedDataSource::default().roles().map_err(|e| e.to_string())?.entries;
+    rules_core::roles::validate_against(&character.roles, &role_catalog).map_err(|e| e.to_string())?;
     let storage = lock(&state)?;
     let kind = storage
         .get_character(id)
@@ -1121,7 +1128,21 @@ fn heal_injury(
         (0, None)
     } else {
         let bonus = match skill {
-            TreatmentSkill::Surgery => bonus.ok_or("surgery needs a bonus")?,
+            TreatmentSkill::Surgery => match bonus {
+                Some(b) => b,
+                None => {
+                    // A Medtech's Medicine gives the Surgery skill (p. 149); anyone else types it.
+                    let helper = if helper_id == target_id {
+                        target.clone()
+                    } else {
+                        require_character(&storage, helper_id)?
+                    };
+                    if helper.role(rules_core::roles::MEDTECH).is_none() {
+                        return Err("surgery needs a bonus".to_string());
+                    }
+                    rules_core::roles::surgery_bonus(&helper)
+                }
+            },
             TreatmentSkill::FirstAid | TreatmentSkill::Paramedic => {
                 let id = if skill == TreatmentSkill::FirstAid { "first_aid" } else { "paramedic" };
                 let helper = if helper_id == target_id {
@@ -1146,6 +1167,26 @@ fn heal_injury(
         .map_err(|e| e.to_string())?;
     store_character(&storage, target_id, &target)?;
     Ok(HealApplied { character: CharacterRecord::new(target_id, target), result })
+}
+
+/// A Medtech (`helper_id`) gives a drug they picked to `target_id` (p. 150).
+#[tauri::command]
+fn administer_drug(
+    state: State<'_, AppStorage>,
+    target_id: i64,
+    helper_id: i64,
+    drug: String,
+) -> Result<rules_core::roles::DrugApplied, String> {
+    let storage = lock(&state)?;
+    let mut target = require_character(&storage, target_id)?;
+    let helper = if helper_id == target_id {
+        target.clone()
+    } else {
+        require_character(&storage, helper_id)?
+    };
+    let result = rules_core::roles::administer_drug(&helper, &mut target, &drug).map_err(|e| e.to_string())?;
+    store_character(&storage, target_id, &target)?;
+    Ok(rules_core::roles::DrugApplied { character: CharacterRecord::new(target_id, target), result })
 }
 
 /// Days of rest needed to reach `target_hp` (computed by the rules, nothing is changed).
@@ -1388,6 +1429,8 @@ pub fn run() {
             rules_info,
             set_content_lang,
             list_skills,
+            list_roles,
+            administer_drug,
             skill_check,
             list_armor,
             list_weapons,

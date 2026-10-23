@@ -6,7 +6,7 @@ use thiserror::Error;
 use ts_rs::TS;
 
 use crate::catalog::{
-    Armor, Collection, CollectionVersion, CoverMaterial, CriticalInjury, NpcTemplate, Shield, Skill, Weapon,
+    Armor, Collection, CollectionVersion, CoverMaterial, CriticalInjury, NpcTemplate, Role, Shield, Skill, Weapon,
 };
 
 #[derive(Debug, Error)]
@@ -25,6 +25,7 @@ pub trait DataSource {
     fn weapons(&self) -> DataResult<Collection<Weapon>>;
     fn skills(&self) -> DataResult<Collection<Skill>>;
     fn npc_templates(&self) -> DataResult<Collection<NpcTemplate>>;
+    fn roles(&self) -> DataResult<Collection<Role>>;
 
     /// Versions of every collection, the "manifest" compared during sync.
     fn versions(&self) -> DataResult<Vec<CollectionVersion>> {
@@ -36,6 +37,7 @@ pub trait DataSource {
             self.weapons()?.version_info(),
             self.skills()?.version_info(),
             self.npc_templates()?.version_info(),
+            self.roles()?.version_info(),
         ])
     }
 }
@@ -114,6 +116,9 @@ impl DataSource for SeedDataSource {
     fn npc_templates(&self) -> DataResult<Collection<NpcTemplate>> {
         content!(self.lang, "npc_templates")
     }
+    fn roles(&self) -> DataResult<Collection<Role>> {
+        content!(self.lang, "roles")
+    }
 }
 
 #[cfg(test)]
@@ -135,7 +140,7 @@ mod tests {
     #[test]
     fn manifest_lists_all_collections() {
         let names: Vec<_> = SeedDataSource::default().versions().unwrap().into_iter().map(|v| v.name).collect();
-        assert_eq!(names, ["critical_injuries", "cover_materials", "armor", "shields", "weapons", "skills", "npc_templates"]);
+        assert_eq!(names, ["critical_injuries", "cover_materials", "armor", "shields", "weapons", "skills", "npc_templates", "roles"]);
     }
 
     #[test]
@@ -180,7 +185,7 @@ mod tests {
             match v {
                 serde_json::Value::Object(m) => {
                     for (k, x) in m.iter_mut() {
-                        if matches!(k.as_str(), "name" | "armor_name" | "gear" | "notes" | "examples" | "ammo" | "description") && x.is_string() {
+                        if matches!(k.as_str(), "name" | "armor_name" | "gear" | "notes" | "examples" | "ammo" | "description" | "summary" | "ability_name") && x.is_string() {
                             assert!(!x.as_str().unwrap().is_empty(), "empty text {k}");
                             *x = "".into();
                         } else if k == "features" {
@@ -204,6 +209,7 @@ mod tests {
                 serde_json::to_value(ds.shields().unwrap()).unwrap(),
                 serde_json::to_value(ds.weapons().unwrap()).unwrap(),
                 serde_json::to_value(ds.npc_templates().unwrap()).unwrap(),
+                serde_json::to_value(ds.roles().unwrap()).unwrap(),
             ];
             all.iter_mut().for_each(blank);
             all
@@ -223,6 +229,7 @@ mod tests {
         ids.extend(ds.shields().unwrap().entries.into_iter().map(|e| e.uuid));
         ids.extend(ds.weapons().unwrap().entries.into_iter().map(|e| e.uuid));
         ids.extend(ds.npc_templates().unwrap().entries.into_iter().map(|e| e.uuid));
+        ids.extend(ds.roles().unwrap().entries.into_iter().map(|e| e.uuid));
         let n = ids.len();
         ids.sort();
         ids.dedup();
@@ -239,6 +246,7 @@ mod tests {
         assert_eq!(validate_shields(&ds.shields().unwrap()), Ok(()));
         assert_eq!(validate_weapons(&ds.weapons().unwrap(), &ds.skills().unwrap()), Ok(()));
         assert_eq!(validate_skills(&ds.skills().unwrap()), Ok(()));
+        assert_eq!(validate_roles(&ds.roles().unwrap()), Ok(()));
         assert_eq!(
             validate_npc_templates(&ds.npc_templates().unwrap(), &ds.skills().unwrap()),
             Ok(())
@@ -428,5 +436,26 @@ mod tests {
         assert_eq!(get("rocket_launcher").damage.as_deref(), Some("8d6"));
         assert_eq!(get("light_melee").concealable, Some(true));
         assert_eq!(get("malorian_3516").price, 10000);
+    }
+
+    /// Roles and Medicine against pp. 143–161 (numbers read from the page images, two passes).
+    #[test]
+    fn roles_match_the_book() {
+        for lang in Lang::ALL {
+            let roles = SeedDataSource::new(lang).roles().unwrap().entries;
+            let codes: Vec<_> = roles.iter().map(|r| r.code.as_str()).collect();
+            assert_eq!(
+                codes,
+                ["rockerboy", "solo", "netrunner", "tech", "medtech", "media", "exec", "lawman", "fixer", "nomad"]
+            );
+            let medtech = roles.iter().find(|r| r.code == "medtech").unwrap();
+            assert_eq!(medtech.source.page, 149);
+            let subs: Vec<_> = medtech.subabilities.iter().map(|s| (s.code.as_str(), s.max_points)).collect();
+            assert_eq!(subs, [("surgery", Some(5)), ("pharmaceutics", Some(5)), ("cryosystems", Some(5))]);
+            let drugs: Vec<_> = medtech.subabilities[1].options.iter().map(|o| o.code.as_str()).collect();
+            assert_eq!(drugs, ["antibiotics", "rapid_detox", "speedheal", "stim", "surge"]);
+            let levels: Vec<_> = medtech.subabilities[2].levels.iter().map(|l| l.points).collect();
+            assert_eq!(levels, [1, 2, 3, 4, 5]);
+        }
     }
 }

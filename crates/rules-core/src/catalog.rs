@@ -280,6 +280,54 @@ pub struct NpcTemplate {
     pub source: Source,
 }
 
+/// A player role (book p. 27–42) with its role ability (p. 143–166). Server content: names and
+/// short summaries only, the rules themselves live in `roles`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+pub struct Role {
+    pub uuid: String,
+    pub code: String,
+    pub name: String,
+    pub ability_code: String,
+    pub ability_name: String,
+    /// What the role ability is about, one or two sentences of our own.
+    pub summary: String,
+    /// Parts of the ability that rank points are spent on; empty until the role is filled in.
+    pub subabilities: Vec<SubAbility>,
+    pub source: Source,
+}
+
+/// A part of a role ability that gets points (e.g. Medicine: Surgery, Pharmaceuticals).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+pub struct SubAbility {
+    pub code: String,
+    pub name: String,
+    pub summary: String,
+    /// Cap on the points that may be put here; `None` = only the rank limits it.
+    pub max_points: Option<u8>,
+    /// Things the player picks, at most one per point (e.g. a drug).
+    pub options: Vec<AbilityOption>,
+    /// Benefits that arrive by themselves when the points reach a threshold.
+    pub levels: Vec<AbilityLevel>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+pub struct AbilityOption {
+    pub code: String,
+    pub name: String,
+    pub summary: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+pub struct AbilityLevel {
+    /// Points in the sub-ability at which the benefit is gained.
+    pub points: u8,
+    pub summary: String,
+}
+
 /// A versioned set of entries of one type, the unit of sync with the future API.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct Collection<T> {
@@ -397,6 +445,31 @@ pub fn validate_shields(c: &Collection<Shield>) -> Result<(), CatalogError> {
         Some(e) => Err(CatalogError::OutOfRange(e.code.clone())),
         None => Ok(()),
     }
+}
+
+pub fn validate_roles(c: &Collection<Role>) -> Result<(), CatalogError> {
+    check_ids(c.entries.iter().map(|e| (e.code.as_str(), e.name.as_str(), e.source.page)))?;
+    for role in &c.entries {
+        if role.ability_code.is_empty() || role.ability_name.is_empty() {
+            return Err(CatalogError::MissingField(role.code.clone()));
+        }
+        check_ids(role.subabilities.iter().map(|s| (s.code.as_str(), s.name.as_str(), 1)))?;
+        for sub in &role.subabilities {
+            if sub.max_points == Some(0) || sub.max_points.is_some_and(|m| m > 10) {
+                return Err(CatalogError::OutOfRange(format!("{}.{}", role.code, sub.code)));
+            }
+            check_ids(sub.options.iter().map(|o| (o.code.as_str(), o.name.as_str(), 1)))?;
+            let cap = sub.max_points.unwrap_or(10);
+            let mut last = 0;
+            for level in &sub.levels {
+                if level.points <= last || level.points > cap {
+                    return Err(CatalogError::OutOfRange(format!("{}.{}", role.code, sub.code)));
+                }
+                last = level.points;
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Printed pages of the weapon tables.
@@ -558,6 +631,7 @@ pub fn json_schemas() -> Vec<(&'static str, schemars::Schema)> {
         ("weapons", schema_for!(Collection<Weapon>)),
         ("skills", schema_for!(Collection<Skill>)),
         ("npc_templates", schema_for!(Collection<NpcTemplate>)),
+        ("roles", schema_for!(Collection<Role>)),
         ("collection_version", schema_for!(CollectionVersion)),
     ]
 }

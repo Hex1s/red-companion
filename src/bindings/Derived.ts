@@ -29,4 +29,12 @@ cyberpsychosis: boolean,
  * DV of stabilising the character in their current wound state (p. 186); `None` when
  * there is nothing to stabilise (healthy, dead).
  */
-stabilization_dv: number | null, };
+stabilization_dv: number | null, 
+/**
+ * Surgery skill from a Medtech's Medicine (0 without it).
+ */
+surgery_skill: number, 
+/**
+ * Medical Technology skill from a Medtech's Medicine (0 without it).
+ */
+medical_tech_skill: number, };

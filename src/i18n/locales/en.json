@@ -200,7 +200,8 @@
       "derived": "Derived",
       "armor": "Armor",
       "injuries": "Critical injuries",
-      "skills": "Skills"
+      "skills": "Skills",
+      "roles": "Roles"
     },
     "hp": "HP",
     "max_hp": "Max HP",
@@ -558,7 +559,8 @@
     "failed": "failed",
     "success_lifted": "{{name}}: the effect of {{injury}} is lifted until the end of the day.",
     "success_removed": "{{name}}: {{injury}} is healed.",
-    "skill_surgery": "Surgery"
+    "skill_surgery": "Surgery",
+    "surgery_medtech_hint": "Surgery: TECH + {{skill}} (Medicine)"
   },
   "rest": {
     "button": "Rest",
@@ -588,7 +590,8 @@
       "weapons": "Weapons",
       "skills": "Skills",
       "npc": "NPCs",
-      "reputation": "Reputation"
+      "reputation": "Reputation",
+      "roles": "Roles"
     },
     "eb": "eb",
     "filter": {
@@ -759,5 +762,32 @@
       "9": "Constantly in the news and on TV.",
       "10": "Known all over the world."
     }
+  },
+  "roles": {
+    "none": "No roles yet.",
+    "add": "Add a role",
+    "open": "Ability",
+    "remove": "Remove role",
+    "rank": "Rank",
+    "rank_up": "Raise rank",
+    "rank_down": "Lower rank",
+    "free_points": "free points: {{count}}",
+    "not_filled": "This role's sub-abilities are not entered yet; the rank can be kept already.",
+    "point_add": "Point in \"{{name}}\"",
+    "point_remove": "Take a point from \"{{name}}\"",
+    "picks": "Picked: {{used}} of {{total}}",
+    "skill_surgery": "Surgery skill",
+    "skill_med_tech": "Medical Tech skill",
+    "multiclass_warning": "By the book a new role is taken at rank {{rank}}+ in all earlier ones (the GM may allow otherwise).",
+    "synthesis": "Synthesis: Medical Tech DV 13, doses per hour: {{doses}} (200 eb of materials)"
+  },
+  "drug": {
+    "target": "Target",
+    "give": "Give",
+    "doses": "Drugs (limit used):",
+    "clear": "Clear limit",
+    "hint": "Speedheal heals at once; the other drugs only mark the limit, the GM plays out the effect. A day of rest clears the daily marks, the cross clears weekly ones.",
+    "done": "{{name}}: {{drug}} given.",
+    "done_hp": "{{name}}: {{drug}}, +{{hp}} HP."
   }
 }

@@ -73,15 +73,18 @@ function HealForm({ target, helpers, onDone, onClose }: HealFormProps) {
   const dv = options.find((o) => o.skill === skill)?.dv ?? null;
   const skillName = (id: TreatmentSkill) =>
     id === "surgery" ? t("heal.skill_surgery") : t(`skill.items.${id}`);
-  // First aid and paramedic add TECH + the sheet level; surgery is typed in.
+  // First aid and paramedic add TECH + the sheet level; surgery comes from a Medtech's Medicine
+  // (Rust adds it when no bonus is sent), anyone else types it in.
+  const helperIsMedtech = helper.character.roles.some((r) => r.role === "medtech");
   const sheetBonus = (id: TreatmentSkill) =>
     helper.character.stats.tech +
-    (id === "surgery" ? 0 : (helper.character.skills[id] ?? 0));
+    (id === "surgery" ? helper.derived.surgery_skill : (helper.character.skills[id] ?? 0));
 
   const surgery = skill === "surgery";
   const surgeryBonus = surgeryText.trim() === "" ? null : Number(surgeryText);
   const surgeryInvalid =
-    surgery && (surgeryBonus === null || !Number.isInteger(surgeryBonus));
+    surgery &&
+    (surgeryBonus === null ? !helperIsMedtech : !Number.isInteger(surgeryBonus));
 
   const total = totalText.trim() === "" ? null : Number(totalText);
   const totalInvalid =
@@ -150,7 +153,9 @@ function HealForm({ target, helpers, onDone, onClose }: HealFormProps) {
             key={o.skill}
             label={
               o.skill === "surgery"
-                ? t("heal.surgery_bonus_hint")
+                ? helperIsMedtech
+                  ? t("heal.surgery_medtech_hint", { skill: helper.derived.surgery_skill })
+                  : t("heal.surgery_bonus_hint")
                 : t("stabilize.formula_short", {
                     tech: helper.character.stats.tech,
                     level: helper.character.skills[o.skill] ?? 0,
@@ -164,7 +169,11 @@ function HealForm({ target, helpers, onDone, onClose }: HealFormProps) {
               onClick={() => setSkill(o.skill)}
             >
               {skillName(o.skill)}
-              <span className="num">{o.skill === "surgery" ? `${t("heal.dv")} ${o.dv}` : `+${sheetBonus(o.skill)}`}</span>
+              <span className="num">
+                {o.skill === "surgery" && !helperIsMedtech
+                  ? `${t("heal.dv")} ${o.dv}`
+                  : `+${sheetBonus(o.skill)}`}
+              </span>
             </Button>
           </Hint>
         ))}
@@ -180,7 +189,9 @@ function HealForm({ target, helpers, onDone, onClose }: HealFormProps) {
               <Input
                 inputMode="numeric"
                 value={surgeryText}
-                placeholder={t("heal.surgery_bonus")}
+                placeholder={
+                  helperIsMedtech ? String(sheetBonus("surgery")) : t("heal.surgery_bonus")
+                }
                 aria-label={t("heal.surgery_bonus")}
                 aria-invalid={invalid}
                 onChange={(e) => setSurgeryText(e.target.value)}

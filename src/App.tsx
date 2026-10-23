@@ -11,6 +11,7 @@ import { NpcTemplateDialog, type CloneRequest } from "@/components/character/npc
 import { EncountersPage } from "@/components/encounter/encounters-page";
 import { CombatBar } from "@/components/combat/combat-bar";
 import { DamageDialog } from "@/components/combat/damage-dialog";
+import { DrugDialog, type DrugRequest } from "@/components/combat/drug-dialog";
 import { HealDialog, type HealTarget } from "@/components/combat/heal-dialog";
 import { LoseHumanityDialog } from "@/components/combat/humanity-dialog";
 import { RestDialog } from "@/components/combat/rest-dialog";
@@ -58,6 +59,7 @@ export default function App() {
   const [humanityLossTargetId, setHumanityLossTargetId] = useState<number | null>(null);
   const [therapyTargetId, setTherapyTargetId] = useState<number | null>(null);
   const [healTarget, setHealTarget] = useState<{ id: number; injuryId: string; kind: HealKind } | null>(null);
+  const [drugRequest, setDrugRequest] = useState<DrugRequest | null>(null);
   const [importFiles, setImportFiles] = useState<ExportFile[] | null>(null);
   const [encounterImportFiles, setEncounterImportFiles] = useState<ExportFile[] | null>(null);
   const [lastSave, setLastSave] = useState<{ id: number; save: DeathSave } | null>(null);
@@ -93,6 +95,12 @@ export default function App() {
   // The rail shows the session's characters only: fighters first, in acting order, then the
   // others in the order they joined.
   const sessionEntries = members.flatMap((id) => entries.filter((e) => e.id === id));
+  // A dose can go to anyone in the session, or to the Medtech themselves.
+  const drugHelper = drugRequest ? (entries.find((e) => e.id === drugRequest.helperId) ?? null) : null;
+  const drugTargets =
+    drugHelper && !sessionEntries.some((e) => e.id === drugHelper.id)
+      ? [drugHelper, ...sessionEntries]
+      : sessionEntries;
   const healHelpers =
     healPatient && !sessionEntries.some((e) => e.id === healPatient.id)
       ? [healPatient, ...sessionEntries]
@@ -112,6 +120,7 @@ export default function App() {
     setStabilizeTargetId(null);
     setRestTargetId(null);
     setHealTarget(null);
+    setDrugRequest(null);
     setLastSave(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
@@ -416,6 +425,7 @@ export default function App() {
                     setHealTarget({ id: selected.id, injuryId: injury.id, kind })
                   }
                   onRest={() => setRestTargetId(selected.id)}
+                  onAdminister={(drug) => setDrugRequest({ helperId: selected.id, drug })}
                   onLoseHumanity={() => setHumanityLossTargetId(selected.id)}
                   onTherapy={() => setTherapyTargetId(selected.id)}
                   onDelete={async () => {
@@ -653,6 +663,23 @@ export default function App() {
                 });
               }}
               onClose={() => setHealTarget(null)}
+            />
+            <DrugDialog
+              request={drugRequest}
+              targets={drugTargets}
+              onDone={(applied, drugName) => {
+                void reload();
+                status.show({
+                  id: "drug",
+                  kind: "success",
+                  text: t(applied.result.restored_hp > 0 ? "drug.done_hp" : "drug.done", {
+                    name: applied.character.character.name,
+                    drug: drugName,
+                    hp: applied.result.restored_hp,
+                  }),
+                });
+              }}
+              onClose={() => setDrugRequest(null)}
             />
             <DamageDialog
               target={damageTarget}

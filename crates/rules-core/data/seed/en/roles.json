@@ -1,0 +1,198 @@
+{
+  "name": "roles",
+  "version": 1,
+  "entries": [
+    {
+      "uuid": "05dac63d-6fb7-5a95-908b-10fe5d1808de",
+      "code": "rockerboy",
+      "name": "Rockerboy",
+      "ability_code": "rockerboy_ability",
+      "ability_name": "Charismatic Impact",
+      "summary": "Influence over fans: one fan, a small group or a crowd; the scale grows with rank.",
+      "subabilities": [],
+      "source": {
+        "page": 144
+      }
+    },
+    {
+      "uuid": "d649d8c3-add9-5bbd-b585-993311c349a1",
+      "code": "solo",
+      "name": "Solo",
+      "ability_code": "solo_ability",
+      "ability_name": "Combat Awareness",
+      "summary": "Rank points are spread over combat techniques and can be reassigned during a fight.",
+      "subabilities": [],
+      "source": {
+        "page": 146
+      }
+    },
+    {
+      "uuid": "52944f5e-e274-5573-bad5-791be835c545",
+      "code": "netrunner",
+      "name": "Netrunner",
+      "ability_code": "netrunner_ability",
+      "ability_name": "Interface",
+      "summary": "Rank sets the number of Net actions per turn and unlocks Interface functions.",
+      "subabilities": [],
+      "source": {
+        "page": 147
+      }
+    },
+    {
+      "uuid": "bf8851c4-5303-56c9-8d40-2c47bee22229",
+      "code": "tech",
+      "name": "Tech",
+      "ability_code": "tech_ability",
+      "ability_name": "Maker",
+      "summary": "Each rank gives a point in a specialty: field repair, upgrading, fabrication, invention.",
+      "subabilities": [],
+      "source": {
+        "page": 147
+      }
+    },
+    {
+      "uuid": "372769a4-10b6-50de-a49e-5144e8a51063",
+      "code": "medtech",
+      "name": "Medtech",
+      "ability_code": "medtech_ability",
+      "ability_name": "Medicine",
+      "summary": "Each rank gives a point in Surgery, Pharmaceuticals or Cryosystems.",
+      "subabilities": [
+        {
+          "code": "surgery",
+          "name": "Surgery",
+          "summary": "A point is 2 levels of the Surgery skill (TECH, max 10): severe injuries and cyberware.",
+          "max_points": 5,
+          "options": [],
+          "levels": []
+        },
+        {
+          "code": "pharmaceutics",
+          "name": "Pharmaceuticals",
+          "summary": "A point is 1 level of Medical Tech; each point unlocks one drug. Synthesis is a Medical Tech check, DV 13.",
+          "max_points": 5,
+          "options": [
+            {
+              "code": "antibiotics",
+              "name": "Antibiotics",
+              "summary": "A target already healing recovers 2 more HP a day for a week."
+            },
+            {
+              "code": "rapid_detox",
+              "name": "Rapid Detox",
+              "summary": "Instantly clears a drug, poison or intoxicant."
+            },
+            {
+              "code": "speedheal",
+              "name": "Speedheal",
+              "summary": "Restores HP equal to BODY + WILL at once (not when mortally wounded), once a day."
+            },
+            {
+              "code": "stim",
+              "name": "Stim",
+              "summary": "Ignores seriously-wounded penalties for 1 hour, once a day."
+            },
+            {
+              "code": "surge",
+              "name": "Surge",
+              "summary": "Stay awake for 24 hours, once a week."
+            }
+          ],
+          "levels": []
+        },
+        {
+          "code": "cryosystems",
+          "name": "Cryosystems",
+          "summary": "A point is 1 level of Medical Tech; grants cryochambers and a cryopump.",
+          "max_points": 5,
+          "options": [],
+          "levels": [
+            {
+              "points": 1,
+              "summary": "1 cryopump."
+            },
+            {
+              "points": 2,
+              "summary": "Registered Cryotank technician: 24/7 access to 1 cryochamber in any facility run by med corps or the state."
+            },
+            {
+              "points": 3,
+              "summary": "1 cryochamber in a place of your choice."
+            },
+            {
+              "points": 4,
+              "summary": "2 more cryochambers; the cryopump has 2 charges, up to 2 people in stasis."
+            },
+            {
+              "points": 5,
+              "summary": "3 more cryochambers; the cryopump has 3 charges, up to 3 people in stasis."
+            }
+          ]
+        }
+      ],
+      "source": {
+        "page": 149
+      }
+    },
+    {
+      "uuid": "5f35fd11-1b3f-528d-874c-92477f16f6cc",
+      "code": "media",
+      "name": "Media",
+      "ability_code": "media_ability",
+      "ability_name": "Credibility",
+      "summary": "Rumors, sources and the believability of publications grow with rank.",
+      "subabilities": [],
+      "source": {
+        "page": 151
+      }
+    },
+    {
+      "uuid": "c1808960-8722-5ae2-a512-4a659794255e",
+      "code": "exec",
+      "name": "Exec",
+      "ability_code": "exec_ability",
+      "ability_name": "Teamwork",
+      "summary": "A team of subordinates and corporate perks such as housing and insurance by rank.",
+      "subabilities": [],
+      "source": {
+        "page": 153
+      }
+    },
+    {
+      "uuid": "97611b4e-0298-5359-a370-734376ac2c10",
+      "code": "lawman",
+      "name": "Lawman",
+      "ability_code": "lawman_ability",
+      "ability_name": "Backup",
+      "summary": "Calling a group of fellow officers; their make-up and gear depend on rank.",
+      "subabilities": [],
+      "source": {
+        "page": 158
+      }
+    },
+    {
+      "uuid": "9d7cdaab-d270-51fe-a7c1-4a96755731ad",
+      "code": "fixer",
+      "name": "Fixer",
+      "ability_code": "fixer_ability",
+      "ability_name": "Operator",
+      "summary": "Contacts, access to goods, haggling and fitting in among many cultures.",
+      "subabilities": [],
+      "source": {
+        "page": 159
+      }
+    },
+    {
+      "uuid": "4aeae1c3-6357-53cf-aa9d-3734d3856330",
+      "code": "nomad",
+      "name": "Nomad",
+      "ability_code": "nomad_ability",
+      "ability_name": "Moto",
+      "summary": "Rank adds to driving checks, plus the family motor pool.",
+      "subabilities": [],
+      "source": {
+        "page": 161
+      }
+    }
+  ]
+}

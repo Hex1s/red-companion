@@ -68,6 +68,7 @@ pub fn revive(character: &mut Character) -> Result<(), VitalsError> {
     character.death_save_penalty = 0;
     character.injuries.clear();
     character.first_aided.clear();
+    character.doses.clear();
     Ok(())
 }
 

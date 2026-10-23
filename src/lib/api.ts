@@ -3,6 +3,7 @@ import type { Character } from "@/bindings/Character";
 import type { CharacterKind } from "@/bindings/CharacterKind";
 import type { CharacterRecord } from "@/bindings/CharacterRecord";
 import type { Armor } from "@/bindings/Armor";
+import type { Role } from "@/bindings/Role";
 import type { BodyArea } from "@/bindings/BodyArea";
 import type { CoverPreset } from "@/bindings/CoverPreset";
 import type { CriticalInjury } from "@/bindings/CriticalInjury";
@@ -29,6 +30,7 @@ import type { StabilizeApplied } from "@/bindings/StabilizeApplied";
 import type { NpcTemplate } from "@/bindings/NpcTemplate";
 import type { Skill } from "@/bindings/Skill";
 import type { SkillCheck } from "@/bindings/SkillCheck";
+import type { DrugApplied } from "@/bindings/DrugApplied";
 import type { HealApplied } from "@/bindings/HealApplied";
 import type { HealKind } from "@/bindings/HealKind";
 import type { HumanityLossApplied } from "@/bindings/HumanityLossApplied";
@@ -56,6 +58,7 @@ export const api = {
   listArmor: (lang: string) => inLanguage(lang, () => invoke<Armor[]>("list_armor")),
   listWeapons: (lang: string) => inLanguage(lang, () => invoke<Weapon[]>("list_weapons")),
   listSkills: () => invoke<Skill[]>("list_skills"),
+  listRoles: (lang: string) => inLanguage(lang, () => invoke<Role[]>("list_roles")),
   listNpcTemplates: (lang: string) =>
     inLanguage(lang, () => invoke<NpcTemplate[]>("list_npc_templates")),
   /** Clones a ready-made NPC into a new NPC sheet; `notes` is the localized weapons and gear text. */
@@ -134,6 +137,9 @@ export const api = {
    * paramedic use the healer's TECH + level; surgery needs the typed-in `bonus`. `manualTotal`
    * is a physical d10, `granted` counts it as a success without a roll.
    */
+  /** A Medtech gives a drug they picked (p. 150); the rules apply the effect and the dose limit. */
+  administerDrug: (targetId: number, helperId: number, drug: string) =>
+    invoke<DrugApplied>("administer_drug", { targetId, helperId, drug }),
   healInjury: (
     targetId: number,
     helperId: number,
