@@ -292,9 +292,30 @@ pub struct Role {
     pub ability_name: String,
     /// What the role ability is about, one or two sentences of our own.
     pub summary: String,
-    /// Parts of the ability that rank points are spent on; empty until the role is filled in.
+    /// What the role does, a few sentences of our own.
+    #[serde(default)]
+    pub description: String,
+    /// What each rank gives, our own words; ranks 1..=10 in order, or empty until filled in.
+    #[serde(default)]
+    pub ranks: Vec<RankNote>,
+    /// Rank points the pool gains per rank (Tech takes two specialty ranks per rank, p. 147).
+    #[serde(default = "one_point_per_rank")]
+    pub points_per_rank: u8,
+    /// Parts of the ability that rank points are spent on; empty when the role has no point pool.
     pub subabilities: Vec<SubAbility>,
     pub source: Source,
+}
+
+fn one_point_per_rank() -> u8 {
+    1
+}
+
+/// What one rank of a role ability gives.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+pub struct RankNote {
+    pub rank: u8,
+    pub summary: String,
 }
 
 /// A part of a role ability that gets points (e.g. Medicine: Surgery, Pharmaceuticals).
@@ -452,6 +473,15 @@ pub fn validate_roles(c: &Collection<Role>) -> Result<(), CatalogError> {
     for role in &c.entries {
         if role.ability_code.is_empty() || role.ability_name.is_empty() {
             return Err(CatalogError::MissingField(role.code.clone()));
+        }
+        if !(1..=2).contains(&role.points_per_rank) {
+            return Err(CatalogError::OutOfRange(format!("{} points_per_rank", role.code)));
+        }
+        if !role.ranks.is_empty() {
+            let in_order = role.ranks.iter().map(|r| r.rank).eq(1..=10);
+            if !in_order || role.ranks.iter().any(|r| r.summary.trim().is_empty()) {
+                return Err(CatalogError::OutOfRange(format!("{} ranks", role.code)));
+            }
         }
         check_ids(role.subabilities.iter().map(|s| (s.code.as_str(), s.name.as_str(), 1)))?;
         for sub in &role.subabilities {

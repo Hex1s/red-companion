@@ -454,6 +454,16 @@ mod tests {
             assert_eq!(subs, [("surgery", Some(5)), ("pharmaceutics", Some(5)), ("cryosystems", Some(5))]);
             let drugs: Vec<_> = medtech.subabilities[1].options.iter().map(|o| o.code.as_str()).collect();
             assert_eq!(drugs, ["antibiotics", "rapid_detox", "speedheal", "stim", "surge"]);
+            for r in &roles {
+                assert!(!r.description.is_empty(), "{}: description", r.code);
+                assert!(r.ranks.iter().map(|n| n.rank).eq(1..=10), "{}: ranks", r.code);
+            }
+            let pools: Vec<_> = roles.iter().filter(|r| !r.subabilities.is_empty()).map(|r| r.code.as_str()).collect();
+            assert_eq!(pools, ["solo", "tech", "medtech"]);
+            let solo = roles.iter().find(|r| r.code == "solo").unwrap();
+            assert_eq!(solo.subabilities.len(), 6);
+            let deflection: Vec<_> = solo.subabilities[0].levels.iter().map(|l| l.points).collect();
+            assert_eq!(deflection, [2, 4, 6, 8, 10]);
             let levels: Vec<_> = medtech.subabilities[2].levels.iter().map(|l| l.points).collect();
             assert_eq!(levels, [1, 2, 3, 4, 5]);
         }

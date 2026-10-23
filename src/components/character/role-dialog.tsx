@@ -1,4 +1,4 @@
-import { Minus, Plus, Syringe } from "lucide-react";
+import { Minus, Plus, Syringe, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Derived } from "@/bindings/Derived";
 import type { Role } from "@/bindings/Role";
@@ -6,8 +6,11 @@ import type { RoleEntry } from "@/bindings/RoleEntry";
 import type { SubAbility } from "@/bindings/SubAbility";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { RANK_MAX } from "@/lib/character-schema";
+import type { RoleCounter } from "@/bindings/RoleCounter";
+import { COUNTER_NAME_MAX, RANK_MAX, ROLE_COUNTERS_MAX, ROLE_NOTES_MAX } from "@/lib/character-schema";
 import { cn } from "@/lib/utils";
 
 type RoleDialogProps = {
@@ -32,7 +35,7 @@ const picksOf = (entry: RoleEntry, sub: SubAbility) =>
  */
 export function RoleDialog({ role, entry, derived, onChange, onAdminister, onClose }: RoleDialogProps) {
   const { t } = useTranslation();
-  const free = entry.rank - spentOf(entry);
+  const free = entry.rank * role.points_per_rank - spentOf(entry);
 
   const setPoints = (sub: SubAbility, points: number) => {
     const next = { ...entry.points, [sub.code]: points };
@@ -55,7 +58,7 @@ export function RoleDialog({ role, entry, derived, onChange, onAdminister, onClo
           <DialogTitle className="text-xl font-bold">
             {role.name} — {role.ability_name}
           </DialogTitle>
-          <DialogDescription>{role.summary}</DialogDescription>
+          <DialogDescription>{role.description || role.summary}</DialogDescription>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -65,7 +68,7 @@ export function RoleDialog({ role, entry, derived, onChange, onAdminister, onClo
             size="icon-xs"
             variant="outline"
             aria-label={t("roles.rank_down")}
-            disabled={entry.rank <= 0 || free <= 0}
+            disabled={entry.rank <= 0 || free < role.points_per_rank}
             onClick={() => onChange({ ...entry, rank: entry.rank - 1 })}
           >
             <Minus />
@@ -85,14 +88,30 @@ export function RoleDialog({ role, entry, derived, onChange, onAdminister, onClo
           </span>
         </div>
 
-        {role.subabilities.length === 0 && (
-          <p className="text-sm text-muted-foreground">{t("roles.not_filled")}</p>
+        {role.ranks.length > 0 && (
+          <ol className="space-y-1">
+            {role.ranks.map((r) => (
+              <li
+                key={r.rank}
+                className={cn(
+                  "flex gap-2 text-sm",
+                  r.rank <= entry.rank ? "text-foreground" : "text-muted-foreground",
+                )}
+              >
+                <span className={cn("num w-5 shrink-0", r.rank <= entry.rank && "text-primary")}>
+                  {r.rank}
+                </span>
+                <span>{r.summary}</span>
+              </li>
+            ))}
+          </ol>
         )}
 
         {role.subabilities.map((sub) => {
           const points = entry.points[sub.code] ?? 0;
           const picks = picksOf(entry, sub);
-          const max = sub.max_points ?? RANK_MAX;
+          // One point per rank at most goes to the same part, whatever the pool size.
+          const max = Math.min(sub.max_points ?? RANK_MAX, entry.rank);
           return (
             <section key={sub.code} className="cut space-y-2 p-3 [--cut:6px]">
               <div className="flex items-center gap-2">
@@ -109,7 +128,7 @@ export function RoleDialog({ role, entry, derived, onChange, onAdminister, onClo
                 </Button>
                 <span className="num w-10 text-center font-bold">
                   {points}
-                  {sub.max_points !== null && (
+                  {max < RANK_MAX && (
                     <span className="text-xs text-muted-foreground"> / {max}</span>
                   )}
                 </span>
@@ -191,6 +210,77 @@ export function RoleDialog({ role, entry, derived, onChange, onAdminister, onClo
             </section>
           );
         })}
+
+        <section className="cut space-y-2 p-3 [--cut:6px]">
+          <div className="flex items-center gap-2">
+            <h4 className="flex-1 text-sm">{t("roles.counters")}</h4>
+            <Button
+              type="button"
+              size="xs"
+              variant="outline"
+              disabled={entry.counters.length >= ROLE_COUNTERS_MAX}
+              onClick={() =>
+                onChange({ ...entry, counters: [...entry.counters, { name: "", value: 0, max: null }] })
+              }
+            >
+              <Plus />
+              {t("roles.counter_add")}
+            </Button>
+          </div>
+          {entry.counters.map((c, i) => {
+            const set = (patch: Partial<RoleCounter>) =>
+              onChange({
+                ...entry,
+                counters: entry.counters.map((o, j) => (j === i ? { ...o, ...patch } : o)),
+              });
+            const num = (v: string) => (v === "" ? null : Math.trunc(Number(v)));
+            return (
+              <div key={i} className="flex items-center gap-2">
+                <Input
+                  value={c.name}
+                  placeholder={t("roles.counter_name")}
+                  maxLength={COUNTER_NAME_MAX}
+                  onChange={(e) => set({ name: e.target.value })}
+                  className="flex-1"
+                />
+                <Input
+                  type="number"
+                  value={c.value}
+                  aria-label={t("roles.counter_value")}
+                  onChange={(e) => set({ value: num(e.target.value) ?? 0 })}
+                  className="num w-16"
+                />
+                <span className="text-muted-foreground">/</span>
+                <Input
+                  type="number"
+                  value={c.max ?? ""}
+                  placeholder="∞"
+                  aria-label={t("roles.counter_max")}
+                  onChange={(e) => set({ max: num(e.target.value) })}
+                  className="num w-16"
+                />
+                <Button
+                  type="button"
+                  size="icon-xs"
+                  variant="outline"
+                  aria-label={t("roles.counter_remove")}
+                  onClick={() =>
+                    onChange({ ...entry, counters: entry.counters.filter((_, j) => j !== i) })
+                  }
+                >
+                  <X />
+                </Button>
+              </div>
+            );
+          })}
+          <Textarea
+            value={entry.notes}
+            placeholder={t("roles.notes")}
+            maxLength={ROLE_NOTES_MAX}
+            rows={3}
+            onChange={(e) => onChange({ ...entry, notes: e.target.value })}
+          />
+        </section>
 
         {medtech && (
           <div className="grid grid-cols-2 gap-2 text-sm">

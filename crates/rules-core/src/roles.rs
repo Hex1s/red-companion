@@ -15,6 +15,8 @@ use crate::character::{Character, CharacterRecord};
 
 /// Highest rank of a role ability (p. 143).
 pub const RANK_MAX: u8 = 10;
+/// Most rank points a role may gain per rank (see `catalog::Role::points_per_rank`).
+pub const POINTS_PER_RANK_MAX: u8 = 2;
 /// A new role may be taken once every role held so far is at this rank (p. 143).
 pub const MULTICLASS_MIN_RANK: u8 = 4;
 /// Rank a starting character has in their role (p. 142).
@@ -55,11 +57,43 @@ pub struct RoleEntry {
     /// Option codes the player picked (e.g. drugs), at most one per point of their sub-ability.
     #[serde(default)]
     pub picks: Vec<String>,
+    /// Free text the player keeps about this role.
+    #[serde(default)]
+    pub notes: String,
+    /// Named counters the player keeps (contacts, rumours...); the rules do not read them.
+    #[serde(default)]
+    pub counters: Vec<RoleCounter>,
 }
+
+/// A user-defined counter on a role ("Contacts: 2 / 5").
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct RoleCounter {
+    pub name: String,
+    pub value: i32,
+    /// Optional upper bound shown as "value / max".
+    pub max: Option<i32>,
+}
+
+/// Longest role note, in characters.
+pub const ROLE_NOTES_MAX: usize = 5000;
+/// Most counters one role may hold.
+pub const ROLE_COUNTERS_MAX: usize = 20;
+/// Longest counter name, in characters.
+pub const COUNTER_NAME_MAX: usize = 60;
+/// Counter values stay within this magnitude (a typo guard).
+pub const COUNTER_VALUE_MAX: i32 = 9999;
 
 impl RoleEntry {
     pub fn new(role: &str, rank: u8) -> Self {
-        Self { role: role.to_string(), rank, points: BTreeMap::new(), picks: Vec::new() }
+        Self {
+            role: role.to_string(),
+            rank,
+            points: BTreeMap::new(),
+            picks: Vec::new(),
+            notes: String::new(),
+            counters: Vec::new(),
+        }
     }
 
     pub fn spent(&self) -> u32 {
@@ -77,8 +111,10 @@ pub enum RoleError {
     Duplicate(String),
     #[error("role {role:?}: rank {rank} is out of range")]
     RankOutOfRange { role: String, rank: u8 },
-    #[error("role {role:?}: {spent} points spent, rank is {rank}")]
-    Overspent { role: String, spent: u32, rank: u8 },
+    #[error("role {role:?}: {spent} points spent, only {allowed} allowed")]
+    Overspent { role: String, spent: u32, allowed: u32 },
+    #[error("role {role:?}: {sub:?} has {points} points, more than rank {rank}")]
+    SubAboveRank { role: String, sub: String, points: u8, rank: u8 },
     #[error("unknown role {0:?}")]
     UnknownRole(String),
     #[error("role {role:?}: unknown sub-ability {sub:?}")]
@@ -91,6 +127,8 @@ pub enum RoleError {
     DuplicatePick { role: String, option: String },
     #[error("role {role:?}: {sub:?} has {picks} picks for {points} points")]
     TooManyPicks { role: String, sub: String, picks: usize, points: u8 },
+    #[error("role {role:?}: {what} is invalid")]
+    BadCustomField { role: String, what: &'static str },
 }
 
 /// Checks that need no catalog: distinct roles, ranks, points within the rank.
@@ -103,8 +141,30 @@ pub fn validate_entries(entries: &[RoleEntry]) -> Result<(), RoleError> {
             return Err(RoleError::RankOutOfRange { role: e.role.clone(), rank: e.rank });
         }
         let spent = e.spent();
-        if spent > u32::from(e.rank) {
-            return Err(RoleError::Overspent { role: e.role.clone(), spent, rank: e.rank });
+        let allowed = u32::from(e.rank) * u32::from(POINTS_PER_RANK_MAX);
+        if spent > allowed {
+            return Err(RoleError::Overspent { role: e.role.clone(), spent, allowed });
+        }
+        // Each rank adds at most one point to a given part, whatever the pool size.
+        if let Some((sub, &points)) = e.points.iter().find(|(_, p)| **p > e.rank) {
+            return Err(RoleError::SubAboveRank { role: e.role.clone(), sub: sub.clone(), points, rank: e.rank });
+        }
+        let bad = |what| RoleError::BadCustomField { role: e.role.clone(), what };
+        if e.notes.chars().count() > ROLE_NOTES_MAX {
+            return Err(bad("notes"));
+        }
+        if e.counters.len() > ROLE_COUNTERS_MAX {
+            return Err(bad("counters"));
+        }
+        for c in &e.counters {
+            let name = c.name.trim();
+            let in_range = |v: i32| v.abs() <= COUNTER_VALUE_MAX;
+            if name.is_empty() || name.chars().count() > COUNTER_NAME_MAX {
+                return Err(bad("counter name"));
+            }
+            if !in_range(c.value) || c.max.is_some_and(|m| m < 0 || !in_range(m)) {
+                return Err(bad("counter value"));
+            }
         }
     }
     Ok(())
@@ -118,6 +178,10 @@ pub fn validate_against(entries: &[RoleEntry], catalog: &[Role]) -> Result<(), R
             .iter()
             .find(|r| r.code == e.role)
             .ok_or_else(|| RoleError::UnknownRole(e.role.clone()))?;
+        let allowed = u32::from(e.rank) * u32::from(role.points_per_rank);
+        if e.spent() > allowed {
+            return Err(RoleError::Overspent { role: e.role.clone(), spent: e.spent(), allowed });
+        }
         for (sub, &points) in &e.points {
             let def = role
                 .subabilities
@@ -237,8 +301,9 @@ pub fn can_add_role(entries: &[RoleEntry]) -> bool {
 }
 
 /// Points of a rank not yet put into any sub-ability.
-pub fn free_points(entry: &RoleEntry) -> u8 {
-    u8::try_from(u32::from(entry.rank).saturating_sub(entry.spent())).unwrap_or(0)
+pub fn free_points(entry: &RoleEntry, points_per_rank: u8) -> u8 {
+    let allowed = u32::from(entry.rank) * u32::from(points_per_rank);
+    u8::try_from(allowed.saturating_sub(entry.spent())).unwrap_or(0)
 }
 
 /// The Surgery skill level a Medtech's Medicine gives: two per point, at most 10 (p. 149).
@@ -276,6 +341,27 @@ mod tests {
     }
 
     #[test]
+    fn custom_fields_are_checked() {
+        let mut e = RoleEntry::new("fixer", 4);
+        e.notes = "x".repeat(ROLE_NOTES_MAX);
+        e.counters.push(RoleCounter { name: "Contacts".into(), value: 2, max: Some(5) });
+        assert!(validate_entries(&[e.clone()]).is_ok());
+
+        let mut bad = e.clone();
+        bad.counters[0].name = "  ".into();
+        assert!(matches!(validate_entries(&[bad]), Err(RoleError::BadCustomField { .. })));
+        let mut bad = e.clone();
+        bad.counters[0].value = COUNTER_VALUE_MAX + 1;
+        assert!(validate_entries(&[bad]).is_err());
+        let mut bad = e.clone();
+        bad.notes.push('x');
+        assert!(validate_entries(&[bad]).is_err());
+        let mut bad = e;
+        bad.counters = vec![bad.counters[0].clone(); ROLE_COUNTERS_MAX + 1];
+        assert!(validate_entries(&[bad]).is_err());
+    }
+
+    #[test]
     fn surgery_gives_two_skill_levels_per_point() {
         let c = medtech(4, 3, 1, 0);
         assert_eq!(surgery_skill(&c), 6);
@@ -301,10 +387,11 @@ mod tests {
 
     #[test]
     fn points_cannot_exceed_rank_and_roles_are_unique() {
-        assert_eq!(validate_entries(&medtech(4, 2, 2, 0).roles), Ok(()));
+        let catalog = SeedDataSource::default().roles().unwrap().entries;
+        assert_eq!(validate_against(&medtech(4, 2, 2, 0).roles, &catalog), Ok(()));
         assert!(matches!(
-            validate_entries(&medtech(4, 3, 2, 0).roles),
-            Err(RoleError::Overspent { spent: 5, rank: 4, .. })
+            validate_against(&medtech(4, 3, 2, 0).roles, &catalog),
+            Err(RoleError::Overspent { spent: 5, allowed: 4, .. })
         ));
         assert!(matches!(
             validate_entries(&[RoleEntry::new("solo", 11)]),
@@ -328,7 +415,28 @@ mod tests {
     fn free_points_counts_what_is_left() {
         let mut e = RoleEntry::new(MEDTECH, 5);
         e.points.insert(SURGERY.into(), 2);
-        assert_eq!(free_points(&e), 3);
+        assert_eq!(free_points(&e, 1), 3);
+    }
+
+    /// Tech: two specialty ranks per rank (p. 147), at most one per rank in the same specialty.
+    #[test]
+    fn tech_gets_two_points_per_rank_but_one_per_specialty() {
+        let catalog = SeedDataSource::default().roles().unwrap().entries;
+        let tech = catalog.iter().find(|r| r.code == "tech").unwrap();
+        assert_eq!(tech.points_per_rank, 2);
+        assert!(catalog.iter().filter(|r| r.code != "tech").all(|r| r.points_per_rank == 1));
+
+        let mut e = RoleEntry::new("tech", 3);
+        e.points.insert("field_expertise".into(), 3);
+        e.points.insert("upgrade_expert".into(), 3);
+        assert_eq!(validate_against(&[e.clone()], &catalog), Ok(()));
+        assert_eq!(free_points(&e, 2), 0);
+
+        let mut lopsided = RoleEntry::new("tech", 3);
+        lopsided.points.insert("upgrade_expert".into(), 4);
+        assert!(matches!(validate_entries(&[lopsided]), Err(RoleError::SubAboveRank { .. })));
+        e.points.insert("fabrication_expert".into(), 1);
+        assert!(matches!(validate_against(&[e], &catalog), Err(RoleError::Overspent { allowed: 6, .. })));
     }
 
     #[test]

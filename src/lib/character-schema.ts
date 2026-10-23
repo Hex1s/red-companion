@@ -9,6 +9,10 @@ export const STAT_MAX = 99;
 export const SP_MAX = 20;
 export const REPUTATION_MAX = 10;
 export const SKILL_MAX = 10;
+export const ROLE_NOTES_MAX = 5000;
+export const ROLE_COUNTERS_MAX = 20;
+export const COUNTER_NAME_MAX = 60;
+export const COUNTER_VALUE_MAX = 9999;
 export const RANK_MAX = 10;
 /** A new role may be taken once every role held is at this rank (p. 143). */
 export const MULTICLASS_MIN_RANK = 4;
@@ -52,6 +56,16 @@ export const characterSchema = z.object({
       rank: z.number().int().min(0).max(RANK_MAX),
       points: z.record(z.string(), z.number().int().min(0).max(RANK_MAX)),
       picks: z.array(z.string()),
+      notes: z.string().max(ROLE_NOTES_MAX),
+      counters: z
+        .array(
+          z.object({
+            name: z.string().trim().min(1).max(COUNTER_NAME_MAX),
+            value: z.number().int().min(-COUNTER_VALUE_MAX).max(COUNTER_VALUE_MAX),
+            max: z.number().int().min(0).max(COUNTER_VALUE_MAX).nullable(),
+          }),
+        )
+        .max(ROLE_COUNTERS_MAX),
     }),
   ),
   skills: z.record(z.string(), z.number().int().min(0).max(SKILL_MAX)),

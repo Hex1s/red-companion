@@ -145,13 +145,14 @@ export function ReferencePage() {
           id: r.code,
           name: `${r.name} — ${r.ability_name}`,
           detail: [
-            r.summary,
+            r.description || r.summary,
+            ...r.ranks.map((n) => `${n.rank}: ${n.summary}`),
             ...r.subabilities.flatMap((sub) => [
               `${sub.name}: ${sub.summary}`,
               ...sub.options.map((o) => `${o.name}: ${o.summary}`),
               ...sub.levels.map((l) => `${sub.name} ${l.points}: ${l.summary}`),
             ]),
-          ].join(" · "),
+          ].join("\n"),
           value: "",
         }));
       case "npc":
@@ -248,7 +249,7 @@ export function ReferencePage() {
             <li key={e.id} className="flex items-baseline gap-3 px-3 py-2">
               <div className="min-w-0 flex-1">
                 <div className="font-medium">{e.name}</div>
-                {e.detail && <div className="text-sm text-muted-foreground">{e.detail}</div>}
+                {e.detail && <div className="whitespace-pre-line text-sm text-muted-foreground">{e.detail}</div>}
               </div>
               <span className="num text-muted-foreground">{e.value}</span>
             </li>

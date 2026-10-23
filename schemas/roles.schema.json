@@ -65,6 +65,25 @@
         "summary"
       ]
     },
+    "RankNote": {
+      "description": "What one rank of a role ability gives.",
+      "type": "object",
+      "properties": {
+        "rank": {
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "rank",
+        "summary"
+      ]
+    },
     "Role": {
       "description": "A player role (book p. 27–42) with its role ability (p. 143–166). Server content: names and\nshort summaries only, the rules themselves live in `roles`.",
       "type": "object",
@@ -78,14 +97,35 @@
         "code": {
           "type": "string"
         },
+        "description": {
+          "description": "What the role does, a few sentences of our own.",
+          "type": "string",
+          "default": ""
+        },
         "name": {
           "type": "string"
+        },
+        "points_per_rank": {
+          "description": "Rank points the pool gains per rank (Tech takes two specialty ranks per rank, p. 147).",
+          "type": "integer",
+          "format": "uint8",
+          "default": 1,
+          "maximum": 255,
+          "minimum": 0
+        },
+        "ranks": {
+          "description": "What each rank gives, our own words; ranks 1..=10 in order, or empty until filled in.",
+          "type": "array",
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/RankNote"
+          }
         },
         "source": {
           "$ref": "#/$defs/Source"
         },
         "subabilities": {
-          "description": "Parts of the ability that rank points are spent on; empty until the role is filled in.",
+          "description": "Parts of the ability that rank points are spent on; empty when the role has no point pool.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/SubAbility"

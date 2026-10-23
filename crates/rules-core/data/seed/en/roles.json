@@ -1,6 +1,6 @@
 {
   "name": "roles",
-  "version": 1,
+  "version": 2,
   "entries": [
     {
       "uuid": "05dac63d-6fb7-5a95-908b-10fe5d1808de",
@@ -12,7 +12,51 @@
       "subabilities": [],
       "source": {
         "page": 144
-      }
+      },
+      "description": "The Rockerboy sways people with presence: music, art, charisma. Charismatic Impact works only on fans, outside combat: roll the ability rank + 1d10 against DV 8 (one fan), DV 10 (a small group of up to 6) or DV 12 (a huge crowd). On a failure you cannot ask those fans for the same favor for a week; rank sets which scales are available at all.",
+      "ranks": [
+        {
+          "rank": 1,
+          "summary": "Ranks 1-2. Venues: small local clubs. One fan (DV 8): a minor favor such as buying a drink or food, or giving a ride. Small group of up to 6 (DV 10): ask for autographs and merch, may stop you in the street to chat. Huge crowd (DV 12): not available yet."
+        },
+        {
+          "rank": 2,
+          "summary": "Same as rank 1."
+        },
+        {
+          "rank": 3,
+          "summary": "Ranks 3-4. Venues: well-known clubs. One fan (DV 8): pass on a message, do a favor, put in a good word (sources differ, see doubts). Small group (DV 10): spend time with you and fetch drinks, drugs and other party supplies. Huge crowd (DV 12): many local fans buy your records and merch."
+        },
+        {
+          "rank": 4,
+          "summary": "Same as rank 3."
+        },
+        {
+          "rank": 5,
+          "summary": "Ranks 5-6. Venues: big well-known clubs. One fan (DV 8): a petty crime such as shoplifting or helping in a fight. Small group (DV 10): act as a personal posse, always around, doing favors and guarding you. Huge crowd (DV 12): fans everywhere, even in neighboring towns, loyal and often doing big favors for attention."
+        },
+        {
+          "rank": 6,
+          "summary": "Same as rank 5."
+        },
+        {
+          "rank": 7,
+          "summary": "Ranks 7-8. Venues: small concert halls, local video broadcasts. One fan (DV 8): will risk their life for you without question. Small group (DV 10): petty crime (theft, helping in a fight). Huge crowd (DV 12): frenzied loyalty, fight rival fan groups and band together to help."
+        },
+        {
+          "rank": 8,
+          "summary": "Same as rank 7."
+        },
+        {
+          "rank": 9,
+          "summary": "Rank 9. Venues: large concert halls, national video broadcasts. One fan (DV 8): a serious crime (steal something expensive, beat someone up). Small group (DV 10): a major crime on your behalf. Huge crowd (DV 12): cultists who riot, destroy property and kill for the Rockerboy."
+        },
+        {
+          "rank": 10,
+          "summary": "Rank 10. Venues: huge stadiums, international video broadcasts. One fan (DV 8): will give their life without question. Small group (DV 10): risks their life, acts as personal security. Huge crowd (DV 12): worldwide fans who will do almost anything, in effect a private army."
+        }
+      ],
+      "points_per_rank": 1
     },
     {
       "uuid": "d649d8c3-add9-5bbd-b585-993311c349a1",
@@ -21,10 +65,142 @@
       "ability_code": "solo_ability",
       "ability_name": "Combat Awareness",
       "summary": "Rank points are spread over combat techniques and can be reassigned during a fight.",
-      "subabilities": [],
+      "subabilities": [
+        {
+          "code": "damage_deflection",
+          "name": "Damage Deflection",
+          "summary": "The first damage you take each round is reduced.",
+          "max_points": null,
+          "options": [],
+          "levels": [
+            {
+              "points": 2,
+              "summary": "−1 to the first damage each round"
+            },
+            {
+              "points": 4,
+              "summary": "−2"
+            },
+            {
+              "points": 6,
+              "summary": "−3"
+            },
+            {
+              "points": 8,
+              "summary": "−4"
+            },
+            {
+              "points": 10,
+              "summary": "−5"
+            }
+          ]
+        },
+        {
+          "code": "fumble_recovery",
+          "name": "Fumble Recovery",
+          "summary": "Critical fumbles (a natural 1) on attack rolls are ignored, but the roll still counts as 1.",
+          "max_points": null,
+          "options": [],
+          "levels": [
+            {
+              "points": 4,
+              "summary": "Ignore attack fumbles"
+            }
+          ]
+        },
+        {
+          "code": "personal_initiative",
+          "name": "Initiative Reaction",
+          "summary": "Each point gives +1 to Initiative.",
+          "max_points": null,
+          "options": [],
+          "levels": []
+        },
+        {
+          "code": "precision_attack",
+          "name": "Precision Attack",
+          "summary": "A bonus to any attack.",
+          "max_points": null,
+          "options": [],
+          "levels": [
+            {
+              "points": 3,
+              "summary": "+1 to attacks"
+            },
+            {
+              "points": 6,
+              "summary": "+2"
+            },
+            {
+              "points": 9,
+              "summary": "+3"
+            }
+          ]
+        },
+        {
+          "code": "spot_weakness",
+          "name": "Spot Weakness",
+          "summary": "Each point gives +1 damage (before armor) to the first successful attack of the round.",
+          "max_points": null,
+          "options": [],
+          "levels": []
+        },
+        {
+          "code": "threat_detection",
+          "name": "Threat Detection",
+          "summary": "Each point gives +1 to Perception checks.",
+          "max_points": null,
+          "options": [],
+          "levels": []
+        }
+      ],
       "source": {
         "page": 146
-      }
+      },
+      "description": "The Solo is a professional fighter and killer. Combat Awareness gives a pool of points equal to rank, spread among combat abilities (Damage Deflection, Fumble Recovery, Initiative Reaction, Precision Attack, Spot Weakness, Threat Detection) before initiative, at any time outside combat, or in place of an action in combat. Without changes the previous spread stays.",
+      "ranks": [
+        {
+          "rank": 1,
+          "summary": "Rank 1: Combat Awareness pool = 1 point; each further rank adds +1 point to the pool."
+        },
+        {
+          "rank": 2,
+          "summary": "Rank 2: Combat Awareness pool = 2 points (rank equals points)."
+        },
+        {
+          "rank": 3,
+          "summary": "Rank 3: Combat Awareness pool = 3 points (rank equals points)."
+        },
+        {
+          "rank": 4,
+          "summary": "Rank 4: Combat Awareness pool = 4 points (rank equals points)."
+        },
+        {
+          "rank": 5,
+          "summary": "Rank 5: Combat Awareness pool = 5 points (rank equals points)."
+        },
+        {
+          "rank": 6,
+          "summary": "Rank 6: Combat Awareness pool = 6 points (rank equals points)."
+        },
+        {
+          "rank": 7,
+          "summary": "Rank 7: Combat Awareness pool = 7 points (rank equals points)."
+        },
+        {
+          "rank": 8,
+          "summary": "Rank 8: Combat Awareness pool = 8 points (rank equals points)."
+        },
+        {
+          "rank": 9,
+          "summary": "Rank 9: Combat Awareness pool = 9 points (rank equals points)."
+        },
+        {
+          "rank": 10,
+          "summary": "Rank 10: Combat Awareness pool = 10 points (rank equals points)."
+        }
+      ],
+      "points_per_rank": 1
     },
     {
       "uuid": "52944f5e-e274-5573-bad5-791be835c545",
@@ -36,7 +212,51 @@
       "subabilities": [],
       "source": {
         "page": 147
-      }
+      },
+      "description": "The Netrunner hacks the NET and Architectures. Interface rank sets the number of NET Actions per turn (2/3/4/5) and grants the interface abilities: Backdoor, Cloak, Control, Eye-Dee, Pathfinder, Scanner, Slide, Virus, Zap. Netrunning details are in a separate rules section.",
+      "ranks": [
+        {
+          "rank": 1,
+          "summary": "Interface 1-3: 2 NET Actions per turn. All interface abilities are available from rank 1: Backdoor, Cloak, Control, Eye-Dee, Pathfinder, Scanner, Slide, Virus, Zap."
+        },
+        {
+          "rank": 2,
+          "summary": "Same as rank 1: 2 NET Actions per turn."
+        },
+        {
+          "rank": 3,
+          "summary": "Same as rank 1: 2 NET Actions per turn."
+        },
+        {
+          "rank": 4,
+          "summary": "Interface 4-6: 3 NET Actions per turn (was 2)."
+        },
+        {
+          "rank": 5,
+          "summary": "Same as rank 4: 3 NET Actions per turn."
+        },
+        {
+          "rank": 6,
+          "summary": "Same as rank 4: 3 NET Actions per turn."
+        },
+        {
+          "rank": 7,
+          "summary": "Interface 7-9: 4 NET Actions per turn (was 3)."
+        },
+        {
+          "rank": 8,
+          "summary": "Same as rank 7: 4 NET Actions per turn."
+        },
+        {
+          "rank": 9,
+          "summary": "Same as rank 7: 4 NET Actions per turn."
+        },
+        {
+          "rank": 10,
+          "summary": "Interface 10: 5 NET Actions per turn (was 4)."
+        }
+      ],
+      "points_per_rank": 1
     },
     {
       "uuid": "bf8851c4-5303-56c9-8d40-2c47bee22229",
@@ -45,10 +265,87 @@
       "ability_code": "tech_ability",
       "ability_name": "Maker",
       "summary": "Each rank gives a point in a specialty: field repair, upgrading, fabrication, invention.",
-      "subabilities": [],
+      "subabilities": [
+        {
+          "code": "field_expertise",
+          "name": "Field Expertise",
+          "summary": "Each point: +1 to Basic Tech, Cybertech, Security Tech, Weaponstech, Land/Sea/Air Vehicle Tech outside Maker checks; an item can be jury-rigged to perfect state for 10 minutes per point (again only after a full repair).",
+          "max_points": null,
+          "options": [],
+          "levels": []
+        },
+        {
+          "code": "upgrade_expert",
+          "name": "Upgrade Expert",
+          "summary": "Upgrade an item (one upgrade from this specialty per item). Roll: TECH + the skill that repairs the item + specialty rank + 1d10; materials of the item's price category.",
+          "max_points": null,
+          "options": [],
+          "levels": []
+        },
+        {
+          "code": "fabrication_expert",
+          "name": "Fabrication Expert",
+          "summary": "Build an item. Roll: TECH + the skill that repairs the item + specialty rank + 1d10; materials one price category lower; DV and time by category (Everyday DV 9, 1 h; Costly DV 13, 6 h; Premium DV 17, 1 day; Expensive DV 21, 1 week; Very Expensive DV 24, 2 weeks; Luxury DV 29, 1 month).",
+          "max_points": null,
+          "options": [],
+          "levels": []
+        },
+        {
+          "code": "invention_expert",
+          "name": "Inventor",
+          "summary": "Design an upgrade or a new item with the GM, who sets its price category (at least Expensive). Roll: TECH + the skill + specialty rank + 1d10; the item can then be fabricated or installed.",
+          "max_points": null,
+          "options": [],
+          "levels": []
+        }
+      ],
       "source": {
         "page": 147
-      }
+      },
+      "description": "The Tech repairs, upgrades, fabricates and invents items with Maker. Each rank gives 1 rank in two different specialties of choice (Field Expertise, Upgrade Expert, Fabrication Expert, Inventor), i.e. 2 points per rank, at most 1 point per rank in the same specialty. Masters add their specialty rank to the roll (TECH + tech skill + rank + 1d10).",
+      "ranks": [
+        {
+          "rank": 1,
+          "summary": "Rank 1: +1 rank in two different specialties, 2 points in total (at most 1 in one specialty)."
+        },
+        {
+          "rank": 2,
+          "summary": "Rank 2: +1 rank in two different specialties, 4 points in total (at most 2 in one specialty)."
+        },
+        {
+          "rank": 3,
+          "summary": "Rank 3: +1 rank in two different specialties, 6 points in total (at most 3 in one specialty)."
+        },
+        {
+          "rank": 4,
+          "summary": "Rank 4: +1 rank in two different specialties, 8 points in total (at most 4 in one specialty)."
+        },
+        {
+          "rank": 5,
+          "summary": "Rank 5: +1 rank in two different specialties, 10 points in total (at most 5 in one specialty)."
+        },
+        {
+          "rank": 6,
+          "summary": "Rank 6: +1 rank in two different specialties, 12 points in total (at most 6 in one specialty)."
+        },
+        {
+          "rank": 7,
+          "summary": "Rank 7: +1 rank in two different specialties, 14 points in total (at most 7 in one specialty)."
+        },
+        {
+          "rank": 8,
+          "summary": "Rank 8: +1 rank in two different specialties, 16 points in total (at most 8 in one specialty)."
+        },
+        {
+          "rank": 9,
+          "summary": "Rank 9: +1 rank in two different specialties, 18 points in total (at most 9 in one specialty)."
+        },
+        {
+          "rank": 10,
+          "summary": "Rank 10: +1 rank in two different specialties, 20 points in total (at most 10 in one specialty)."
+        }
+      ],
+      "points_per_rank": 2
     },
     {
       "uuid": "372769a4-10b6-50de-a49e-5144e8a51063",
@@ -132,7 +429,51 @@
       ],
       "source": {
         "page": 149
-      }
+      },
+      "description": "The Medtech keeps alive people who would otherwise be dead. With the Medicine ability each rank adds 1 point to a specialty. Surgery gives +2 skill per point; Pharmaceuticals and Cryosystem Operation give +1 Medical Tech per point (skill max 10; at most 5 points into Pharmaceuticals and 5 into Cryosystem Operation).",
+      "ranks": [
+        {
+          "rank": 1,
+          "summary": "Rank 1: 1 point to put into a specialty (Surgery, Medical Tech [Pharmaceuticals] or Medical Tech [Cryosystem Operation])."
+        },
+        {
+          "rank": 2,
+          "summary": "Rank 2: +1 specialty point, 2 invested in total."
+        },
+        {
+          "rank": 3,
+          "summary": "Rank 3: +1 specialty point, 3 invested in total."
+        },
+        {
+          "rank": 4,
+          "summary": "Rank 4: +1 specialty point, 4 invested in total."
+        },
+        {
+          "rank": 5,
+          "summary": "Rank 5: +1 specialty point, 5 invested in total."
+        },
+        {
+          "rank": 6,
+          "summary": "Rank 6: +1 specialty point, 6 invested in total."
+        },
+        {
+          "rank": 7,
+          "summary": "Rank 7: +1 specialty point, 7 invested in total."
+        },
+        {
+          "rank": 8,
+          "summary": "Rank 8: +1 specialty point, 8 invested in total."
+        },
+        {
+          "rank": 9,
+          "summary": "Rank 9: +1 specialty point, 9 invested in total."
+        },
+        {
+          "rank": 10,
+          "summary": "Rank 10: +1 specialty point, 10 invested in total."
+        }
+      ],
+      "points_per_rank": 1
     },
     {
       "uuid": "5f35fd11-1b3f-528d-874c-92477f16f6cc",
@@ -144,7 +485,51 @@
       "subabilities": [],
       "source": {
         "page": 151
-      }
+      },
+      "description": "The Media has Credibility: the audience believes them, and access to sources yields rumors and material for stories and exposes. When publishing they check believability with a 1d10: one easily verified proof gives +1 to the chance, more than 4 irrefutable proofs give +2 (cumulative); Luck cannot be spent, and a repeat story on the same subject needs new information. Credibility rank sets sources, audience, believability and scale of impact.",
+      "ranks": [
+        {
+          "rank": 1,
+          "summary": "Ranks 1-2. Rumors (general rule): twice a week the GM secretly rolls Credibility + 1d10 against the Passive DV: Vague 7, Ordinary 9, Substantial 11, Detailed 13; active search: STAT + skill + 1d10 against the Active DV 13 / 15 / 17 / 21. Sources: local boss, gang leader, neighborhood leader. Audience: nearby neighbors. Believability 2 in 10. Impact: small gradual changes, minor bullies are scared."
+        },
+        {
+          "rank": 2,
+          "summary": "Same as rank 1."
+        },
+        {
+          "rank": 3,
+          "summary": "Ranks 3-4. Sources: city gang boss, minor politician, Corporate manager. Audience: you are known as a writer in local scream sheets or on the Data Pool. Believability 3 in 10. Impact: a concrete effect, local minor bullies arrested or stripped of power."
+        },
+        {
+          "rank": 4,
+          "summary": "Same as rank 3."
+        },
+        {
+          "rank": 5,
+          "summary": "Ranks 5-6. Sources: key city figure, city official, local celebrity. Audience: the whole city, your own column in scream sheets or on TV. Believability 4 in 10. Impact: the city situation changes, higher-level villains may be jailed or lose power, local laws may pass."
+        },
+        {
+          "rank": 6,
+          "summary": "Same as rank 5."
+        },
+        {
+          "rank": 7,
+          "summary": "Ranks 7-8. Sources: president of a local Corporation, mayor, city celebrity. Audience: the whole state. Believability 5 in 10. Impact: change across several cities, mid-level Corporations or low-level government may fall, laws may pass in several cities."
+        },
+        {
+          "rank": 8,
+          "summary": "Same as rank 7."
+        },
+        {
+          "rank": 9,
+          "summary": "Rank 9. Sources: head of a regional Corporate division, state politician, famous celebrity. Audience: nationwide, though not everyone knows you. Believability 6 in 10. Impact: change across the country, big corporations or local government can be toppled, nationwide laws may pass."
+        },
+        {
+          "rank": 10,
+          "summary": "Rank 10. Sources: a major world leader, head of a major Corporation, world-famous celebrity. Audience: the whole world, high officials leak information to you. Believability 7 in 10. Impact: change worldwide, megacorps and powerful governments can fall, international laws may be set."
+        }
+      ],
+      "points_per_rank": 1
     },
     {
       "uuid": "c1808960-8722-5ae2-a512-4a659794255e",
@@ -156,7 +541,51 @@
       "subabilities": [],
       "source": {
         "page": 153
-      }
+      },
+      "description": "The Exec is a mid-level corporate manager, a boss rather than a salesman. Teamwork provides corporate perks (outfit, housing, insurance) and up to 3 subordinates run by the GM. Subordinates have Loyalty (max 10; the GM rolls 1d6 against it when you give an order); at 0 or below they will sell you out, and replacing a lost one costs a 200eb hiring fee.",
+      "ranks": [
+        {
+          "rank": 1,
+          "summary": "Rank 1: Signing Bonus, a Businesswear outfit (jacket, top, pants, shoes) marking you as business elite; cannot be resold without suspicion."
+        },
+        {
+          "rank": 2,
+          "summary": "Rank 2: Corporate Housing, a company apartment with no rent while you stay in the corporation; Lifestyle is still paid monthly on your own. If you switch corporations you get the same offer plus moving costs."
+        },
+        {
+          "rank": 3,
+          "summary": "Rank 3: first subordinate (type chosen from the tables, STATs from a 1d6 roll, starting Loyalty 1d6 + 1)."
+        },
+        {
+          "rank": 4,
+          "summary": "Rank 4: nothing new."
+        },
+        {
+          "rank": 5,
+          "summary": "Rank 5: one more subordinate (second)."
+        },
+        {
+          "rank": 6,
+          "summary": "Rank 6: Corporate Health Insurance, Trauma Team Silver coverage paid monthly by the corporation; the offer carries over if you switch corporations."
+        },
+        {
+          "rank": 7,
+          "summary": "Rank 7: housing upgrades to a house in Beaverville, in the Executive Zone."
+        },
+        {
+          "rank": 8,
+          "summary": "Rank 8: insurance upgrades to exclusive Executive-level Trauma Team coverage."
+        },
+        {
+          "rank": 9,
+          "summary": "Rank 9: one more subordinate (third, maximum 3)."
+        },
+        {
+          "rank": 10,
+          "summary": "Rank 10: housing greatly improves: a mansion in Beaverville in the Executive Zone or a luxury penthouse in the Corporate Zone."
+        }
+      ],
+      "points_per_rank": 1
     },
     {
       "uuid": "97611b4e-0298-5359-a370-734376ac2c10",
@@ -168,7 +597,51 @@
       "subabilities": [],
       "source": {
         "page": 158
-      }
+      },
+      "description": "The Lawman is a cop or agent of authority who calls Backup from their organization. Rank decides which forces answer; Backup is armed and armored per the table, controlled by the GM, and cannot dodge bullets. The Backup's Combat Number (STAT + skill) plus 1d10 is used when using equipment, attacking and defending.",
+      "ranks": [
+        {
+          "rank": 1,
+          "summary": "Ranks 1-2. Backup: when in danger, use an action to call a group of your rank or lower; a d10 roll must not exceed your rank (abuse is punished by your boss); arrival in d6 rounds, on a 6 a group one level higher comes (two separate groups at rank 10); if nobody answers you may call again next round. Corporate Security: four local cops, Heavy Pistols, Kevlar armor. Combat Number 8, SP 7, HP 20, MOVE and BODY 4."
+        },
+        {
+          "rank": 2,
+          "summary": "Same as rank 1."
+        },
+        {
+          "rank": 3,
+          "summary": "Ranks 3-4. Patrol Officers: four cops in two Cars, Heavy Pistols, Kevlar armor. Combat Number 10, SP 7, HP 25, MOVE and BODY 5."
+        },
+        {
+          "rank": 4,
+          "summary": "Same as rank 3."
+        },
+        {
+          "rank": 5,
+          "summary": "Ranks 5-7. Sheriff's Department: two county deputies in a Sports Car, Heavy Pistols and Assault Rifles, Heavy Armorjack. Combat Number 14, SP 13, HP 35, MOVE and BODY 4."
+        },
+        {
+          "rank": 6,
+          "summary": "Same as rank 5."
+        },
+        {
+          "rank": 7,
+          "summary": "Same as rank 5."
+        },
+        {
+          "rank": 8,
+          "summary": "Rank 8. Reclaimed Zone Marshal: one lawman on a Sport Motorcycle, Very Heavy Pistol, Assault Rifle and Grenade Launcher, blast-resistant armor. Combat Number 16, SP 15, HP 50, MOVE and BODY 6."
+        },
+        {
+          "rank": 9,
+          "summary": "Rank 9. C-SWAT: two Psycho Squad fighters, Assault Rifles and Rocket Launchers, Metalgear armor, arrive by AV-4. Combat Number 15, SP 18, HP 35, MOVE and BODY 4."
+        },
+        {
+          "rank": 10,
+          "summary": "Rank 10. National law enforcement, Interpol, FBI, NET Watch: two fighters as a pair, arrive by AV-4, Very Heavy Pistols, Assault Rifles, Light Armorjack. Combat Number 14, SP 11, HP 35, MOVE and BODY 6. They stay to help investigate and come to every related call until the case closes or they die; their Combat Number replaces these skills: Accounting, Acting, Concealment/Perception of an Object, Criminology, Cryptography, Deduction, Education, Forgery, Interrogation, Paramedic, Perception, Personal Grooming, Resist Torture/Drugs, Stealth, Tracking."
+        }
+      ],
+      "points_per_rank": 1
     },
     {
       "uuid": "9d7cdaab-d270-51fe-a7c1-4a96755731ad",
@@ -180,7 +653,51 @@
       "subabilities": [],
       "source": {
         "page": 159
-      }
+      },
+      "description": "The Fixer is a black-market middleman who gets hard-to-find things and fits into many Street cultures. The Operator ability grants Contacts, availability of goods (by price category), Haggling and Fits In. Haggling: COOL + Trading + Operator rank + 1d10 against their COOL + Trading (+ Operator rank if a Fixer) + 1d10.",
+      "ranks": [
+        {
+          "rank": 1,
+          "summary": "Ranks 1-2. Haggling (general rule): COOL + Trading + Operator rank + 1d10 against their COOL + Trading (+ their Operator rank if a Fixer) + 1d10; success lets you make 1 deal of your Operator rank or lower, only one deal per meeting with a Fixer. Contacts: local boss, gang leader, neighborhood leader. Can source single items: Cheap and Everyday categories. Haggle: 10% more or less than market value. Fits In: your neighborhood's cultures and all local gangs."
+        },
+        {
+          "rank": 2,
+          "summary": "Same as rank 1."
+        },
+        {
+          "rank": 3,
+          "summary": "Ranks 3-4. Contacts: city gang boss, minor politician, Corporate manager. Can source single items: Costly and below. Haggle: buy 5 or more identical items and get one more free. Fits In: common ground with one more culture in the area, plus one more language (skill 4)."
+        },
+        {
+          "rank": 4,
+          "summary": "Same as rank 3."
+        },
+        {
+          "rank": 5,
+          "summary": "Ranks 5-6. Contacts: key city figure, city official, neighborhood celebrity. Can source: once a month, with other Fixers of your rank, you organize a Night Market, where you always find Super Luxury and below. Haggle: job payouts higher by 20%. Fits In: 2 more cultures (3 total) and one language per culture (skill 4)."
+        },
+        {
+          "rank": 6,
+          "summary": "Same as rank 5."
+        },
+        {
+          "rank": 7,
+          "summary": "Ranks 7-8. Contacts: president of a local Corporation, mayor, city official, local celebrity. Can source single items: Very Expensive and below. Haggle: Luxury and Super Luxury purchases can be half now, half in a month; miss the second half and nobody will deal with you again. Fits In: 3 more cultures (6 total) and one language per culture (skill 4)."
+        },
+        {
+          "rank": 8,
+          "summary": "Same as rank 7."
+        },
+        {
+          "rank": 9,
+          "summary": "Rank 9. Contacts: head of a regional Corporate division, state or city-zone politician, famous celebrity. Can source single items: Luxury and below; inside a Night Market you can run a Midnight Market for the criminal elite. Haggle: 20% more or less than market value. Fits In: you can also talk to Corporate and government representatives."
+        },
+        {
+          "rank": 10,
+          "summary": "Rank 10. Contacts: a major world leader, head of a major Corporation, world-famous celebrity. Can source single items: Super Luxury and below. Haggle: double payout for Dangerous work. Fits In: blend into almost any group, including secret societies, cults and exclusive clubs."
+        }
+      ],
+      "points_per_rank": 1
     },
     {
       "uuid": "4aeae1c3-6357-53cf-aa9d-3734d3856330",
@@ -192,7 +709,51 @@
       "subabilities": [],
       "source": {
         "page": 161
-      }
+      },
+      "description": "The Nomad grew up on wheels and knows vehicles best. Moto adds to driving, piloting and vehicle TECH checks, and the Family Motorpool grows with rank in new vehicles and upgrades. At rank 10 the Nomad takes a leadership post in the Family.",
+      "ranks": [
+        {
+          "rank": 1,
+          "summary": "Rank 1: Moto 1, added to driving, piloting, sea-vehicle and vehicle TECH skill checks. With each rank-up you may EITHER add a stock vehicle of Moto rank or lower to the Family Motorpool, OR apply one upgrade of Moto rank or lower to a vehicle; only one Family vehicle can be on loan. A destroyed vehicle is rebuilt by the Family in a week for 500eb. Vehicles of ranks 1-4: Car, Gyrocopter, Jetski, Road Bike. Rank 1 upgrades: Bulletproof Glass (15 HP, Thick 30 HP), Comm Suite, NOS, Built-in Flamethrower, Built-in Assault Rifle (30 rounds), Improved Seating, Smuggling Compartment (DV 17), Reinforced Chassis (+20 VHP, tows 10 tons), Built-in Melee Weapon, Roo Bar (2d6), Deployable Spike Strip (DV 17, 4d6, 10eb), Living Space."
+        },
+        {
+          "rank": 2,
+          "summary": "Rank 2: Moto 2. Nothing new in the tables; lower-rank options remain available."
+        },
+        {
+          "rank": 3,
+          "summary": "Rank 3: Moto 3. Nothing new."
+        },
+        {
+          "rank": 4,
+          "summary": "Rank 4: Moto 4. Nothing new."
+        },
+        {
+          "rank": 5,
+          "summary": "Rank 5: Moto 5. Vehicles of ranks 5-6: Helicopter, Sports Car, Speedboat. Rank 5 upgrades: Frame Reinforcement (SP 13, glass not armored), Security System (DV 17), Built-in Rocket Pod (3 rockets, needs Reinforced Chassis), Heavy Weapon Mount (Tsunami Arms Helix, Rhinemetall EMG-86 or Militech Cowboy U-56, needs Reinforced Chassis), Hovercraft Skirt, Improved Interface Plug Integration (bikes, needs REF 8, DV 17, 4d6)."
+        },
+        {
+          "rank": 6,
+          "summary": "Rank 6: Moto 6. No new vehicles or upgrades."
+        },
+        {
+          "rank": 7,
+          "summary": "Rank 7: Moto 7. Vehicles of ranks 7-8: AV-4, Cabin Cruiser, Sport Motorcycle. Rank 7 upgrade: AV-4 Engine (a land vehicle flies like an AV-4, handled with Pilot)."
+        },
+        {
+          "rank": 8,
+          "summary": "Rank 8: Moto 8. No new vehicles or upgrades."
+        },
+        {
+          "rank": 9,
+          "summary": "Rank 9: Moto 9. Vehicles of ranks 9-10: Aerozep, AV-9, Supercar, Yacht. No new upgrades."
+        },
+        {
+          "rank": 10,
+          "summary": "Rank 10: Moto 10. Leadership post in the Family: you can use all Family vehicles at once; future Family vehicles sell at market price, any future upgrade costs 1,000eb."
+        }
+      ],
+      "points_per_rank": 1
     }
   ]
 }
