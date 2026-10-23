@@ -162,6 +162,15 @@ pub struct Derived {
     pub surgery_skill: u8,
     /// Medical Technology skill from a Medtech's Medicine (0 without it).
     pub medical_tech_skill: u8,
+    /// Solo's Combat Awareness, while the role's effects are on: initiative roll bonus...
+    pub solo_initiative: i32,
+    /// ...how much the first damage of a round is reduced...
+    pub solo_deflection: u32,
+    /// ...bonus to Perception checks...
+    pub solo_perception: i32,
+    /// ...and the two attack bonuses shown as hints (to any attack; to the first hit's damage).
+    pub solo_precision: u8,
+    pub solo_spot_weakness: u8,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -255,6 +264,47 @@ impl Character {
         }
     }
 
+    /// How many times the injury is on the sheet (the same injury may repeat: two legs).
+    pub fn injury_count(&self, id: &str) -> usize {
+        self.injuries.iter().filter(|i| i.as_str() == id).count()
+    }
+
+    /// How many of those injuries had their effect lifted by first aid today.
+    pub fn aided_count(&self, id: &str) -> usize {
+        self.first_aided.iter().filter(|i| i.as_str() == id).count()
+    }
+
+    /// Takes one instance of the injury off the sheet; a first-aid mark that no longer has an
+    /// injury behind it goes too. `false` if there was none. The death save penalty is not touched.
+    pub fn take_injury(&mut self, id: &str) -> bool {
+        let Some(at) = self.injuries.iter().position(|i| i == id) else { return false };
+        self.injuries.remove(at);
+        if self.aided_count(id) > self.injury_count(id) {
+            if let Some(mark) = self.first_aided.iter().position(|i| i == id) {
+                self.first_aided.remove(mark);
+            }
+        }
+        true
+    }
+
+    /// The GM puts an injury on the sheet by hand, no roll and no checks (it may repeat). An injury
+    /// whose table row raises the death save penalty raises it, as a hit would.
+    pub fn add_injury(&mut self, id: &str, raises_death_save_penalty: bool) {
+        self.injuries.push(id.to_string());
+        if raises_death_save_penalty {
+            self.death_save_penalty = self.death_save_penalty.saturating_add(1);
+        }
+    }
+
+    /// The GM takes one instance of an injury off by hand; its penalty goes with it.
+    pub fn remove_injury(&mut self, id: &str, raises_death_save_penalty: bool) -> bool {
+        let removed = self.take_injury(id);
+        if removed && raises_death_save_penalty {
+            self.death_save_penalty = self.death_save_penalty.saturating_sub(1);
+        }
+        removed
+    }
+
     /// A fresh copy of the sheet for use as a template: full HP and armor, no wounds, no injuries.
     pub fn as_fresh(&self) -> Self {
         let mut c = self.clone();
@@ -288,6 +338,11 @@ impl Character {
             stabilization_dv: self.wound_state().stabilization_dv(),
             surgery_skill: roles::surgery_skill(self),
             medical_tech_skill: roles::medical_tech_skill(self),
+            solo_initiative: roles::initiative_bonus(self),
+            solo_deflection: roles::damage_deflection(self),
+            solo_perception: roles::perception_bonus(self),
+            solo_precision: roles::precision_bonus(self),
+            solo_spot_weakness: roles::spot_weakness_bonus(self),
         }
     }
 
@@ -310,7 +365,8 @@ impl Character {
         if self.name.trim().is_empty() {
             return Err(CharacterError::EmptyName);
         }
-        if let Some(id) = self.first_aided.iter().find(|id| !self.injuries.contains(id)) {
+        // Injuries may repeat (two legs, three arms); each first-aid mark needs its own injury.
+        if let Some(id) = self.first_aided.iter().find(|id| self.aided_count(id) > self.injury_count(id)) {
             return Err(CharacterError::FirstAidWithoutInjury(id.clone()));
         }
         if !(-REPUTATION_MAX..=REPUTATION_MAX).contains(&self.reputation) {

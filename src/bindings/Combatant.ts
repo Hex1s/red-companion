@@ -9,4 +9,8 @@ reflex: number,
 /**
  * The d10 check; `None` when the total was typed in by hand.
  */
-roll: CheckRoll | null, initiative: number, };
+roll: CheckRoll | null, 
+/**
+ * What a role added to the roll (Solo's Personal Initiative); part of `initiative`.
+ */
+bonus: number, initiative: number, };

@@ -24,4 +24,9 @@ notes: string,
 /**
  * Named counters the player keeps (contacts, rumours...); the rules do not read them.
  */
-counters: Array<RoleCounter>, };
+counters: Array<RoleCounter>, 
+/**
+ * The role ability changes the numbers of the sheet (Solo: initiative, damage, Perception).
+ * Off = the role is a reference only. Roles without such effects ignore it.
+ */
+apply_effects: boolean, };

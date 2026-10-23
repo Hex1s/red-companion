@@ -13,8 +13,12 @@ skill: string, stat: StatKey, stat_value: number,
 /**
  * Level on the sheet, 0 when the skill is not trained.
  */
-level: number, die: CheckRoll, 
+level: number, 
 /**
- * STAT + level + die.
+ * What a role adds to this skill (Solo's Threat Detection to Perception); 0 for most checks.
+ */
+role_bonus: number, die: CheckRoll, 
+/**
+ * STAT + level + role bonus + die.
  */
 total: number, };

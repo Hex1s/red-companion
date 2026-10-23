@@ -1,7 +1,7 @@
 //! Export and import of the GM's own NPC templates and encounters as a versioned JSON file.
 //!
-//! The file has its own format and suffix (`.redencounters.json`), apart from the characters
-//! file. An encounter that uses one of the GM's own templates travels together with it: the
+//! The file has its own format and type in its name (`name.encounters.redcompanion.json`), apart
+//! from the characters files. An encounter that uses one of the GM's own templates travels together with it: the
 //! template is stored in the same file under a file-local `key`, and the encounter line points
 //! at that key. Book templates are referenced by catalog `code` (every install has them).
 //! Import validates everything before anything is stored.
@@ -21,8 +21,6 @@ use crate::encounter::{Encounter, EncounterError, EncounterRecord, TemplateSourc
 pub const FORMAT: &str = "red-companion/encounters";
 /// Current version of the file.
 pub const FILE_VERSION: u32 = 1;
-/// Suffix of every encounters file the app writes.
-pub const SUFFIX: &str = ".redencounters.json";
 /// Most templates and encounters one file may hold (a sanity limit against runaway files).
 pub const ITEMS_MAX: usize = 500;
 
@@ -220,16 +218,6 @@ pub fn remap_templates(encounter: &mut Encounter, new_ids: &HashMap<String, i64>
     }
 }
 
-/// File name for an export: the name made safe for any file system, plus the suffix.
-pub fn file_name(base: &str) -> String {
-    crate::transfer::safe_file_name(base, "encounters", SUFFIX)
-}
-
-/// A name taken from the UI is only accepted as a bare file name of an encounters file.
-pub fn is_file_name(name: &str) -> bool {
-    crate::transfer::is_bare_file_name(name, SUFFIX)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -374,14 +362,5 @@ mod tests {
         );
         let b = encounter("B", vec![line(TemplateSource::Custom, "9", 2)]);
         assert_eq!(used_template_ids(&[a, b]), vec![9, 3]);
-    }
-
-    #[test]
-    fn file_names_use_their_own_suffix() {
-        assert_eq!(file_name("Засада"), "Засада.redencounters.json");
-        assert_eq!(file_name(""), "encounters.redencounters.json");
-        assert!(is_file_name("Засада.redencounters.json"));
-        assert!(!is_file_name("Johnny.redcompanion.json"));
-        assert!(!is_file_name("../x.redencounters.json"));
     }
 }

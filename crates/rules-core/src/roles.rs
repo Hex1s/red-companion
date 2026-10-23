@@ -22,6 +22,22 @@ pub const MULTICLASS_MIN_RANK: u8 = 4;
 /// Rank a starting character has in their role (p. 142).
 pub const STARTING_RANK: u8 = 4;
 
+/// Solo: Combat Awareness (p. 146). Points spent on its parts change the sheet.
+pub const SOLO: &str = "solo";
+pub const PERSONAL_INITIATIVE: &str = "personal_initiative";
+pub const DAMAGE_DEFLECTION: &str = "damage_deflection";
+pub const THREAT_DETECTION: &str = "threat_detection";
+pub const PRECISION_ATTACK: &str = "precision_attack";
+pub const SPOT_WEAKNESS: &str = "spot_weakness";
+/// The skill Threat Detection adds to.
+pub const PERCEPTION_SKILL: &str = "perception";
+/// Damage Deflection: 1 less per 2 points, at most 5 (10 points).
+pub const DEFLECTION_POINTS_PER_STEP: u8 = 2;
+pub const DEFLECTION_MAX: u32 = 5;
+/// Precision Attack: +1 per 3 points, at most +3 (9 points).
+pub const PRECISION_POINTS_PER_STEP: u8 = 3;
+pub const PRECISION_MAX: u8 = 3;
+
 /// Medtech: Medicine (pp. 149–150).
 pub const MEDTECH: &str = "medtech";
 pub const SURGERY: &str = "surgery";
@@ -38,6 +54,36 @@ pub const SURGE: &str = "surge";
 pub const LIMITED_DRUGS: [&str; 4] = [ANTIBIOTICS, SPEEDHEAL, STIM, SURGE];
 /// Dose flags a day of rest clears (the other limits run for a week; the GM clears those).
 pub const DAILY_DRUGS: [&str; 2] = [SPEEDHEAL, STIM];
+/// Points of Solo's Combat Awareness on a part, counted only while the role's effects are on.
+fn solo_points(c: &Character, sub: &str) -> u8 {
+    c.role(SOLO).filter(|e| e.apply_effects).map_or(0, |e| e.points_in(sub))
+}
+
+/// Personal Initiative: +1 to the initiative roll per point.
+pub fn initiative_bonus(c: &Character) -> i32 {
+    i32::from(solo_points(c, PERSONAL_INITIATIVE))
+}
+
+/// Damage Deflection: how much the first damage of a round is reduced (0..=5).
+pub fn damage_deflection(c: &Character) -> u32 {
+    (u32::from(solo_points(c, DAMAGE_DEFLECTION)) / u32::from(DEFLECTION_POINTS_PER_STEP)).min(DEFLECTION_MAX)
+}
+
+/// Threat Detection: +1 to Perception checks per point.
+pub fn perception_bonus(c: &Character) -> i32 {
+    i32::from(solo_points(c, THREAT_DETECTION))
+}
+
+/// Precision Attack: bonus to any attack (shown as a hint, hits are not calculated here).
+pub fn precision_bonus(c: &Character) -> u8 {
+    (solo_points(c, PRECISION_ATTACK) / PRECISION_POINTS_PER_STEP).min(PRECISION_MAX)
+}
+
+/// Spot Weakness: extra damage of the first successful attack of a round (a hint).
+pub fn spot_weakness_bonus(c: &Character) -> u8 {
+    solo_points(c, SPOT_WEAKNESS)
+}
+
 /// A point in Surgery is two points of the Surgery skill (p. 149).
 pub const SURGERY_SKILL_PER_POINT: u8 = 2;
 /// Skill level cap for the skills Medicine grants.
@@ -63,6 +109,14 @@ pub struct RoleEntry {
     /// Named counters the player keeps (contacts, rumours...); the rules do not read them.
     #[serde(default)]
     pub counters: Vec<RoleCounter>,
+    /// The role ability changes the numbers of the sheet (Solo: initiative, damage, Perception).
+    /// Off = the role is a reference only. Roles without such effects ignore it.
+    #[serde(default = "effects_on")]
+    pub apply_effects: bool,
+}
+
+fn effects_on() -> bool {
+    true
 }
 
 /// A user-defined counter on a role ("Contacts: 2 / 5").
@@ -93,6 +147,7 @@ impl RoleEntry {
             picks: Vec::new(),
             notes: String::new(),
             counters: Vec::new(),
+            apply_effects: true,
         }
     }
 
@@ -533,5 +588,44 @@ mod tests {
         assert_eq!(validate_doses(&[STIM.into(), SURGE.into()]), Ok(()));
         assert!(validate_doses(&[RAPID_DETOX.into()]).is_err());
         assert!(validate_doses(&[STIM.into(), STIM.into()]).is_err());
+    }
+
+    fn solo(points: &[(&str, u8)]) -> Character {
+        let mut c = Character::quick("S");
+        let mut e = RoleEntry::new(SOLO, 6);
+        for (sub, n) in points {
+            e.points.insert((*sub).into(), *n);
+        }
+        c.roles.push(e);
+        c
+    }
+
+    #[test]
+    fn solo_points_turn_into_numbers_by_the_book_thresholds() {
+        let c = solo(&[(PERSONAL_INITIATIVE, 3), (THREAT_DETECTION, 2), (DAMAGE_DEFLECTION, 5), (PRECISION_ATTACK, 4), (SPOT_WEAKNESS, 1)]);
+        assert_eq!(initiative_bonus(&c), 3);
+        assert_eq!(perception_bonus(&c), 2);
+        assert_eq!(damage_deflection(&c), 2, "5 points = steps at 2 and 4");
+        assert_eq!(precision_bonus(&c), 1, "4 points: the +1 step at 3");
+        assert_eq!(spot_weakness_bonus(&c), 1);
+        // The top of every scale.
+        let top = solo(&[(DAMAGE_DEFLECTION, 10), (PRECISION_ATTACK, 9)]);
+        assert_eq!((damage_deflection(&top), precision_bonus(&top)), (5, 3));
+        // Below the first step nothing happens.
+        let low = solo(&[(DAMAGE_DEFLECTION, 1), (PRECISION_ATTACK, 2)]);
+        assert_eq!((damage_deflection(&low), precision_bonus(&low)), (0, 0));
+    }
+
+    #[test]
+    fn solo_effects_follow_the_switch_and_the_role() {
+        let mut c = solo(&[(PERSONAL_INITIATIVE, 3), (DAMAGE_DEFLECTION, 4)]);
+        c.roles[0].apply_effects = false;
+        assert_eq!((initiative_bonus(&c), damage_deflection(&c)), (0, 0));
+        // Points on a Medtech's sub-ability never count as Solo's.
+        let mut m = Character::quick("M");
+        let mut e = RoleEntry::new(MEDTECH, 4);
+        e.points.insert(PERSONAL_INITIATIVE.into(), 3);
+        m.roles.push(e);
+        assert_eq!(initiative_bonus(&m), 0);
     }
 }

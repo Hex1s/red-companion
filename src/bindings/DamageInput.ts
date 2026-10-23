@@ -22,4 +22,8 @@ manual_critical: boolean,
 /**
  * Current HP of the cover the target stands behind, if any.
  */
-cover_hp: number | null, };
+cover_hp: number | null, 
+/**
+ * How much a role (Solo's Damage Deflection) takes off the damage that got through armor.
+ */
+deflection: number, };

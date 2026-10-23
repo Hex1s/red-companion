@@ -83,7 +83,7 @@ pub fn heal_injury(
     if target.dead {
         return Err(HealingError::Dead);
     }
-    if !target.injuries.contains(&injury.id) {
+    if target.injury_count(&injury.id) == 0 {
         return Err(HealingError::NotInjured);
     }
     let options = match kind {
@@ -93,7 +93,7 @@ pub fn heal_injury(
     let dv = options.iter().find(|o| o.skill == skill).ok_or(HealingError::NoSuchOption)?.dv;
     if kind == HealKind::FirstAid
         && !injury.quick_fix_removes_effect
-        && target.first_aided.contains(&injury.id)
+        && target.aided_count(&injury.id) >= target.injury_count(&injury.id)
     {
         return Err(HealingError::AlreadyFirstAided);
     }
@@ -103,8 +103,8 @@ pub fn heal_injury(
     let mut removed = false;
     if success {
         if kind == HealKind::Treatment || injury.quick_fix_removes_effect {
-            target.injuries.retain(|i| i != &injury.id);
-            target.first_aided.retain(|i| i != &injury.id);
+            // One instance: with two broken legs, the other one stays.
+            target.take_injury(&injury.id);
             removed = true;
         } else {
             target.first_aided.push(injury.id.clone());
@@ -307,5 +307,42 @@ mod tests {
         assert!(c.validate().is_err());
         c.injuries.push("broken_ribs".into());
         assert!(c.validate().is_ok());
+    }
+
+    #[test]
+    fn repeated_injuries_are_healed_one_instance_at_a_time() {
+        let inj = injury("broken_ribs");
+        let mut c = Character::quick("T");
+        c.injuries = vec!["broken_ribs".into(), "broken_ribs".into()];
+        let aid = |c: &mut Character| {
+            heal_injury(c, &inj, HealKind::FirstAid, TreatmentSkill::Paramedic, 8, die(9))
+        };
+        assert!(aid(&mut c).unwrap().success);
+        // The second one has no mark yet, a third try is refused.
+        assert!(aid(&mut c).unwrap().success);
+        assert_eq!(aid(&mut c), Err(HealingError::AlreadyFirstAided));
+        assert_eq!(c.aided_count("broken_ribs"), 2);
+        assert!(c.validate().is_ok());
+        // Treatment takes one instance and one mark with it.
+        heal_injury(&mut c, &inj, HealKind::Treatment, TreatmentSkill::Paramedic, 0, None).unwrap();
+        assert_eq!((c.injury_count("broken_ribs"), c.aided_count("broken_ribs")), (1, 1));
+        assert!(c.validate().is_ok());
+    }
+
+    #[test]
+    fn the_gm_adds_and_removes_injuries_by_hand_with_their_penalty() {
+        let table = table();
+        let penalising = table.iter().find(|i| i.death_save_penalty).unwrap();
+        let mut c = Character::quick("T");
+        c.add_injury(&penalising.id, true);
+        c.add_injury(&penalising.id, true); // two legs, say
+        assert_eq!((c.injury_count(&penalising.id), c.death_save_penalty), (2, 2));
+        assert!(c.remove_injury(&penalising.id, true));
+        assert_eq!((c.injury_count(&penalising.id), c.death_save_penalty), (1, 1));
+        c.first_aided.push(penalising.id.clone());
+        assert!(c.remove_injury(&penalising.id, true));
+        assert!(c.first_aided.is_empty(), "the mark leaves with its injury");
+        assert!(!c.remove_injury(&penalising.id, true), "nothing left to remove");
+        assert_eq!(c.death_save_penalty, 0);
     }
 }

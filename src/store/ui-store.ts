@@ -1,6 +1,8 @@
 import { create } from "zustand";
 
 export type AppTab = "characters" | "encounters" | "notes" | "rules";
+/** Tabs of a character sheet; the choice is kept while switching between characters. */
+export type SheetTab = "general" | "state" | "skills" | "roles" | "gear";
 export type ReferenceSection = "injuries" | "cover" | "armor" | "weapons" | "skills" | "npc" | "roles" | "reputation";
 
 /** UI state only: game data lives in Rust and comes through Tauri commands. */
@@ -9,6 +11,8 @@ type UiState = {
   selectedCharacterId: number | null;
   /** Character the "damage taken" window is open for. */
   damageTargetId: number | null;
+  sheetTab: SheetTab;
+  setSheetTab: (tab: SheetTab) => void;
   referenceSection: ReferenceSection;
   referenceQuery: string;
   setReferenceSection: (section: ReferenceSection) => void;
@@ -22,6 +26,8 @@ export const useUiStore = create<UiState>((set) => ({
   tab: "characters",
   selectedCharacterId: null,
   damageTargetId: null,
+  sheetTab: "general",
+  setSheetTab: (sheetTab) => set({ sheetTab }),
   referenceSection: "injuries",
   referenceQuery: "",
   setReferenceSection: (referenceSection) => set({ referenceSection }),

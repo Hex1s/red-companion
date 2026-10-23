@@ -8,6 +8,7 @@ import type { CriticalInjury } from "@/bindings/CriticalInjury";
 import type { DamageApplied } from "@/bindings/DamageApplied";
 import type { DamageOutcome } from "@/bindings/DamageOutcome";
 import type { DamageRequest } from "@/bindings/DamageRequest";
+import type { DeflectionInfo } from "@/bindings/DeflectionInfo";
 import type { RollResult } from "@/bindings/RollResult";
 import { DiceButton } from "@/components/combat/dice-button";
 import { InjuryIcon } from "@/components/combat/injury-icons";
@@ -80,6 +81,8 @@ function DamageForm({ target, cover, injuries, onApplied, onClose }: DamageFormP
   const [armorMode, setArmorMode] = useState<ArmorMode>("full");
   const [explosive, setExplosive] = useState(false);
   const [manualCritical, setManualCritical] = useState(false);
+  const [deflect, setDeflect] = useState(false);
+  const [deflection, setDeflection] = useState<DeflectionInfo | null>(null);
   const [injuryId, setInjuryId] = useState<string | null>(null);
   const [injuryRoll, setInjuryRoll] = useState<RollResult | null>(null);
   const [preview, setPreview] = useState<DamageOutcome | null>(null);
@@ -103,8 +106,26 @@ function DamageForm({ target, cover, injuries, onApplied, onClose }: DamageFormP
       explosive,
       manual_critical: roll === null && manualCritical,
       cover_id: cover?.id ?? null,
+      deflect: deflect && (deflection?.amount ?? 0) > 0,
     };
-  }, [roll, valueText, area, aimed, armorMode, explosive, manualCritical, cover]);
+  }, [roll, valueText, area, aimed, armorMode, explosive, manualCritical, cover, deflect, deflection]);
+
+  // Solo's Damage Deflection: ticked for the first hit of the round in a running fight; outside
+  // a fight (no rounds) the GM ticks it.
+  useEffect(() => {
+    let live = true;
+    api.deflectionInfo(characterId).then(
+      (info) => {
+        if (!live) return;
+        setDeflection(info);
+        setDeflect(info.amount > 0 && info.first_this_round);
+      },
+      () => undefined,
+    );
+    return () => {
+      live = false;
+    };
+  }, [characterId]);
 
   // Rust decides what the hit does (two sixes, forced injuries); the form only asks.
   useEffect(() => {
@@ -131,9 +152,12 @@ function DamageForm({ target, cover, injuries, onApplied, onClose }: DamageFormP
   }, [characterId, request]);
 
   const critical = preview?.critical ?? false;
-  const freeInjuries = injuries
-    .filter((i) => i.area === area && !owned.includes(i.id) && i.id !== preview?.forced_injury)
+  // Any injury of the area can be picked, even one the target has (a second leg); the random
+  // 2d6 roll skips the ones already on the sheet.
+  const pickable = injuries
+    .filter((i) => i.area === area && i.id !== preview?.forced_injury)
     .sort((a, b) => a.roll - b.roll);
+  const freeInjuries = pickable.filter((i) => !owned.includes(i.id));
   const chosenInjury = critical ? (injuries.find((i) => i.id === injuryId) ?? null) : null;
 
   const guard = async (action: () => Promise<void>) => {
@@ -182,7 +206,8 @@ function DamageForm({ target, cover, injuries, onApplied, onClose }: DamageFormP
       onClose();
     });
 
-  const canApply = preview !== null && !busy;
+  // Zero damage changes nothing: there is nothing to apply (or to undo later).
+  const canApply = preview !== null && !busy && (parseCount(valueText) ?? 0) > 0;
   const damageInvalid = valueText.trim() !== "" && parseCount(valueText) === null;
 
   return (
@@ -292,6 +317,14 @@ function DamageForm({ target, cover, injuries, onApplied, onClose }: DamageFormP
             {t("damage.critical")}
           </label>
         </Hint>
+        {deflection !== null && deflection.amount > 0 && (
+          <Hint label={t("damage.deflect_hint")}>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox checked={deflect} onCheckedChange={(v) => setDeflect(v === true)} />
+              {t("damage.deflect", { value: deflection.amount })}
+            </label>
+          </Hint>
+        )}
         <Hint label={t("damage.explosive")}>
           <label className="flex items-center gap-2 text-sm">
             <Checkbox checked={explosive} onCheckedChange={(v) => setExplosive(v === true)} />
@@ -311,18 +344,21 @@ function DamageForm({ target, cover, injuries, onApplied, onClose }: DamageFormP
               onRoll={(_, manual) => void rollInjury(manual)}
             />
           </div>
-          {freeInjuries.length === 0 ? (
+          {pickable.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("damage.no_free_injury")}</p>
           ) : (
             <>
               <div className="grid grid-cols-6 gap-1.5">
-                {freeInjuries.map((injury) => (
+                {pickable.map((injury) => (
                   <Hint
                     key={injury.id}
                     label={
                       <div className="space-y-1">
                         <div className="font-semibold">{t(injury.name_key)}</div>
                         <div className="text-muted-foreground">{t(injury.effect_key)}</div>
+                        {owned.includes(injury.id) && (
+                          <div className="text-state-serious">{t("damage.injury_owned")}</div>
+                        )}
                       </div>
                     }
                   >

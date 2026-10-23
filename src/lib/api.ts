@@ -16,7 +16,9 @@ import type { EncounterRecord } from "@/bindings/EncounterRecord";
 import type { Assessment } from "@/bindings/Assessment";
 import type { TierHint } from "@/bindings/TierHint";
 import type { NpcTier } from "@/bindings/NpcTier";
+import type { DeflectionInfo } from "@/bindings/DeflectionInfo";
 import type { ExportFile } from "@/bindings/ExportFile";
+import type { ExportKind } from "@/bindings/ExportKind";
 import type { UserTemplateRecord } from "@/bindings/UserTemplateRecord";
 import type { ExportSaved } from "@/bindings/ExportSaved";
 import type { EncountersImported } from "@/bindings/EncountersImported";
@@ -91,19 +93,22 @@ export const api = {
   deleteCharacter: (id: number) => invoke<void>("delete_character", { id }),
   /** Writes `ids` (or everyone when `null`) into a new file in the exports folder. */
   exportCharacters: (ids: number[] | null) => invoke<ExportSaved>("export_characters", { ids }),
-  /** Export files in the exports folder, the newest first. */
-  listExports: () => invoke<ExportFile[]>("list_exports"),
-  /** Imports one file of the exports folder as new characters; rejects the whole file if anything is invalid. */
-  importExportFile: (name: string) => invoke<CharacterRecord[]>("import_export_file", { name }),
-  openExportsFolder: () => invoke<void>("open_exports_folder"),
+  /** Writes the participants of the active session into a session file named after the session. */
+  exportSession: () => invoke<ExportSaved>("export_session"),
+  /** Files an import window of this type offers (its own folder, plus older untyped files), newest first. */
+  listExports: (kind: ExportKind) => invoke<ExportFile[]>("list_exports", { kind }),
+  /** Imports one character or session file as new characters; rejects the whole file if anything is invalid. */
+  importExportFile: (kind: ExportKind, name: string) =>
+    invoke<CharacterRecord[]>("import_export_file", { kind, name }),
+  /** Shows the exports folder, or the sub-folder of one type, in the file manager. */
+  openExportsFolder: (kind?: ExportKind) =>
+    invoke<void>("open_exports_folder", { kind: kind ?? null }),
   /**
-   * Writes encounters and own NPC templates into a new `.redencounters.json` file; the own
+   * Writes encounters and own NPC templates into a new `*.encounters.redcompanion.json` file; the own
    * templates an encounter uses go along with it.
    */
   exportEncounters: (encounterIds: number[], templateIds: number[]) =>
     invoke<EncountersSaved>("export_encounters", { encounterIds, templateIds }),
-  /** Encounter files in the exports folder, the newest first. */
-  listEncounterExports: () => invoke<ExportFile[]>("list_encounter_exports"),
   /** Imports one encounters file as new templates and encounters; rejects the whole file if anything is invalid. */
   importEncounterFile: (name: string) =>
     invoke<EncountersImported>("import_encounter_file", { name }),
@@ -160,6 +165,15 @@ export const api = {
       manualTotal,
       granted,
     }),
+  /** Solo's Damage Deflection for the damage window: how much, and whether it is the first hit of the round. */
+  deflectionInfo: (characterId: number) =>
+    invoke<DeflectionInfo>("deflection_info", { characterId }),
+  /** The GM puts an injury on the sheet by hand; it may repeat (a second broken leg). */
+  addInjury: (id: number, injuryId: string) =>
+    invoke<CharacterRecord>("add_injury", { id, injuryId }),
+  /** The GM takes one instance of an injury off by hand. */
+  removeInjury: (id: number, injuryId: string) =>
+    invoke<CharacterRecord>("remove_injury", { id, injuryId }),
   /** Days of rest needed to reach `targetHp`; changes nothing. */
   restPreview: (id: number, targetHp: number) => invoke<RestPlan>("rest_preview", { id, targetHp }),
   restCharacter: (id: number, targetHp: number) =>

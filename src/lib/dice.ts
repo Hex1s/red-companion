@@ -11,6 +11,19 @@ export function validD10Faces(faces: number[]): boolean {
   return faces.length <= 2 && faces.every((f) => Number.isInteger(f) && f >= 1 && f <= 10);
 }
 
+/** The extra die of a check that exploded: up after a natural 10, down after a natural 1. */
+export type Explosion = { direction: "up" | "down"; first: number; extra: number };
+
+/** `null` for an ordinary roll (or a total typed in from physical dice: there are no faces). */
+export function explosionOf(roll: CheckRoll | null | undefined): Explosion | null {
+  if (!roll || roll.kind === "normal" || roll.dice.length < 2) return null;
+  return {
+    direction: roll.kind === "critical_failure" ? "down" : "up",
+    first: roll.dice[0],
+    extra: roll.dice[1],
+  };
+}
+
 /** "7", "10 + 4" (natural 10 adds a die) or "1 − 4" (natural 1 subtracts one). */
 export function formatCheck(roll: CheckRoll): string {
   const [first, extra] = roll.dice;

@@ -57,6 +57,7 @@ export const characterSchema = z.object({
       points: z.record(z.string(), z.number().int().min(0).max(RANK_MAX)),
       picks: z.array(z.string()),
       notes: z.string().max(ROLE_NOTES_MAX),
+      apply_effects: z.boolean(),
       counters: z
         .array(
           z.object({

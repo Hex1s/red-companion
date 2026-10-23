@@ -44,8 +44,11 @@ pub struct SkillCheck {
     pub stat_value: u8,
     /// Level on the sheet, 0 when the skill is not trained.
     pub level: u8,
+    /// What a role adds to this skill (Solo's Threat Detection to Perception); 0 for most checks.
+    #[serde(default)]
+    pub role_bonus: i32,
     pub die: CheckRoll,
-    /// STAT + level + die.
+    /// STAT + level + role bonus + die.
     pub total: i32,
 }
 
@@ -70,8 +73,13 @@ pub fn skill_check(
     die: CheckRoll,
 ) -> Result<SkillCheck, SkillCheckError> {
     let (stat, stat_value, level) = skill_bonus(character, key, catalog)?;
-    let total = i32::from(stat_value) + i32::from(level) + die.total;
-    Ok(SkillCheck { skill: key.to_string(), stat, stat_value, level, die, total })
+    let role_bonus = if skill_base_id(key) == crate::roles::PERCEPTION_SKILL {
+        crate::roles::perception_bonus(character)
+    } else {
+        0
+    };
+    let total = i32::from(stat_value) + i32::from(level) + role_bonus + die.total;
+    Ok(SkillCheck { skill: key.to_string(), stat, stat_value, level, role_bonus, die, total })
 }
 
 #[cfg(test)]
@@ -130,5 +138,23 @@ mod tests {
     fn unknown_skill_is_rejected() {
         let err = skill_check(&sheet(), "telekinesis", &catalog(), check_total(1).unwrap()).unwrap_err();
         assert_eq!(err, SkillCheckError::UnknownSkill("telekinesis".into()));
+    }
+
+    #[test]
+    fn threat_detection_adds_to_perception_only() {
+        let mut c = sheet();
+        c.skills.insert("perception".into(), 3);
+        c.skills.insert("athletics".into(), 3);
+        let mut solo = crate::roles::RoleEntry::new(crate::roles::SOLO, 4);
+        solo.points.insert(crate::roles::THREAT_DETECTION.into(), 2);
+        c.roles.push(solo);
+        let die = || check_total(5).unwrap();
+        let seen = skill_check(&c, "perception", &catalog(), die()).unwrap();
+        assert_eq!((seen.role_bonus, seen.total), (2, 6 + 3 + 2 + 5)); // INT 6
+        let other = skill_check(&c, "athletics", &catalog(), die()).unwrap();
+        assert_eq!(other.role_bonus, 0);
+        // Switched off: the role is a reference only.
+        c.roles[0].apply_effects = false;
+        assert_eq!(skill_check(&c, "perception", &catalog(), die()).unwrap().role_bonus, 0);
     }
 }

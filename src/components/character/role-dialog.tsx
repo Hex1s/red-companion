@@ -53,7 +53,7 @@ export function RoleDialog({ role, entry, derived, onChange, onAdminister, onClo
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[85vh] max-w-xl overflow-y-auto">
+      <DialogContent className="sm:max-w-xl">
         <div className="space-y-1">
           <DialogTitle className="text-xl font-bold">
             {role.name} — {role.ability_name}
@@ -87,6 +87,28 @@ export function RoleDialog({ role, entry, derived, onChange, onAdminister, onClo
             {t("roles.free_points", { count: free })}
           </span>
         </div>
+
+        {role.code === "solo" && (
+          <section className="cut space-y-2 p-3 [--cut:6px]">
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={entry.apply_effects}
+                onCheckedChange={(v) => onChange({ ...entry, apply_effects: v === true })}
+              />
+              {t("roles.apply_effects")}
+            </label>
+            <p className="text-xs text-muted-foreground">{t("roles.solo_effects_hint")}</p>
+            {entry.apply_effects && (
+              <ul className="num space-y-0.5 text-xs">
+                <li>{t("solo.initiative", { value: derived.solo_initiative })}</li>
+                <li>{t("solo.deflection", { value: derived.solo_deflection })}</li>
+                <li>{t("solo.perception", { value: derived.solo_perception })}</li>
+                <li>{t("solo.precision", { value: derived.solo_precision })}</li>
+                <li>{t("solo.spot_weakness", { value: derived.solo_spot_weakness })}</li>
+              </ul>
+            )}
+          </section>
+        )}
 
         {role.ranks.length > 0 && (
           <ol className="space-y-1">

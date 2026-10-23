@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { CharacterKind } from "@/bindings/CharacterKind";
 import type { DeathSave } from "@/bindings/DeathSave";
 import type { ExportFile } from "@/bindings/ExportFile";
+import type { ExportKind } from "@/bindings/ExportKind";
 import { CharacterCard } from "@/components/character/character-card";
 import { CharacterList } from "@/components/character/character-list";
 import { CharacterSheet } from "@/components/character/character-sheet";
@@ -34,6 +35,7 @@ import { useScene } from "@/hooks/use-scene";
 import { useSessions } from "@/hooks/use-sessions";
 import { api, hasBackend } from "@/lib/api";
 import { coverLabel } from "@/lib/cover-label";
+import { formatCheck } from "@/lib/dice";
 import { cloneNames, npcNotes, templateKey } from "@/lib/encounter";
 import type { EncounterRecord } from "@/bindings/EncounterRecord";
 import type { UserTemplateRecord } from "@/bindings/UserTemplateRecord";
@@ -61,10 +63,16 @@ export default function App() {
   const [healTarget, setHealTarget] = useState<{ id: number; injuryId: string; kind: HealKind } | null>(null);
   const [drugRequest, setDrugRequest] = useState<DrugRequest | null>(null);
   const [importFiles, setImportFiles] = useState<ExportFile[] | null>(null);
+  // Which type of file the open import window is for (characters or a session).
+  const [importKind, setImportKind] = useState<"character" | "session">("character");
   const [encounterImportFiles, setEncounterImportFiles] = useState<ExportFile[] | null>(null);
   const [lastSave, setLastSave] = useState<{ id: number; save: DeathSave } | null>(null);
   const damageTarget = entries.find((e) => e.id === damageTargetId) ?? null;
   const selected = entries.find((e) => e.id === selectedCharacterId) ?? null;
+  // The sheet is heavy to build; while the next one renders, the previous stays on screen
+  // (dimmed) instead of the page going blank and flickering.
+  const deferredCharacterId = useDeferredValue(selectedCharacterId);
+  const shown = entries.find((e) => e.id === deferredCharacterId) ?? selected;
 
   // The healer may be anyone in the session, or the patient themselves (self-help is allowed).
   const healPatient = healTarget ? (entries.find((e) => e.id === healTarget.id) ?? null) : null;
@@ -131,6 +139,33 @@ export default function App() {
       await reload();
     } catch (e) {
       status.error(errorMessage(e), "session:leave");
+    }
+  };
+
+  const rollInitiative = async (id: number, name: string) => {
+    const record = await sceneState.combatRoll(id);
+    const rolled = record?.scene.combat.combatants.find((c) => c.character_id === id);
+    if (!rolled?.roll) return;
+    status.show({
+      kind: "info",
+      id: `initiative:${id}`,
+      text: t(rolled.bonus !== 0 ? "initiative.rolled_bonus" : "initiative.rolled", {
+        name,
+        reflex: rolled.reflex,
+        bonus: rolled.bonus,
+        die: formatCheck(rolled.roll),
+        total: rolled.initiative,
+      }),
+    });
+  };
+
+  // The GM adds or removes an injury by hand; the sheet reads the injuries from the saved record.
+  const changeInjury = async (id: number, change: "add" | "remove", injuryId: string) => {
+    try {
+      await (change === "add" ? api.addInjury(id, injuryId) : api.removeInjury(id, injuryId));
+      await reload();
+    } catch (e) {
+      status.error(errorMessage(e), "injury");
     }
   };
 
@@ -225,13 +260,16 @@ export default function App() {
     }
   };
 
-  const openExportsFolder = () =>
-    api.openExportsFolder().catch((e: unknown) => status.error(errorMessage(e), "transfer:open"));
+  const openExportsFolder = (kind?: ExportKind) =>
+    api.openExportsFolder(kind).catch((e: unknown) => status.error(errorMessage(e), "transfer:open"));
 
-  /** Writes `ids` (or everyone) into the app's export folder and says where the file went. */
-  const exportCharacters = async (ids: number[]) => {
+  /** Writes one character, or the active session, into the export folder and says where it went. */
+  const exportCharacters = async (what: { ids: number[] } | "session") => {
+    const kind: ExportKind = what === "session" ? "session" : "character";
     try {
-      const saved = await api.exportCharacters(ids);
+      const saved = await (what === "session"
+        ? api.exportSession()
+        : api.exportCharacters(what.ids));
       status.show({
         id: "transfer",
         kind: "success",
@@ -239,7 +277,7 @@ export default function App() {
           count: saved.count,
           path: saved.path,
         }),
-        action: { label: t("transfer.open_folder"), run: () => void openExportsFolder() },
+        action: { label: t("transfer.open_folder"), run: () => void openExportsFolder(kind) },
         autoHideMs: 9000,
       });
     } catch (e) {
@@ -247,19 +285,23 @@ export default function App() {
     }
   };
 
-  /** Import reads only from the app's export folder; an empty folder is reported, not opened. */
-  const startImport = async () => {
+  /**
+   * Import reads only from the app's export folder and shows only the files of its own type; an
+   * empty folder is reported, not opened.
+   */
+  const startImport = async (kind: "character" | "session") => {
     try {
-      const files = await api.listExports();
+      const files = await api.listExports(kind);
       if (files.length === 0) {
         status.show({
           id: "transfer",
           kind: "info",
-          text: t("transfer.empty"),
-          action: { label: t("transfer.open_folder"), run: () => void openExportsFolder() },
+          text: t(kind === "session" ? "transfer.empty_session" : "transfer.empty"),
+          action: { label: t("transfer.open_folder"), run: () => void openExportsFolder(kind) },
           autoHideMs: 9000,
         });
       } else {
+        setImportKind(kind);
         setImportFiles(files);
       }
     } catch (e) {
@@ -279,7 +321,7 @@ export default function App() {
           templates: saved.templates,
           path: saved.path,
         }),
-        action: { label: t("transfer.open_folder"), run: () => void openExportsFolder() },
+        action: { label: t("transfer.open_folder"), run: () => void openExportsFolder("encounters") },
         autoHideMs: 9000,
       });
     } catch (e) {
@@ -289,13 +331,13 @@ export default function App() {
 
   const startEncounterImport = async () => {
     try {
-      const files = await api.listEncounterExports();
+      const files = await api.listExports("encounters");
       if (files.length === 0) {
         status.show({
           id: "transfer:encounters",
           kind: "info",
           text: t("encounters.import_empty"),
-          action: { label: t("transfer.open_folder"), run: () => void openExportsFolder() },
+          action: { label: t("transfer.open_folder"), run: () => void openExportsFolder("encounters") },
           autoHideMs: 9000,
         });
       } else {
@@ -385,14 +427,17 @@ export default function App() {
                 </Button>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="xs" disabled={!hasBackend} onClick={() => void startImport()}>
+                <Button variant="outline" size="xs" disabled={!hasBackend} onClick={() => void startImport("character")}>
                   {t("characters.import")}
+                </Button>
+                <Button variant="outline" size="xs" disabled={!hasBackend} onClick={() => void startImport("session")}>
+                  {t("characters.import_session")}
                 </Button>
                 <Button
                   variant="outline"
                   size="xs"
                   disabled={!hasBackend || !selected}
-                  onClick={() => selected && exportCharacters([selected.id])}
+                  onClick={() => selected && exportCharacters({ ids: [selected.id] })}
                 >
                   {t("characters.export_selected")}
                 </Button>
@@ -400,7 +445,7 @@ export default function App() {
                   variant="outline"
                   size="xs"
                   disabled={!hasBackend || members.length === 0}
-                  onClick={() => exportCharacters(members)}
+                  onClick={() => exportCharacters("session")}
                 >
                   {t("characters.export_all")}
                 </Button>
@@ -414,29 +459,35 @@ export default function App() {
                 onAdd={(id) => void joinSession(id)}
                 onLeave={(id) => void leaveSession(id)}
               />
-              {selected ? (
+              {shown ? (
+                <div className={shown.id === selectedCharacterId ? undefined : "opacity-60 transition-opacity"}>
                 <CharacterSheet
-                  key={selected.id}
-                  entry={selected}
-                  onSave={(character) => save(selected.id, character)}
-                  onSaveAsTemplate={() => saveAsTemplate(selected.id)}
+                  key={shown.id}
+                  entry={shown}
+                  onSave={(character) => save(shown.id, character)}
+                  onSaveAsTemplate={() => saveAsTemplate(shown.id)}
                   injuryTable={injuries}
                   onHeal={(injury, kind) =>
-                    setHealTarget({ id: selected.id, injuryId: injury.id, kind })
+                    setHealTarget({ id: shown.id, injuryId: injury.id, kind })
                   }
-                  onRest={() => setRestTargetId(selected.id)}
-                  onAdminister={(drug) => setDrugRequest({ helperId: selected.id, drug })}
-                  onLoseHumanity={() => setHumanityLossTargetId(selected.id)}
-                  onTherapy={() => setTherapyTargetId(selected.id)}
+                  onAddInjury={(injuryId) => void changeInjury(shown.id, "add", injuryId)}
+                  onRemoveInjury={(injuryId) => void changeInjury(shown.id, "remove", injuryId)}
+                  onRest={() => setRestTargetId(shown.id)}
+                  onAdminister={(drug) => setDrugRequest({ helperId: shown.id, drug })}
+                  onLoseHumanity={() => setHumanityLossTargetId(shown.id)}
+                  onTherapy={() => setTherapyTargetId(shown.id)}
                   onDelete={async () => {
                     try {
-                      await remove(selected.id);
+                      await remove(shown.id);
+                      // The backend passed the turn on if the deleted one was active.
+                      sceneState.replaceScene(await api.getScene());
                       selectCharacter(null);
                     } catch (e) {
                       status.error(errorMessage(e), "character:delete");
                     }
                   }}
                 />
+                </div>
               ) : (
                 hasBackend && (
                   <p className="text-muted-foreground">
@@ -530,7 +581,9 @@ export default function App() {
                   }}
                   onDamage={() => openDamage(e.id)}
                   onSetInitiative={(value) => void sceneState.combatSetInitiative(e.id, value)}
-                  onRollInitiative={() => void sceneState.combatRoll(e.id)}
+                  initiativeRoll={fighter?.roll ?? null}
+                  initiativeBonus={fighter?.bonus ?? 0}
+                  onRollInitiative={() => void rollInitiative(e.id, e.character.name)}
                   onShift={(delta) => void sceneState.combatShift(e.id, delta)}
                   onStabilize={() => setStabilizeTargetId(e.id)}
                   onRest={() => setRestTargetId(e.id)}
@@ -558,7 +611,7 @@ export default function App() {
             <ImportDialog
               files={importFiles}
               onImport={async (name) => {
-                const records = await api.importExportFile(name);
+                const records = await api.importExportFile(importKind, name);
                 void reload();
                 if (records.length === 1) selectCharacter(records[0].id);
                 status.show({
@@ -567,7 +620,7 @@ export default function App() {
                   text: t("transfer.imported", { count: records.length }),
                 });
               }}
-              onOpenFolder={() => void openExportsFolder()}
+              onOpenFolder={() => void openExportsFolder(importKind)}
               onClose={() => setImportFiles(null)}
             />
             <ImportDialog
@@ -584,7 +637,7 @@ export default function App() {
                   }),
                 });
               }}
-              onOpenFolder={() => void openExportsFolder()}
+              onOpenFolder={() => void openExportsFolder("encounters")}
               onClose={() => setEncounterImportFiles(null)}
             />
             <StabilizeDialog

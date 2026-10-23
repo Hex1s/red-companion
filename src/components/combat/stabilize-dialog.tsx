@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { FieldBadge } from "@/components/ui/field-badge";
 import { Hint } from "@/components/ui/hint";
+import { RollNote } from "@/components/ui/roll-note";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -182,6 +183,7 @@ function StabilizeForm({ target, helpers, onDone, onClose }: StabilizeFormProps)
           {failed.total} / {t("stabilize_dialog.dv")} {failed.dv} — {t("stabilize_dialog.failed")}
         </p>
       )}
+      {failed && <RollNote roll={failed.roll} />}
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       <Hint label={t("stabilize_dialog.declare_hint")}>

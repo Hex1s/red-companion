@@ -118,9 +118,19 @@ export function SkillsSection({ characterId, form, skills, onChange }: SkillsSec
     );
   };
 
-  const checkButton = (key: string, label: string) => (
-    <SkillCheckButton characterId={characterId} skillKey={key} label={label} />
-  );
+  const checkButton = (key: string, label: string) => {
+    // The check runs on the saved sheet; a level outside 0..10 would only fail there.
+    const level = values[key];
+    const invalid = key in values && !(Number.isInteger(level) && level >= 0 && level <= SKILL_MAX);
+    return (
+      <SkillCheckButton
+        characterId={characterId}
+        skillKey={key}
+        label={label}
+        disabledReason={invalid ? t("skill_check.invalid_level") : null}
+      />
+    );
+  };
 
   const skillRow = (skill: Skill) => {
     const stat = <span className="text-xs text-muted-foreground">{t(`stats.${STAT_ABBR[skill.stat]}`)}</span>;

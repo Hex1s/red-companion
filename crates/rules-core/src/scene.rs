@@ -360,6 +360,7 @@ mod tests {
             explosive: false,
             manual_critical: false,
             cover_hp: Some(cover.hp),
+            deflection: 0,
         };
         let target = TargetState { hp: 40, max_hp: 40, sp_head: 0, sp_body: 0, injuries: vec![] };
         let out = resolve_damage(&input, &target);

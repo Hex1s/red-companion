@@ -212,6 +212,17 @@
     "wound": "Condition",
     "sp": "SP",
     "sp_max": "Max SP",
+    "injury_add": "Add injury",
+    "injury_remove": "Remove injury",
+    "injury_add_hint": "No roll, no checks; the same injury can be added again (a second leg, a third arm). The death save penalty counts for each one.",
+    "import_session": "Import session",
+    "tab": {
+      "general": "General",
+      "state": "Condition",
+      "skills": "Skills",
+      "roles": "Roles",
+      "gear": "Gear and notes"
+    },
     "no_injuries": "No critical injuries.",
     "derived_hint": "Derived values update after saving.",
     "load_error": "Could not load characters: {{error}}",
@@ -370,6 +381,9 @@
     "injury_roll": "Roll 2d6",
     "injury_manual": "2d6 faces by hand",
     "injury_pick": "Pick an injury",
+    "deflect": "Damage Deflection −{{value}}",
+    "deflect_hint": "Solo: the first damage of a round is lower by this much after armor (the critical +5 is not reduced). In a fight it is ticked for the first hit of the round; outside a fight the GM ticks it.",
+    "injury_owned": "The target already has it: another instance is added",
     "no_free_injury": "The target already has every injury of this table.",
     "apply": "Apply",
     "undo": "Undo",
@@ -421,6 +435,8 @@
     "armor": "SP"
   },
   "initiative": {
+    "rolled_bonus": "{{name}}: initiative REF {{reflex}} + Solo {{bonus}} + d10 {{die}} = {{total}}",
+    "rolled": "{{name}}: initiative REF {{reflex}} + d10 {{die}} = {{total}}",
     "title": "Initiative",
     "round": "Round",
     "next_turn": "Next turn",
@@ -448,12 +464,20 @@
     "death_save_passed": "alive",
     "death_save_failed": "dead"
   },
+  "roll": {
+    "explode_up": "Exploded: the die showed 10, one more d10 added ({{first}} + {{extra}})",
+    "explode_down": "Fumble: the die showed 1, one more d10 taken away ({{first}} − {{extra}})"
+  },
   "skill_check": {
     "tooltip": "Skill check: STAT + skill + d10",
     "roll": "Roll",
     "total_hint": "Total of a physical d10 (with the 10 / 1 extra die added)",
     "total_label": "d10 total",
-    "formula": "{{stat}} {{statValue}} + skill {{level}} + d10 {{die}}"
+    "formula": "{{stat}} {{statValue}} + skill {{level}} + d10 {{die}}",
+    "toast_role": "{{name}}: {{stat}} {{statValue}} + skill {{level}} + Solo {{role}} + d10 {{die}} = {{total}}",
+    "formula_role": "{{stat}} {{statValue}} + skill {{level}} + Solo {{role}} + d10 {{die}}",
+    "toast": "{{name}}: {{stat}} {{statValue}} + skill {{level}} + d10 {{die}} = {{total}}",
+    "invalid_level": "The skill level on the sheet is outside 0–10: fix it to roll a check"
   },
   "stabilize": {
     "title": "Stabilize",
@@ -504,6 +528,7 @@
     "close": "Close"
   },
   "transfer": {
+    "empty_session": "No sessions to import: save one with «Export session» or drop a file into the folder.",
     "exported_one": "Exported 1 character: {{path}}",
     "exported_many": "Exported characters: {{count}}. File: {{path}}",
     "open_folder": "Open folder",
@@ -763,6 +788,15 @@
       "10": "Known all over the world."
     }
   },
+  "solo": {
+    "badge": "Solo",
+    "initiative": "Initiative Reaction: +{{value}} to initiative",
+    "initiative_from": "Solo: Initiative Reaction +{{value}} is in the total",
+    "deflection": "Damage Deflection: −{{value}} to the first damage of a round",
+    "perception": "Threat Detection: +{{value}} to Perception",
+    "precision": "Precision Attack: +{{value}} to attacks (hint)",
+    "spot_weakness": "Spot Weakness: +{{value}} to the first attack's damage each round (hint)"
+  },
   "roles": {
     "none": "No roles yet.",
     "add": "Add a role",
@@ -775,6 +809,8 @@
     "counter_max": "Maximum",
     "counter_remove": "Remove counter",
     "notes": "Role notes",
+    "apply_effects": "Apply the role effects",
+    "solo_effects_hint": "On: Combat Awareness points change initiative, the first damage of a round and Perception checks; the attack bonuses are hints only (hits and attack damage are not calculated). Off: the role is a reference only.",
     "rank": "Rank",
     "rank_up": "Raise rank",
     "rank_down": "Lower rank",

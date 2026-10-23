@@ -11,7 +11,7 @@ use ts_rs::TS;
 use crate::catalog::{BodyArea, CriticalInjury};
 use crate::character::{ArmorSlot, Character, CharacterRecord};
 use crate::damage::{
-    AimedTarget, ArmorMode, DamageInput, DamageOutcome, DamageRoll, resolve_damage,
+    AimedTarget, ArmorMode, DamageInput, DamageOutcome, DamageRoll, DamageStep, resolve_damage,
     roll_critical_injury,
 };
 use crate::dice::{DiceError, DiceNotation, DiceRng, RollResult, roll_manual};
@@ -30,6 +30,9 @@ pub struct DamageRequest {
     /// Cover object the target stands behind for this hit only (it does not
     /// change the character's link in the scene).
     pub cover_id: Option<u32>,
+    /// Apply Solo's Damage Deflection to this hit (the UI sets it for the first hit of a round).
+    #[serde(default)]
+    pub deflect: bool,
 }
 
 /// Cover HP before the hit, for undo.
@@ -58,6 +61,10 @@ pub struct DamageEvent {
     /// This hit killed a filler NPC (0 HP); undo brings them back.
     #[serde(default)]
     pub died: bool,
+    /// The hit used up the fighter's Damage Deflection of this round; this is what the mark was
+    /// before, so undo can put it back.
+    #[serde(default)]
+    pub deflected_before: Option<Option<u32>>,
     pub outcome: DamageOutcome,
 }
 
@@ -132,8 +139,27 @@ pub fn evaluate(
         explosive: req.explosive,
         manual_critical: req.manual_critical,
         cover_hp,
+        deflection: if req.deflect { crate::roles::damage_deflection(character) } else { 0 },
     };
     Ok(resolve_damage(&input, &character.target_state()))
+}
+
+/// What the "damage taken" window needs to offer Solo's Damage Deflection.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct DeflectionInfo {
+    /// How much the first damage of a round is reduced; 0 = the character has no deflection.
+    pub amount: u32,
+    /// The fight is on and this fighter has not had a damage reduced this round: the window
+    /// ticks the box by itself. Outside a fight the GM ticks it by hand.
+    pub first_this_round: bool,
+}
+
+pub fn deflection_info(character: &Character, character_id: i64, scene: &Scene) -> DeflectionInfo {
+    DeflectionInfo {
+        amount: crate::roles::damage_deflection(character),
+        first_this_round: scene.combat.first_damage_this_round(character_id),
+    }
 }
 
 fn slot_mut(character: &mut Character, area: BodyArea) -> &mut ArmorSlot {
@@ -169,9 +195,9 @@ pub fn apply(
             if injury.area != req.area {
                 return Err(EventError::WrongInjuryArea(id.to_string()));
             }
-            let taken = character.injuries.iter().any(|i| i == id)
-                || outcome.forced_injury.as_deref() == Some(id);
-            if taken {
+            // A chosen injury may repeat one the target already has (a second leg, a third arm);
+            // only the random roll avoids those. The forced one (aimed leg...) is not chosen twice.
+            if outcome.forced_injury.as_deref() == Some(id) {
                 return Err(EventError::InjuryOwned(id.to_string()));
             }
             Some(injury)
@@ -209,6 +235,15 @@ pub fn apply(
         scene.set_hp(undo.id, hp).map_err(|_| EventError::CoverNotFound(undo.id))?;
     }
 
+    // A hit that really was reduced uses up this round's deflection of a fighter.
+    let mut deflected_before = None;
+    let reduced = outcome.steps.iter().any(|s| matches!(s, DamageStep::Deflection { .. }));
+    if reduced && scene.combat.round > 0 && scene.combat.is_in_fight(character_id) {
+        deflected_before = Some(scene.combat.deflected.get(&character_id).copied());
+        let round = scene.combat.round;
+        scene.combat.deflected.insert(character_id, round);
+    }
+
     let event = DamageEvent {
         character_id,
         character_name: character.name.clone(),
@@ -219,6 +254,7 @@ pub fn apply(
         added_injuries,
         cover,
         died: false,
+        deflected_before,
         outcome,
     };
     scene.last_damage = Some(event.clone());
@@ -245,14 +281,26 @@ pub fn undo_character(character: &mut Character, event: &DamageEvent) {
     character.hp = event.hp_before.min(character.max_hp());
     let slot = slot_mut(character, event.request.area);
     slot.sp = event.sp_before.min(slot.max_sp);
-    character.injuries.retain(|i| !event.added_injuries.contains(i));
-    character.first_aided.retain(|i| character.injuries.contains(i));
+    // One instance per injury the hit added; instances the target already had stay.
+    for id in &event.added_injuries {
+        character.take_injury(id);
+    }
     character.death_save_penalty = event.death_save_penalty_before;
 }
 
 /// Restores the cover HP and clears the scene's last event. A cover removed in
 /// the meantime is skipped.
 pub fn undo_scene(scene: &mut Scene, event: &DamageEvent) {
+    if let Some(before) = event.deflected_before {
+        match before {
+            Some(round) => {
+                scene.combat.deflected.insert(event.character_id, round);
+            }
+            None => {
+                scene.combat.deflected.remove(&event.character_id);
+            }
+        }
+    }
     if let Some(cover) = event.cover {
         let _ = scene.set_hp(cover.id, cover.hp_before);
     }
@@ -327,6 +375,7 @@ mod tests {
             explosive: false,
             manual_critical: false,
             cover_id: None,
+            deflect: false,
         }
     }
 
@@ -379,15 +428,18 @@ mod tests {
     }
 
     #[test]
-    fn rejects_injury_the_target_already_has() {
+    fn a_chosen_injury_may_repeat_one_the_target_already_has() {
         let mut c = character();
         let injury = table().into_iter().find(|i| i.area == BodyArea::Body).unwrap();
         c.injuries.push(injury.id.clone());
         let mut scene = Scene::default();
         let mut req = request(20);
         req.manual_critical = true;
-        let err = apply(&mut c, 1, &mut scene, &req, Some(&injury.id), &table()).unwrap_err();
-        assert_eq!(err, EventError::InjuryOwned(injury.id));
+        let event = apply(&mut c, 1, &mut scene, &req, Some(&injury.id), &table()).unwrap();
+        assert_eq!(c.injury_count(&injury.id), 2);
+        // Undo takes back only what the hit added.
+        undo_character(&mut c, &event);
+        assert_eq!(c.injury_count(&injury.id), 1);
     }
 
     #[test]
@@ -490,5 +542,68 @@ mod tests {
         apply(&mut c, 1, &mut scene, &request(8), None, &table()).unwrap();
         kill_downed_npc(&mut c, &mut scene);
         assert!(!c.dead && !scene.last_damage.unwrap().died);
+    }
+
+    fn soloist(deflection_points: u8) -> Character {
+        let mut c = character();
+        let mut e = crate::roles::RoleEntry::new(crate::roles::SOLO, 6);
+        e.points.insert(crate::roles::DAMAGE_DEFLECTION.into(), deflection_points);
+        c.roles.push(e);
+        c
+    }
+
+    fn fight_with(id: i64) -> Scene {
+        let mut scene = Scene::default();
+        let die = crate::dice::check_manual(&[5]).unwrap();
+        scene.combat.add(id, 6, die).unwrap();
+        scene.combat.start(&[]).unwrap();
+        scene
+    }
+
+    #[test]
+    fn deflection_takes_off_what_passed_the_armor_and_is_used_once_per_round() {
+        // SP 11 body (see `character()`), 20 damage: 9 pass, 4 points of deflection = -2.
+        let mut c = soloist(4);
+        let mut scene = fight_with(1);
+        let req = DamageRequest { deflect: true, ..request(20) };
+        let outcome = evaluate(&c, &scene, &req).unwrap();
+        assert_eq!(outcome.hp_lost, 7);
+        let event = apply(&mut c, 1, &mut scene, &req, None, &table()).unwrap();
+        assert_eq!(event.outcome.hp_lost, 7);
+        assert_eq!(scene.combat.deflected.get(&1), Some(&1));
+        assert!(!scene.combat.first_damage_this_round(1), "this round's deflection is spent");
+        // A new round makes it available again.
+        scene.combat.next_turn(&[]).unwrap();
+        assert!(scene.combat.first_damage_this_round(1));
+        // Undo puts the mark back: the round counts as unused.
+        let mut scene = fight_with(1);
+        let mut c = soloist(4);
+        let event = apply(&mut c, 1, &mut scene, &req, None, &table()).unwrap();
+        undo_scene(&mut scene, &event);
+        assert!(scene.combat.first_damage_this_round(1));
+    }
+
+    #[test]
+    fn deflection_never_goes_below_zero_does_not_touch_armor_wear_and_skips_the_critical_bonus() {
+        let c = soloist(10); // -5
+        let scene = fight_with(1);
+        // 13 vs SP 11: 2 pass, -5 -> 0; the armor still wore (damage did get through).
+        let outcome = evaluate(&c, &scene, &DamageRequest { deflect: true, ..request(13) }).unwrap();
+        assert_eq!((outcome.hp_lost, outcome.sp_after), (0, 10));
+        // With a critical, the +5 is not reduced.
+        let crit = DamageRequest { deflect: true, manual_critical: true, ..request(13) };
+        assert_eq!(evaluate(&c, &scene, &crit).unwrap().hp_lost, 5);
+        // Switched off in the request: nothing is reduced.
+        assert_eq!(evaluate(&c, &scene, &request(13)).unwrap().hp_lost, 2);
+    }
+
+    #[test]
+    fn a_hit_that_deflection_did_not_reduce_does_not_spend_it() {
+        let mut c = soloist(4);
+        let mut scene = fight_with(1);
+        // The armor stops everything: nothing to reduce, the round's deflection stays.
+        let req = DamageRequest { deflect: true, ..request(5) };
+        apply(&mut c, 1, &mut scene, &req, None, &table()).unwrap();
+        assert!(scene.combat.first_damage_this_round(1));
     }
 }

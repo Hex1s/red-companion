@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { FieldBadge } from "@/components/ui/field-badge";
 import { Hint } from "@/components/ui/hint";
+import { RollNote } from "@/components/ui/roll-note";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -240,6 +241,7 @@ function HealForm({ target, helpers, onDone, onClose }: HealFormProps) {
           — {t("heal.failed")}
         </p>
       )}
+      {failed && <RollNote roll={failed.roll} />}
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       <Hint label={t("heal.declare_hint")}>

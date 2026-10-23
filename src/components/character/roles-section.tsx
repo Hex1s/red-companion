@@ -96,7 +96,7 @@ export function RolesSection({ form, roles, derived, onAdminister }: RolesSectio
             value=""
             onValueChange={(code) => {
               const rank = entries.length === 0 ? STARTING_RANK : 1;
-              save([...entries, { role: code, rank, points: {}, picks: [], notes: "", counters: [] }]);
+              save([...entries, { role: code, rank, points: {}, picks: [], notes: "", counters: [], apply_effects: true }]);
               setOpenCode(code);
             }}
           >

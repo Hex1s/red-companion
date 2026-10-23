@@ -12,4 +12,8 @@ export type DamageRequest = { damage: DamageRoll, area: BodyArea, aimed: AimedTa
  * Cover object the target stands behind for this hit only (it does not
  * change the character's link in the scene).
  */
-cover_id: number | null, };
+cover_id: number | null, 
+/**
+ * Apply Solo's Damage Deflection to this hit (the UI sets it for the first hit of a round).
+ */
+deflect: boolean, };

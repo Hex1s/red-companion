@@ -68,7 +68,14 @@ function DialogContent({
         )}
         {...props}
       >
-        {children}
+        {/* The cut frame paints its fill on a pseudo-element that does not scroll, so the scroll
+            lives in this inner body, never on the frame itself. */}
+        <div
+          data-slot="dialog-body"
+          className="-mr-2 grid max-h-[calc(100dvh-5rem)] gap-4 overflow-y-auto pr-2"
+        >
+          {children}
+        </div>
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"

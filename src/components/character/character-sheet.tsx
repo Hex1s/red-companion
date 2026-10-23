@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { BedDouble, BrainCircuit, HeartPulse } from "lucide-react";
+import { BedDouble, BrainCircuit, HeartPulse, Plus, X } from "lucide-react";
 import { useForm, type Path } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import type { Character } from "@/bindings/Character";
@@ -26,8 +26,11 @@ import { FieldBadge } from "@/components/ui/field-badge";
 import { Hint } from "@/components/ui/hint";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { errorMessage, type CharacterEntry } from "@/hooks/use-characters";
 import { useRoles } from "@/hooks/use-roles";
+import { useUiStore, type SheetTab } from "@/store/ui-store";
 import { useSkills } from "@/hooks/use-skills";
 import { api } from "@/lib/api";
 import { characterSchema, REPUTATION_MAX, SP_MAX, STAT_MAX, STAT_MIN } from "@/lib/character-schema";
@@ -62,6 +65,9 @@ type CharacterSheetProps = {
   injuryTable: CriticalInjury[];
   /** Opens the healing window for one injury of this character. */
   onHeal: (injury: CriticalInjury, kind: HealKind) => void;
+  /** The GM adds an injury by hand (no roll, may repeat) or removes one instance of it. */
+  onAddInjury: (injuryId: string) => void;
+  onRemoveInjury: (injuryId: string) => void;
   /** Opens the rest window. */
   onRest: () => void;
   /** Opens the humanity loss window. */
@@ -71,6 +77,15 @@ type CharacterSheetProps = {
   /** Opens the dose window: this character (a Medtech) gives a drug they picked. */
   onAdminister: (drug: string) => void;
 };
+
+/** Tabs of the sheet; the header with name, HP and armor stays above them. */
+const SHEET_TABS: { value: SheetTab; label: string }[] = [
+  { value: "general", label: "characters.tab.general" },
+  { value: "state", label: "characters.tab.state" },
+  { value: "skills", label: "characters.tab.skills" },
+  { value: "roles", label: "characters.tab.roles" },
+  { value: "gear", label: "characters.tab.gear" },
+];
 
 type SectionProps = { title: string; children: ReactNode };
 
@@ -102,6 +117,8 @@ export function CharacterSheet({
   onSaveAsTemplate,
   injuryTable,
   onHeal,
+  onAddInjury,
+  onRemoveInjury,
   onRest,
   onLoseHumanity,
   onTherapy,
@@ -109,6 +126,8 @@ export function CharacterSheet({
 }: CharacterSheetProps) {
   const { t } = useTranslation();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const sheetTab = useUiStore((st) => st.sheetTab);
+  const setSheetTab = useUiStore((st) => st.setSheetTab);
   const [derived, setDerived] = useState<Derived>(entry.derived);
   const skills = useSkills();
   const roles = useRoles();
@@ -232,6 +251,21 @@ export function CharacterSheet({
       : t("characters.validation.range", range);
   };
 
+  const tabHasError = (tab: SheetTab) => {
+    switch (tab) {
+      case "general":
+        return Boolean(errors.stats || errors.reputation);
+      case "skills":
+        return Boolean(errors.skills);
+      case "roles":
+        return Boolean(errors.roles);
+      case "gear":
+        return Boolean(errors.notes);
+      default:
+        return false;
+    }
+  };
+
   const armorField = (area: "armor_head" | "armor_body", label: string) => {
     const range = { min: 0, max: SP_MAX };
     return (
@@ -276,225 +310,300 @@ export function CharacterSheet({
   };
 
   return (
-    <form onSubmit={(e) => e.preventDefault()} className="max-w-3xl space-y-6" noValidate>
-      <div className="flex items-end gap-3">
-        <div className="flex-1 space-y-1">
-          <Label htmlFor="name">{t("characters.name")}</Label>
-          <FieldBadge error={errorText(errors.name, { min: 0, max: 0 })}>
-            {(invalid) => <Input id="name" aria-invalid={invalid} {...register("name")} />}
-          </FieldBadge>
-        </div>
-        <span className="pb-2 text-xs text-muted-foreground uppercase">
-          {t(`characters.kind.${entry.kind}`)}
-        </span>
-        {entry.kind === "npc" && (
-          <Button type="button" variant="outline" onClick={() => void onSaveAsTemplate()}>
-            {t("encounters.save_as_template")}
-          </Button>
-        )}
-        <Button type="button" variant="outline" onClick={() => setConfirmDelete(true)}>
-          {t("characters.delete")}
-        </Button>
-      </div>
-      <Section title={t("characters.section.stats")}>
-        <div className="grid grid-cols-5 gap-2">
-          {STAT_KEYS.map(({ key, label }) => (
-            <div key={key} className="cut [--cut:6px] space-y-1 p-3">
-              <Label htmlFor={`stats.${key}`} className="text-xs text-muted-foreground">
-                {t(`stats.${label}`)}
-              </Label>
-              <FieldBadge
-                error={errorText(errors.stats?.[key], {
-                  min: key === "emp" || key === "luck" ? 0 : STAT_MIN,
-                  max: STAT_MAX,
-                })}
-              >
-                {(invalid) => (
-                  <Input
-                    id={`stats.${key}`}
-                    type="number"
-                    min={key === "emp" || key === "luck" ? 0 : STAT_MIN}
-                    max={STAT_MAX}
-                    className="num text-lg font-bold"
-                    aria-invalid={invalid}
-                    {...num(`stats.${key}`)}
-                  />
-                )}
-              </FieldBadge>
-            </div>
-          ))}
-          <div className="cut [--cut:6px] space-y-1 p-3">
-            <Hint label={t("reputation.field_hint")}>
-              <Label htmlFor="reputation" className="text-xs text-muted-foreground">
-                {t("reputation.field")}
-              </Label>
-            </Hint>
-            <FieldBadge error={errors.reputation ? t("reputation.validation") : null}>
-              {(invalid) => (
-                <Input
-                  id="reputation"
-                  type="number"
-                  min={-REPUTATION_MAX}
-                  max={REPUTATION_MAX}
-                  className="num text-lg font-bold"
-                  aria-invalid={invalid}
-                  {...num("reputation")}
-                />
-              )}
+    <form onSubmit={(e) => e.preventDefault()} className="max-w-3xl space-y-4" noValidate>
+      <Tabs value={sheetTab} onValueChange={(v) => setSheetTab(v as SheetTab)} className="gap-4">
+        <div className="sticky top-0 z-10 -mx-1 space-y-3 bg-background px-1 pb-2">
+        <div className="flex items-end gap-3">
+          <div className="flex-1 space-y-1">
+            <Label htmlFor="name">{t("characters.name")}</Label>
+            <FieldBadge error={errorText(errors.name, { min: 0, max: 0 })}>
+              {(invalid) => <Input id="name" aria-invalid={invalid} {...register("name")} />}
             </FieldBadge>
           </div>
+          <span className="pb-2 text-xs text-muted-foreground uppercase">
+            {t(`characters.kind.${entry.kind}`)}
+          </span>
+          {entry.kind === "npc" && (
+            <Button type="button" variant="outline" onClick={() => void onSaveAsTemplate()}>
+              {t("encounters.save_as_template")}
+            </Button>
+          )}
+          <Button type="button" variant="outline" onClick={() => setConfirmDelete(true)}>
+            {t("characters.delete")}
+          </Button>
         </div>
-      </Section>
+          <div className="cut space-y-3 p-3 [--cut:6px]">
+            <div className="flex items-end gap-3">
+              <div className="w-28 space-y-1">
+                <Label htmlFor="hp">{t("characters.hp")}</Label>
+                <FieldBadge error={errorText(errors.hp, { min: 0, max: derived.max_hp })}>
+                  {(invalid) => (
+                    <Input
+                      id="hp"
+                      type="number"
+                      min={0}
+                      className="num"
+                      aria-invalid={invalid}
+                      {...num("hp")}
+                    />
+                  )}
+                </FieldBadge>
+              </div>
+              <HpBar current={Number(watch("hp")) || 0} max={derived.max_hp} className="flex-1 pb-3" />
+              <WoundBadge state={derived.wound_state} className="pb-2" />
+              {canRest && (
+                <Hint label={t("rest.hint")}>
+                  <Button type="button" size="sm" variant="outline" className="mb-1.5" onClick={onRest}>
+                    <BedDouble />
+                    {t("rest.button")}
+                  </Button>
+                </Hint>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {armorField("armor_head", t("armor.head"))}
+              {armorField("armor_body", t("armor.body"))}
+            </div>
+          </div>
+          <TabsList variant="line" className="w-full justify-start">
+            {SHEET_TABS.map(({ value, label }) => (
+              <TabsTrigger key={value} value={value} className="flex-none px-3">
+                {t(label)}
+                {tabHasError(value) && <span className="ml-1 text-destructive">!</span>}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
 
-      <Section title={t("characters.section.derived")}>
-        <div className="cut [--cut:6px] space-y-3 p-3">
-          <div className="flex items-end gap-3">
-            <div className="w-28 space-y-1">
-              <Label htmlFor="hp">{t("characters.hp")}</Label>
-              <FieldBadge error={errorText(errors.hp, { min: 0, max: derived.max_hp })}>
+        <TabsContent value="general" forceMount className="space-y-6 data-[state=inactive]:hidden">
+        <Section title={t("characters.section.stats")}>
+          <div className="grid grid-cols-5 gap-2">
+            {STAT_KEYS.map(({ key, label }) => (
+              <div key={key} className="cut [--cut:6px] space-y-1 p-3">
+                <Label htmlFor={`stats.${key}`} className="text-xs text-muted-foreground">
+                  {t(`stats.${label}`)}
+                </Label>
+                <FieldBadge
+                  error={errorText(errors.stats?.[key], {
+                    min: key === "emp" || key === "luck" ? 0 : STAT_MIN,
+                    max: STAT_MAX,
+                  })}
+                >
+                  {(invalid) => (
+                    <Input
+                      id={`stats.${key}`}
+                      type="number"
+                      min={key === "emp" || key === "luck" ? 0 : STAT_MIN}
+                      max={STAT_MAX}
+                      className="num text-lg font-bold"
+                      aria-invalid={invalid}
+                      {...num(`stats.${key}`)}
+                    />
+                  )}
+                </FieldBadge>
+              </div>
+            ))}
+            <div className="cut [--cut:6px] space-y-1 p-3">
+              <Hint label={t("reputation.field_hint")}>
+                <Label htmlFor="reputation" className="text-xs text-muted-foreground">
+                  {t("reputation.field")}
+                </Label>
+              </Hint>
+              <FieldBadge error={errors.reputation ? t("reputation.validation") : null}>
                 {(invalid) => (
                   <Input
-                    id="hp"
+                    id="reputation"
                     type="number"
-                    min={0}
-                    className="num"
+                    min={-REPUTATION_MAX}
+                    max={REPUTATION_MAX}
+                    className="num text-lg font-bold"
                     aria-invalid={invalid}
-                    {...num("hp")}
+                    {...num("reputation")}
                   />
                 )}
               </FieldBadge>
             </div>
-            <HpBar current={Number(watch("hp")) || 0} max={derived.max_hp} className="flex-1 pb-3" />
-            <WoundBadge state={derived.wound_state} className="pb-2" />
-            {canRest && (
-              <Hint label={t("rest.hint")}>
-                <Button type="button" size="sm" variant="outline" className="mb-1.5" onClick={onRest}>
-                  <BedDouble />
-                  {t("rest.button")}
-                </Button>
-              </Hint>
-            )}
           </div>
-          <div className="grid grid-cols-4 gap-2">
-            <StatTile label={t("characters.max_hp")} value={derived.max_hp} />
-            <StatTile label={t("characters.serious_threshold")} value={derived.serious_threshold} />
-            <StatTile label={t("characters.death_save")} value={`≤ ${derived.death_save}`} />
-            <StatTile label={t("characters.humanity")} value={derived.max_humanity} />
+        </Section>
+
+        <Section title={t("characters.section.derived")}>
+            <div className="grid grid-cols-4 gap-2">
+              <StatTile label={t("characters.max_hp")} value={derived.max_hp} />
+              <StatTile label={t("characters.serious_threshold")} value={derived.serious_threshold} />
+              <StatTile label={t("characters.death_save")} value={`≤ ${derived.death_save}`} />
+              <StatTile label={t("characters.humanity")} value={derived.max_humanity} />
+            </div>
+        </Section>
+        </TabsContent>
+
+        <TabsContent value="state" forceMount className="space-y-6 data-[state=inactive]:hidden">
+        <Section title={t("glossary.humanity_full")}>
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="grid flex-1 grid-cols-3 gap-2">
+              <StatTile
+                label={t("glossary.humanity")}
+                value={`${derived.humanity} / ${derived.max_humanity}`}
+              />
+              <StatTile label={t("humanity.emp_now")} value={derived.effective_emp} />
+              <StatTile label={t("humanity.emp_base")} value={entry.character.stats.emp} />
+            </div>
+            <Hint label={t("humanity.loss_hint")}>
+              <Button type="button" size="sm" variant="outline" disabled={alive.dead} onClick={onLoseHumanity}>
+                <BrainCircuit />
+                {t("humanity.loss_button")}
+              </Button>
+            </Hint>
+            <Hint label={t("humanity.therapy_hint")}>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={alive.dead || derived.humanity >= derived.max_humanity}
+                onClick={onTherapy}
+              >
+                <HeartPulse />
+                {t("humanity.therapy_button")}
+              </Button>
+            </Hint>
           </div>
-        </div>
-      </Section>
+          {derived.cyberpsychosis && (
+            <Hint label={t("humanity.cyberpsychosis_hint")}>
+              <p className="font-display text-sm font-semibold text-state-mortal uppercase">
+                {t("humanity.cyberpsychosis")}
+              </p>
+            </Hint>
+          )}
+        </Section>
 
-      <Section title={t("glossary.humanity_full")}>
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="grid flex-1 grid-cols-3 gap-2">
-            <StatTile
-              label={t("glossary.humanity")}
-              value={`${derived.humanity} / ${derived.max_humanity}`}
-            />
-            <StatTile label={t("humanity.emp_now")} value={derived.effective_emp} />
-            <StatTile label={t("humanity.emp_base")} value={entry.character.stats.emp} />
-          </div>
-          <Hint label={t("humanity.loss_hint")}>
-            <Button type="button" size="sm" variant="outline" disabled={alive.dead} onClick={onLoseHumanity}>
-              <BrainCircuit />
-              {t("humanity.loss_button")}
-            </Button>
-          </Hint>
-          <Hint label={t("humanity.therapy_hint")}>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={alive.dead || derived.humanity >= derived.max_humanity}
-              onClick={onTherapy}
-            >
-              <HeartPulse />
-              {t("humanity.therapy_button")}
-            </Button>
-          </Hint>
-        </div>
-        {derived.cyberpsychosis && (
-          <Hint label={t("humanity.cyberpsychosis_hint")}>
-            <p className="font-display text-sm font-semibold text-state-mortal uppercase">
-              {t("humanity.cyberpsychosis")}
-            </p>
-          </Hint>
-        )}
-      </Section>
-
-      <Section title={t("characters.section.armor")}>
-        <div className="grid grid-cols-2 gap-2">
-          {armorField("armor_head", t("armor.head"))}
-          {armorField("armor_body", t("armor.body"))}
-        </div>
-      </Section>
-
-      <Section title={t("characters.section.injuries")}>
-        {entry.character.injuries.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("characters.no_injuries")}</p>
-        ) : (
-          <ul className="space-y-1 text-sm">
-            {entry.character.injuries.map((id) => {
-              const injury = injuryTable.find((i) => i.id === id);
-              const aided = entry.character.first_aided.includes(id);
-              const quick = injury?.quick_fix_removes_effect === true;
-              const canFirstAid = injury && !alive.dead && injury.first_aid.length > 0 && !aided;
-              const canTreat = injury && !alive.dead && injury.treatment.length > 0;
-              return (
-                <li key={id} className="cut flex items-center gap-2 px-3 py-1.5 [--cut:4px]">
-                  <InjuryIcon id={id} className="size-5 text-primary" />
-                  <span className="flex-1">
-                    {t(`injury.${id}.name`, { defaultValue: id })}
-                    {aided && (
-                      <span className="ml-2 text-xs text-state-ok">{t("heal.lifted_badge")}</span>
+        <Section title={t("characters.section.injuries")}>
+          {entry.character.injuries.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t("characters.no_injuries")}</p>
+          ) : (
+            <ul className="space-y-1 text-sm">
+              {entry.character.injuries.map((id, index) => {
+                const injury = injuryTable.find((i) => i.id === id);
+                // The same injury may repeat; the first-aid marks go to its earliest instances.
+                const nth = entry.character.injuries.slice(0, index).filter((i) => i === id).length;
+                const aided = nth < entry.character.first_aided.filter((i) => i === id).length;
+                const quick = injury?.quick_fix_removes_effect === true;
+                const canFirstAid = injury && !alive.dead && injury.first_aid.length > 0 && !aided;
+                const canTreat = injury && !alive.dead && injury.treatment.length > 0;
+                return (
+                  <li key={`${id}:${index}`} className="cut flex items-center gap-2 px-3 py-1.5 [--cut:4px]">
+                    <InjuryIcon id={id} className="size-5 text-primary" />
+                    <span className="flex-1">
+                      {t(`injury.${id}.name`, { defaultValue: id })}
+                      {aided && (
+                        <span className="ml-2 text-xs text-state-ok">{t("heal.lifted_badge")}</span>
+                      )}
+                    </span>
+                    {canFirstAid && (
+                      <Hint label={quick ? t("heal.quick_fix_hint") : t("heal.first_aid_hint")}>
+                        <Button
+                          type="button"
+                          size="xs"
+                          variant="outline"
+                          onClick={() => onHeal(injury, "first_aid")}
+                        >
+                          {quick ? t("heal.quick_fix") : t("heal.first_aid")}
+                        </Button>
+                      </Hint>
                     )}
-                  </span>
-                  {canFirstAid && (
-                    <Hint label={quick ? t("heal.quick_fix_hint") : t("heal.first_aid_hint")}>
+                    {canTreat && (
+                      <Hint label={t("heal.treatment_hint")}>
+                        <Button
+                          type="button"
+                          size="xs"
+                          variant="outline"
+                          onClick={() => onHeal(injury, "treatment")}
+                        >
+                          {t("heal.treatment")}
+                        </Button>
+                      </Hint>
+                    )}
+                    <Hint label={t("characters.injury_remove")}>
                       <Button
                         type="button"
-                        size="xs"
-                        variant="outline"
-                        onClick={() => onHeal(injury, "first_aid")}
+                        size="icon-xs"
+                        variant="ghost"
+                        aria-label={t("characters.injury_remove")}
+                        onClick={() => onRemoveInjury(id)}
                       >
-                        {quick ? t("heal.quick_fix") : t("heal.first_aid")}
+                        <X />
                       </Button>
                     </Hint>
-                  )}
-                  {canTreat && (
-                    <Hint label={t("heal.treatment_hint")}>
-                      <Button
-                        type="button"
-                        size="xs"
-                        variant="outline"
-                        onClick={() => onHeal(injury, "treatment")}
-                      >
-                        {t("heal.treatment")}
-                      </Button>
-                    </Hint>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </Section>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button type="button" size="xs" variant="outline" className="mt-2">
+                <Plus />
+                {t("characters.injury_add")}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-80 space-y-2">
+              <p className="text-xs text-muted-foreground">{t("characters.injury_add_hint")}</p>
+              {(["body", "head"] as const).map((area) => (
+                <div key={area} className="space-y-1">
+                  <div className="text-xs text-muted-foreground uppercase">{t(`glossary.area.${area}`)}</div>
+                  <div className="flex flex-wrap gap-1">
+                    {injuryTable
+                      .filter((i) => i.area === area)
+                      .sort((a, b) => a.roll - b.roll)
+                      .map((injury) => (
+                        <Hint
+                          key={injury.id}
+                          label={
+                            <span className="block max-w-64">
+                              <span className="block font-semibold">{t(injury.name_key)}</span>
+                              <span className="block">{t(injury.effect_key)}</span>
+                            </span>
+                          }
+                        >
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="outline"
+                            aria-label={t(injury.name_key)}
+                            onClick={() => onAddInjury(injury.id)}
+                          >
+                            <InjuryIcon id={injury.id} className="size-6" />
+                          </Button>
+                        </Hint>
+                      ))}
+                  </div>
+                </div>
+              ))}
+            </PopoverContent>
+          </Popover>
+        </Section>
+        </TabsContent>
 
-      <Section title={t("characters.section.roles")}>
-        <RolesSection form={form} roles={roles} derived={derived} onAdminister={onAdminister} />
-      </Section>
+        <TabsContent value="skills" forceMount className="space-y-6 data-[state=inactive]:hidden">
+        <Section title={t("characters.section.skills")}>
+          <SkillsSection characterId={entry.id} form={form} skills={skills} onChange={scheduleSave} />
+        </Section>
+        </TabsContent>
 
-      <Section title={t("characters.section.skills")}>
-        <SkillsSection characterId={entry.id} form={form} skills={skills} onChange={scheduleSave} />
-      </Section>
+        <TabsContent value="roles" forceMount className="space-y-6 data-[state=inactive]:hidden">
+        <Section title={t("characters.section.roles")}>
+          <RolesSection form={form} roles={roles} derived={derived} onAdminister={onAdminister} />
+        </Section>
+        </TabsContent>
 
-      <Section title={t("characters.notes")}>
-        <textarea
-          rows={4}
-          className="w-full border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring"
-          {...register("notes")}
-        />
-      </Section>
+        <TabsContent value="gear" forceMount className="space-y-6 data-[state=inactive]:hidden">
+        <Section title={t("characters.notes")}>
+          <textarea
+            rows={4}
+            className="w-full border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring"
+            {...register("notes")}
+          />
+        </Section>
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <DialogContent>

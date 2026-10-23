@@ -15,4 +15,9 @@ added_injuries: Array<string>, cover: CoverUndo | null,
 /**
  * This hit killed a filler NPC (0 HP); undo brings them back.
  */
-died: boolean, outcome: DamageOutcome, };
+died: boolean, 
+/**
+ * The hit used up the fighter's Damage Deflection of this round; this is what the mark was
+ * before, so undo can put it back.
+ */
+deflected_before: number | null | null, outcome: DamageOutcome, };

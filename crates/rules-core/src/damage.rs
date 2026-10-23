@@ -78,6 +78,9 @@ pub struct DamageInput {
     pub manual_critical: bool,
     /// Current HP of the cover the target stands behind, if any.
     pub cover_hp: Option<u32>,
+    /// How much a role (Solo's Damage Deflection) takes off the damage that got through armor.
+    #[serde(default)]
+    pub deflection: u32,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -130,6 +133,12 @@ pub enum DamageStep {
     },
     AimedHeadMultiplier {
         factor: u32,
+        before: u32,
+        after: u32,
+    },
+    /// Solo's Damage Deflection took some of what got through the armor (p. 146).
+    Deflection {
+        amount: u32,
         before: u32,
         after: u32,
     },
@@ -313,6 +322,14 @@ pub fn resolve_damage(input: &DamageInput, target: &TargetState) -> DamageOutcom
         through = after;
     }
 
+    // Damage Deflection (p. 146): the first damage of the round is reduced, after the armor and
+    // the aimed-head multiplier, never below zero. The critical bonus below is not reduced.
+    if input.deflection > 0 && through > 0 {
+        let after = through.saturating_sub(input.deflection);
+        steps.push(DamageStep::Deflection { amount: input.deflection, before: through, after });
+        through = after;
+    }
+
     // Aimed shots at an item or a leg need only one point through the armor.
     let mut item_dropped = false;
     let mut forced_injury = None;
@@ -431,6 +448,7 @@ mod tests {
             explosive: false,
             manual_critical: false,
             cover_hp: None,
+            deflection: 0,
         }
     }
 

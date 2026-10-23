@@ -27,6 +27,9 @@ pub struct Combatant {
     pub reflex: u8,
     /// The d10 check; `None` when the total was typed in by hand.
     pub roll: Option<CheckRoll>,
+    /// What a role added to the roll (Solo's Personal Initiative); part of `initiative`.
+    #[serde(default)]
+    pub bonus: i32,
     pub initiative: i32,
 }
 
@@ -48,6 +51,11 @@ pub struct Combat {
     /// death save yet (set by the app when a turn begins).
     #[serde(default)]
     pub death_save_due: bool,
+    /// The round in which a fighter last had their first damage reduced (Solo's Damage
+    /// Deflection works once per round); cleared when the fight ends.
+    #[serde(default)]
+    #[ts(type = "Record<string, number>")]
+    pub deflected: std::collections::BTreeMap<i64, u32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
@@ -95,13 +103,25 @@ impl Combat {
         reflex: u8,
         roll: CheckRoll,
     ) -> Result<(), InitiativeError> {
+        self.add_with_bonus(character_id, reflex, 0, roll)
+    }
+
+    /// Like `add`, with a bonus from a role on top of REF and the die.
+    pub fn add_with_bonus(
+        &mut self,
+        character_id: i64,
+        reflex: u8,
+        bonus: i32,
+        roll: CheckRoll,
+    ) -> Result<(), InitiativeError> {
         if self.combatants.iter().any(|c| c.character_id == character_id) {
             return Err(InitiativeError::AlreadyInFight(character_id));
         }
         self.insert_sorted(Combatant {
             character_id,
             reflex,
-            initiative: i32::from(reflex) + roll.total,
+            bonus,
+            initiative: i32::from(reflex) + bonus + roll.total,
             roll: Some(roll),
         });
         Ok(())
@@ -114,12 +134,23 @@ impl Combat {
         reflex: u8,
         roll: CheckRoll,
     ) -> Result<(), InitiativeError> {
+        self.reroll_with_bonus(character_id, reflex, 0, roll)
+    }
+
+    pub fn reroll_with_bonus(
+        &mut self,
+        character_id: i64,
+        reflex: u8,
+        bonus: i32,
+        roll: CheckRoll,
+    ) -> Result<(), InitiativeError> {
         let at = self.position(character_id)?;
         self.combatants.remove(at);
         self.insert_sorted(Combatant {
             character_id,
             reflex,
-            initiative: i32::from(reflex) + roll.total,
+            bonus,
+            initiative: i32::from(reflex) + bonus + roll.total,
             roll: Some(roll),
         });
         Ok(())
@@ -137,6 +168,7 @@ impl Combat {
         let at = self.position(character_id)?;
         let mut entry = self.combatants.remove(at);
         entry.roll = None;
+        entry.bonus = 0;
         entry.initiative = initiative;
         self.insert_sorted(entry);
         Ok(())
@@ -150,10 +182,20 @@ impl Combat {
         reflex: u8,
         roll: CheckRoll,
     ) -> Result<(), InitiativeError> {
+        self.roll_with_bonus(character_id, reflex, 0, roll)
+    }
+
+    pub fn roll_with_bonus(
+        &mut self,
+        character_id: i64,
+        reflex: u8,
+        bonus: i32,
+        roll: CheckRoll,
+    ) -> Result<(), InitiativeError> {
         if self.is_in_fight(character_id) {
-            self.reroll(character_id, reflex, roll)
+            self.reroll_with_bonus(character_id, reflex, bonus, roll)
         } else {
-            self.add(character_id, reflex, roll)
+            self.add_with_bonus(character_id, reflex, bonus, roll)
         }
     }
 
@@ -169,7 +211,7 @@ impl Combat {
             return Err(InitiativeError::OutOfRange);
         }
         if !self.is_in_fight(character_id) {
-            self.insert_sorted(Combatant { character_id, reflex, roll: None, initiative });
+            self.insert_sorted(Combatant { character_id, reflex, bonus: 0, roll: None, initiative });
             return Ok(());
         }
         self.set_initiative(character_id, initiative)
@@ -242,7 +284,15 @@ impl Combat {
             }
         }
         self.combatants.remove(at);
+        self.deflected.remove(&character_id);
         Ok(())
+    }
+
+    /// The fight is on, this fighter is in it and has not had a damage reduced this round yet.
+    pub fn first_damage_this_round(&self, character_id: i64) -> bool {
+        self.round > 0
+            && self.is_in_fight(character_id)
+            && self.deflected.get(&character_id) != Some(&self.round)
     }
 
     /// Ends the fight and forgets the order.
@@ -303,6 +353,18 @@ mod tests {
         assert_eq!(combat.add(1, 5, die(5)), Err(InitiativeError::AlreadyInFight(1)));
         assert_eq!(combat.reroll(9, 5, die(5)), Err(InitiativeError::NotInFight(9)));
         assert_eq!(combat.shift(9, 1), Err(InitiativeError::NotInFight(9)));
+    }
+
+    #[test]
+    fn a_role_bonus_is_part_of_the_total_and_kept_for_the_tooltip() {
+        let mut combat = Combat::default();
+        combat.add_with_bonus(1, 6, 3, die(5)).unwrap();
+        assert_eq!((combat.combatants[0].initiative, combat.combatants[0].bonus), (14, 3));
+        combat.roll_with_bonus(1, 6, 2, die(9)).unwrap();
+        assert_eq!((combat.combatants[0].initiative, combat.combatants[0].bonus), (17, 2));
+        // A total typed in by hand carries no bonus: the table already did the sum.
+        combat.set_initiative(1, 11).unwrap();
+        assert_eq!(combat.combatants[0].bonus, 0);
     }
 
     #[test]

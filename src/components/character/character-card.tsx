@@ -1,13 +1,16 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { BedDouble, ChevronDown, ChevronUp, Dices, RotateCcw, Swords, UserMinus } from "lucide-react";
+import { BedDouble, ChevronDown, ChevronUp, Dices, RotateCcw, Swords, UserMinus, Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import type { CheckRoll } from "@/bindings/CheckRoll";
 import type { DeathSave } from "@/bindings/DeathSave";
 import { WoundBadge } from "@/components/character/wound-badge";
 import { Button } from "@/components/ui/button";
 import { FieldBadge } from "@/components/ui/field-badge";
 import { Hint } from "@/components/ui/hint";
 import { Input } from "@/components/ui/input";
+import { RollNote } from "@/components/ui/roll-note";
 import type { CharacterEntry } from "@/hooks/use-characters";
+import { explosionOf } from "@/lib/dice";
 import { cn } from "@/lib/utils";
 import { HpBar } from "./hp-bar";
 
@@ -35,6 +38,10 @@ type CharacterCardProps = {
   onDamage: () => void;
   onSetInitiative: (value: number) => void;
   onRollInitiative: () => void;
+  /** The d10 behind the initiative; `null` when the total was typed in. */
+  initiativeRoll: CheckRoll | null;
+  /** What a role added to that roll (Solo's Personal Initiative); 0 when nothing. */
+  initiativeBonus: number;
   onShift: (delta: number) => void;
   onStabilize: () => void;
   /** Opens the rest window (HP back over days of rest). */
@@ -68,6 +75,8 @@ export function CharacterCard({
   onDamage,
   onSetInitiative,
   onRollInitiative,
+  initiativeRoll,
+  initiativeBonus,
   onShift,
   onStabilize,
   onRest,
@@ -98,6 +107,13 @@ export function CharacterCard({
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
   // Only a mortally wounded character (0 HP) is stabilised; the dead can be brought back.
   const mortal = derived.wound_state === "mortal";
+  // Solo's Combat Awareness is on and some points are placed: a badge lists what they do.
+  const hasSoloEffects =
+    derived.solo_initiative > 0 ||
+    derived.solo_deflection > 0 ||
+    derived.solo_perception > 0 ||
+    derived.solo_precision > 0 ||
+    derived.solo_spot_weakness > 0;
   const dead = derived.wound_state === "dead";
 
   return (
@@ -112,7 +128,20 @@ export function CharacterCard({
       onClick={select}
     >
       <div className="flex items-center gap-1.5">
-        <Hint label={t("card.initiative_hint")}>
+        <Hint
+          label={
+            initiativeBonus !== 0 ? (
+              <span className="block max-w-64">
+                {t("card.initiative_hint")}
+                <span className="num mt-1 block text-primary">
+                  {t("solo.initiative_from", { value: initiativeBonus })}
+                </span>
+              </span>
+            ) : (
+              t("card.initiative_hint")
+            )
+          }
+        >
           <Input
             inputMode="numeric"
             value={text}
@@ -124,6 +153,16 @@ export function CharacterCard({
             className="num h-7 w-12 px-1 text-center text-base font-bold text-primary"
           />
         </Hint>
+        {explosionOf(initiativeRoll) && (
+          <Hint label={<RollNote roll={initiativeRoll} />}>
+            <Zap
+              className={cn(
+                "size-3.5 shrink-0",
+                explosionOf(initiativeRoll)?.direction === "up" ? "text-primary" : "text-state-serious",
+              )}
+            />
+          </Hint>
+        )}
         <Hint label={t("card.initiative_roll", { reflex: character.stats.reflex })}>
           <Button
             type="button"
@@ -192,6 +231,23 @@ export function CharacterCard({
         </span>
         <WoundBadge state={derived.wound_state} className="ml-auto text-xs" />
       </div>
+      {hasSoloEffects && (
+        <Hint
+          label={
+            <ul className="num space-y-0.5">
+              {derived.solo_initiative > 0 && <li>{t("solo.initiative", { value: derived.solo_initiative })}</li>}
+              {derived.solo_deflection > 0 && <li>{t("solo.deflection", { value: derived.solo_deflection })}</li>}
+              {derived.solo_perception > 0 && <li>{t("solo.perception", { value: derived.solo_perception })}</li>}
+              {derived.solo_precision > 0 && <li>{t("solo.precision", { value: derived.solo_precision })}</li>}
+              {derived.solo_spot_weakness > 0 && (
+                <li>{t("solo.spot_weakness", { value: derived.solo_spot_weakness })}</li>
+              )}
+            </ul>
+          }
+        >
+          <p className="font-display text-xs font-semibold text-primary uppercase">{t("solo.badge")}</p>
+        </Hint>
+      )}
       {derived.cyberpsychosis && (
         <Hint label={t("humanity.cyberpsychosis_hint")}>
           <p className="font-display text-xs font-semibold text-state-mortal uppercase">

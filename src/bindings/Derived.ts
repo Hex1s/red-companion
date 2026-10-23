@@ -37,4 +37,20 @@ surgery_skill: number,
 /**
  * Medical Technology skill from a Medtech's Medicine (0 without it).
  */
-medical_tech_skill: number, };
+medical_tech_skill: number, 
+/**
+ * Solo's Combat Awareness, while the role's effects are on: initiative roll bonus...
+ */
+solo_initiative: number, 
+/**
+ * ...how much the first damage of a round is reduced...
+ */
+solo_deflection: number, 
+/**
+ * ...bonus to Perception checks...
+ */
+solo_perception: number, 
+/**
+ * ...and the two attack bonuses shown as hints (to any attack; to the first hit's damage).
+ */
+solo_precision: number, solo_spot_weakness: number, };

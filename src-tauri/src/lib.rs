@@ -15,7 +15,7 @@ use rules_core::dice::{
 use rules_core::skill_check::{self, SkillCheck};
 use rules_core::scene::{CoverPreset, Scene, SceneRecord, SessionInfo, cover_presets};
 use rules_core::encounter_transfer::{self, EncountersImported, EncountersSaved};
-use rules_core::transfer::{self, ExportFile, ExportSaved, ExportedCharacter};
+use rules_core::transfer::{self, ExportFile, ExportKind, ExportSaved, ExportedCharacter};
 use rules_core::healing::{self, HealApplied, HealKind, RestApplied, RestPlan};
 use rules_core::humanity::{self, HumanityLossApplied, TherapyApplied, TherapyInfo, TherapyKind};
 use rules_core::catalog::TreatmentSkill;
@@ -387,19 +387,67 @@ fn save_character(
     Ok(CharacterRecord::new(id, character))
 }
 
-/// `name.redcompanion.json`, or `name (2).redcompanion.json` and so on when it already exists.
+/// Where files of one type live: a sub-folder of the exports folder.
+fn kind_dir(root: &std::path::Path, kind: ExportKind) -> std::path::PathBuf {
+    root.join(kind.folder())
+}
+
+/// Path of an export file the UI named: a typed file lies in the folder of its type, a file from
+/// before types in the exports folder itself. `None` for any other name (paths, other types).
+fn resolve_export(root: &std::path::Path, kind: ExportKind, name: &str) -> Option<std::path::PathBuf> {
+    if transfer::is_typed_file_name(kind, name) {
+        Some(kind_dir(root, kind).join(name))
+    } else if transfer::is_legacy_file_name(kind, name) {
+        Some(root.join(name))
+    } else {
+        None
+    }
+}
+
+/// `name.character.redcompanion.json`, or `name-2.character.redcompanion.json` and so on when it
+/// already exists in `dir`.
 fn free_export_name(dir: &std::path::Path, name: String, suffix: &str) -> String {
     if !dir.join(&name).exists() {
         return name;
     }
     let stem = name.strip_suffix(suffix).unwrap_or(&name).to_string();
     (2..)
-        .map(|n| format!("{stem} ({n}){suffix}"))
+        .map(|n| format!("{stem}-{n}{suffix}"))
         .find(|candidate| !dir.join(candidate).exists())
         .expect("an unused file name exists")
 }
 
-/// Writes characters (`ids`, or everyone when `None`) into a new file in the exports folder.
+/// Writes `json` as a new file of this type into its folder and says where it went.
+fn write_export(
+    root: &std::path::Path,
+    kind: ExportKind,
+    base: &str,
+    json: &str,
+) -> Result<(String, std::path::PathBuf), String> {
+    let dir = kind_dir(root, kind);
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let name = free_export_name(&dir, transfer::typed_file_name(kind, base), &kind.suffix());
+    let path = dir.join(&name);
+    std::fs::write(&path, json).map_err(|e| e.to_string())?;
+    Ok((name, path))
+}
+
+/// The characters with these ids (everyone when `None`) as export items.
+fn export_items(storage: &Storage, ids: Option<&[i64]>) -> Result<Vec<ExportedCharacter>, String> {
+    let mut items = Vec::new();
+    for kind in [CharacterKind::Pc, CharacterKind::Npc] {
+        for row in storage.list_characters(storage_kind(kind)).map_err(|e| e.to_string())? {
+            if ids.is_some_and(|ids| !ids.contains(&row.id)) {
+                continue;
+            }
+            let character: Character = serde_json::from_str(&row.data).map_err(|e| e.to_string())?;
+            items.push(ExportedCharacter { kind, character });
+        }
+    }
+    Ok(items)
+}
+
+/// Writes characters (`ids`, or everyone when `None`) into a new character file.
 #[tauri::command]
 fn export_characters(
     state: State<'_, AppStorage>,
@@ -407,16 +455,7 @@ fn export_characters(
     ids: Option<Vec<i64>>,
 ) -> Result<ExportSaved, String> {
     let storage = lock(&state)?;
-    let mut items = Vec::new();
-    for kind in [CharacterKind::Pc, CharacterKind::Npc] {
-        for row in storage.list_characters(storage_kind(kind)).map_err(|e| e.to_string())? {
-            if ids.as_ref().is_some_and(|ids| !ids.contains(&row.id)) {
-                continue;
-            }
-            let character: Character = serde_json::from_str(&row.data).map_err(|e| e.to_string())?;
-            items.push(ExportedCharacter { kind, character });
-        }
-    }
+    let items = export_items(&storage, ids.as_deref())?;
     let count = u32::try_from(items.len()).unwrap_or(u32::MAX);
     // One character is named after itself, several after "characters".
     let base = match items.as_slice() {
@@ -424,17 +463,37 @@ fn export_characters(
         _ => String::new(),
     };
     let json = transfer::export(items).map_err(|e| e.to_string())?;
-    std::fs::create_dir_all(&dir.0).map_err(|e| e.to_string())?;
-    let name = free_export_name(&dir.0, transfer::export_file_name(&base), transfer::EXPORT_SUFFIX);
-    let path = dir.0.join(&name);
-    std::fs::write(&path, json).map_err(|e| e.to_string())?;
+    let (name, path) = write_export(&dir.0, ExportKind::Character, &base, &json)?;
     Ok(ExportSaved { name, path: path.display().to_string(), count })
 }
 
-/// Files of the exports folder accepted by `is_name`, the newest first.
-fn list_files(dir: &std::path::Path, is_name: fn(&str) -> bool) -> Result<Vec<ExportFile>, String> {
-    let Ok(entries) = std::fs::read_dir(dir) else { return Ok(Vec::new()) };
-    let mut files: Vec<ExportFile> = entries
+/// Writes the participants of the active session into a new session file, named after the session.
+#[tauri::command]
+fn export_session(
+    state: State<'_, AppStorage>,
+    dir: State<'_, ExportsDir>,
+) -> Result<ExportSaved, String> {
+    let storage = lock(&state)?;
+    let session = ensure_session(&storage)?;
+    let members = storage.session_members(session).map_err(|e| e.to_string())?;
+    let name = storage
+        .list_sessions()
+        .map_err(|e| e.to_string())?
+        .into_iter()
+        .find(|s| s.id == session)
+        .map(|s| s.name)
+        .unwrap_or_default();
+    let items = export_items(&storage, Some(&members))?;
+    let count = u32::try_from(items.len()).unwrap_or(u32::MAX);
+    let json = transfer::export(items).map_err(|e| e.to_string())?;
+    let (name, path) = write_export(&dir.0, ExportKind::Session, &name, &json)?;
+    Ok(ExportSaved { name, path: path.display().to_string(), count })
+}
+
+/// Files of `dir` accepted by `is_name`, as list entries.
+fn files_in(dir: &std::path::Path, is_name: impl Fn(&str) -> bool) -> Vec<ExportFile> {
+    let Ok(entries) = std::fs::read_dir(dir) else { return Vec::new() };
+    entries
         .filter_map(|entry| {
             let entry = entry.ok()?;
             let meta = entry.metadata().ok()?;
@@ -449,15 +508,17 @@ fn list_files(dir: &std::path::Path, is_name: fn(&str) -> bool) -> Result<Vec<Ex
                 .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX));
             Some(ExportFile { name, modified_ms, size: meta.len() })
         })
-        .collect();
-    files.sort_by(|a, b| b.modified_ms.cmp(&a.modified_ms).then_with(|| a.name.cmp(&b.name)));
-    Ok(files)
+        .collect()
 }
 
-/// Character export files in the exports folder, the newest first.
+/// Files an import window of this type offers, the newest first: the typed files of its own
+/// folder, and (for characters and encounters) the older untyped ones in the exports folder.
 #[tauri::command]
-fn list_exports(dir: State<'_, ExportsDir>) -> Result<Vec<ExportFile>, String> {
-    list_files(&dir.0, transfer::is_export_file_name)
+fn list_exports(dir: State<'_, ExportsDir>, kind: ExportKind) -> Vec<ExportFile> {
+    let mut files = files_in(&kind_dir(&dir.0, kind), |n| transfer::is_typed_file_name(kind, n));
+    files.extend(files_in(&dir.0, |n| transfer::is_legacy_file_name(kind, n)));
+    files.sort_by(|a, b| b.modified_ms.cmp(&a.modified_ms).then_with(|| a.name.cmp(&b.name)));
+    files
 }
 
 /// Writes the chosen encounters and own templates into a new `.redencounters.json` file. An
@@ -504,22 +565,13 @@ fn export_encounters(
         _ => String::new(),
     };
     let json = encounter_transfer::export(templates, encounters).map_err(|e| e.to_string())?;
-    std::fs::create_dir_all(&dir.0).map_err(|e| e.to_string())?;
-    let name = free_export_name(&dir.0, encounter_transfer::file_name(&base), encounter_transfer::SUFFIX);
-    let path = dir.0.join(&name);
-    std::fs::write(&path, json).map_err(|e| e.to_string())?;
+    let (name, path) = write_export(&dir.0, ExportKind::Encounters, &base, &json)?;
     Ok(EncountersSaved {
         name,
         path: path.display().to_string(),
         encounters: counts.0,
         templates: counts.1,
     })
-}
-
-/// Encounter files in the exports folder, the newest first.
-#[tauri::command]
-fn list_encounter_exports(dir: State<'_, ExportsDir>) -> Result<Vec<ExportFile>, String> {
-    list_files(&dir.0, encounter_transfer::is_file_name)
 }
 
 /// Imports an encounters file of the exports folder as new templates and encounters (nothing is
@@ -530,10 +582,9 @@ fn import_encounter_file(
     dir: State<'_, ExportsDir>,
     name: String,
 ) -> Result<EncountersImported, String> {
-    if !encounter_transfer::is_file_name(&name) {
-        return Err(format!("{name:?} is not an encounters file name"));
-    }
-    let json = std::fs::read_to_string(dir.0.join(&name)).map_err(|e| e.to_string())?;
+    let path = resolve_export(&dir.0, ExportKind::Encounters, &name)
+        .ok_or_else(|| format!("{name:?} is not an encounters file name"))?;
+    let json = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
     let file = encounter_transfer::parse_import(&json, &SeedDataSource::default())
         .map_err(|e| e.to_string())?;
     let storage = lock(&state)?;
@@ -560,18 +611,22 @@ fn import_encounter_file(
     Ok(EncountersImported { templates, encounters })
 }
 
-/// Imports a file of the exports folder as new characters; the whole file is validated
-/// before anything is stored. Only a bare file name is accepted.
+/// Imports a character or session file of the exports folder as new characters (they join the
+/// active session); the whole file is validated before anything is stored. Only a bare file name
+/// of that type is accepted.
 #[tauri::command]
 fn import_export_file(
     state: State<'_, AppStorage>,
     dir: State<'_, ExportsDir>,
+    kind: ExportKind,
     name: String,
 ) -> Result<Vec<CharacterRecord>, String> {
-    if !transfer::is_export_file_name(&name) {
-        return Err(format!("{name:?} is not an export file name"));
+    if kind == ExportKind::Encounters {
+        return Err("encounter files have their own import".to_string());
     }
-    let json = std::fs::read_to_string(dir.0.join(&name)).map_err(|e| e.to_string())?;
+    let path = resolve_export(&dir.0, kind, &name)
+        .ok_or_else(|| format!("{name:?} is not a {} file name", kind.infix()))?;
+    let json = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
     let items = transfer::parse_import(&json, &SeedDataSource::default()).map_err(|e| e.to_string())?;
     let storage = lock(&state)?;
     let mut records = Vec::new();
@@ -589,11 +644,16 @@ fn import_export_file(
     Ok(records)
 }
 
-/// Shows the exports folder in the system file manager.
+/// Shows the exports folder (or the sub-folder of one type) in the system file manager.
 #[tauri::command]
-fn open_exports_folder(app: AppHandle, dir: State<'_, ExportsDir>) -> Result<(), String> {
-    std::fs::create_dir_all(&dir.0).map_err(|e| e.to_string())?;
-    app.opener().open_path(dir.0.display().to_string(), None::<&str>).map_err(|e| e.to_string())
+fn open_exports_folder(
+    app: AppHandle,
+    dir: State<'_, ExportsDir>,
+    kind: Option<ExportKind>,
+) -> Result<(), String> {
+    let target = kind.map_or_else(|| dir.0.clone(), |k| kind_dir(&dir.0, k));
+    std::fs::create_dir_all(&target).map_err(|e| e.to_string())?;
+    app.opener().open_path(target.display().to_string(), None::<&str>).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -608,6 +668,8 @@ fn delete_character(state: State<'_, AppStorage>, id: i64) -> Result<(), String>
         if scene.combat.combatants.iter().any(|c| c.character_id == id) {
             let skip = dead_ids(&storage, &scene)?;
             scene.combat.remove(id, &skip).map_err(|e| e.to_string())?;
+            // The turn may have passed to a mortally wounded fighter (or to nobody).
+            refresh_death_save_due(&mut scene, &storage)?;
         }
         save_scene_row(&storage, row.id, &scene)?;
     }
@@ -822,6 +884,19 @@ fn remove_from_session(
     Ok(SceneRecord { id, scene })
 }
 
+/// Solo's Damage Deflection for the "damage taken" window: how much, and whether this is the
+/// character's first damage of the round in a running fight.
+#[tauri::command]
+fn deflection_info(
+    state: State<'_, AppStorage>,
+    character_id: i64,
+) -> Result<damage_event::DeflectionInfo, String> {
+    let storage = lock(&state)?;
+    let character = require_character(&storage, character_id)?;
+    let (_, scene) = load_scene(&storage)?;
+    Ok(damage_event::deflection_info(&character, character_id, &scene))
+}
+
 #[tauri::command]
 fn get_scene(state: State<'_, AppStorage>) -> Result<SceneRecord, String> {
     with_scene(&state, |_| Ok(()))
@@ -958,9 +1033,13 @@ fn combat_roll(
     manual: Option<Vec<u32>>,
 ) -> Result<SceneRecord, String> {
     with_combat(&state, |scene, storage| {
-        let reflex = require_character(storage, character_id)?.stats.reflex;
+        let character = require_character(storage, character_id)?;
+        let (reflex, bonus) = (character.stats.reflex, rules_core::roles::initiative_bonus(&character));
         let die = d10_check(manual)?;
-        scene.combat.roll(character_id, reflex, die).map_err(|e| e.to_string())
+        scene
+            .combat
+            .roll_with_bonus(character_id, reflex, bonus, die)
+            .map_err(|e| e.to_string())
     })
 }
 
@@ -1011,7 +1090,11 @@ fn combat_start(state: State<'_, AppStorage>) -> Result<SceneRecord, String> {
                 continue;
             }
             let die = d10_check(None)?;
-            scene.combat.add(id, character.stats.reflex, die).map_err(|e| e.to_string())?;
+            let bonus = rules_core::roles::initiative_bonus(&character);
+            scene
+                .combat
+                .add_with_bonus(id, character.stats.reflex, bonus, die)
+                .map_err(|e| e.to_string())?;
         }
         let skip = dead_ids(storage, scene)?;
         scene.combat.start(&skip).map_err(|e| e.to_string())?;
@@ -1167,6 +1250,47 @@ fn heal_injury(
         .map_err(|e| e.to_string())?;
     store_character(&storage, target_id, &target)?;
     Ok(HealApplied { character: CharacterRecord::new(target_id, target), result })
+}
+
+/// The GM puts a critical injury on a character by hand: no roll, no damage, no checks. The same
+/// injury may be added again (a second broken leg).
+#[tauri::command]
+fn add_injury(
+    state: State<'_, AppStorage>,
+    id: i64,
+    injury_id: String,
+) -> Result<CharacterRecord, String> {
+    let storage = lock(&state)?;
+    let mut character = require_character(&storage, id)?;
+    let table = injury_table()?;
+    let injury = table
+        .iter()
+        .find(|i| i.id == injury_id)
+        .ok_or_else(|| format!("unknown injury: {injury_id}"))?;
+    character.add_injury(&injury.id, injury.death_save_penalty);
+    store_character(&storage, id, &character)?;
+    Ok(CharacterRecord::new(id, character))
+}
+
+/// The GM takes one instance of an injury off by hand (its death save penalty goes with it).
+#[tauri::command]
+fn remove_injury(
+    state: State<'_, AppStorage>,
+    id: i64,
+    injury_id: String,
+) -> Result<CharacterRecord, String> {
+    let storage = lock(&state)?;
+    let mut character = require_character(&storage, id)?;
+    let table = injury_table()?;
+    let injury = table
+        .iter()
+        .find(|i| i.id == injury_id)
+        .ok_or_else(|| format!("unknown injury: {injury_id}"))?;
+    if !character.remove_injury(&injury.id, injury.death_save_penalty) {
+        return Err(format!("{injury_id} is not on the sheet"));
+    }
+    store_character(&storage, id, &character)?;
+    Ok(CharacterRecord::new(id, character))
 }
 
 /// A Medtech (`helper_id`) gives a drug they picked to `target_id` (p. 150).
@@ -1452,8 +1576,8 @@ pub fn run() {
             delete_character,
             export_characters,
             list_exports,
+            export_session,
             export_encounters,
-            list_encounter_exports,
             import_encounter_file,
             import_export_file,
             open_exports_folder,
@@ -1474,6 +1598,9 @@ pub fn run() {
             remove_cover,
             set_character_cover,
             list_injuries,
+            deflection_info,
+            add_injury,
+            remove_injury,
             roll_dice,
             roll_injury,
             preview_damage,

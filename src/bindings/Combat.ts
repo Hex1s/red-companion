@@ -18,4 +18,9 @@ active: number | null,
  * The active fighter is mortally wounded and has not made this turn's
  * death save yet (set by the app when a turn begins).
  */
-death_save_due: boolean, };
+death_save_due: boolean, 
+/**
+ * The round in which a fighter last had their first damage reduced (Solo's Damage
+ * Deflection works once per round); cleared when the fight ends.
+ */
+deflected: Record<string, number>, };

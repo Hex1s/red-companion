@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { FieldBadge } from "@/components/ui/field-badge";
 import { Hint } from "@/components/ui/hint";
 import { Input } from "@/components/ui/input";
+import { RollNote } from "@/components/ui/roll-note";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { errorMessage } from "@/hooks/use-characters";
 import { api } from "@/lib/api";
+import { formatCheck } from "@/lib/dice";
 import { STAT_ABBR } from "@/lib/stat-abbr";
 import { status } from "@/store/status-store";
 
@@ -22,10 +24,12 @@ type SkillCheckButtonProps = {
   skillKey: string;
   /** Name shown in the popover. */
   label: string;
+  /** Why the check cannot be rolled now (an invalid level on the sheet); `null` = it can. */
+  disabledReason?: string | null;
 };
 
 /** Quick check of a skill: STAT + level + d10, rolled in the app or typed in from a physical die. */
-export function SkillCheckButton({ characterId, skillKey, label }: SkillCheckButtonProps) {
+export function SkillCheckButton({ characterId, skillKey, label, disabledReason = null }: SkillCheckButtonProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [totalText, setTotalText] = useState("");
@@ -38,8 +42,23 @@ export function SkillCheckButton({ characterId, skillKey, label }: SkillCheckBut
   const run = async (manualTotal: number | null) => {
     setBusy(true);
     try {
-      setResult(await api.skillCheck(characterId, skillKey, manualTotal));
+      const check = await api.skillCheck(characterId, skillKey, manualTotal);
+      setResult(check);
       setTotalText("");
+      // Results also go to the status area; every roll is its own message.
+      status.show({
+        kind: "info",
+        id: `skill-check:${Date.now()}`,
+        text: t(check.role_bonus !== 0 ? "skill_check.toast_role" : "skill_check.toast", {
+          name: label,
+          stat: t(`stats.${STAT_ABBR[check.stat]}`),
+          statValue: check.stat_value,
+          level: check.level,
+          role: check.role_bonus,
+          die: formatCheck(check.die),
+          total: check.total,
+        }),
+      });
     } catch (e) {
       status.error(errorMessage(e), "skill-check");
     } finally {
@@ -55,12 +74,21 @@ export function SkillCheckButton({ characterId, skillKey, label }: SkillCheckBut
         if (next) setResult(null);
       }}
     >
-      <Hint label={t("skill_check.tooltip")}>
-        <PopoverTrigger asChild>
-          <Button type="button" size="xs" variant="outline" aria-label={t("skill_check.tooltip")}>
-            <Dices />
-          </Button>
-        </PopoverTrigger>
+      <Hint label={disabledReason ?? t("skill_check.tooltip")}>
+        {/* A disabled button gets no pointer events, so the tooltip hangs on the wrapper. */}
+        <span className="inline-flex">
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              size="xs"
+              variant="outline"
+              disabled={disabledReason !== null}
+              aria-label={disabledReason ?? t("skill_check.tooltip")}
+            >
+              <Dices />
+            </Button>
+          </PopoverTrigger>
+        </span>
       </Hint>
       <PopoverContent align="end" className="w-72 space-y-3">
         <p className="text-sm">{label}</p>
@@ -92,13 +120,15 @@ export function SkillCheckButton({ characterId, skillKey, label }: SkillCheckBut
           <div className="space-y-1">
             <p className="num text-2xl font-bold text-primary">{result.total}</p>
             <p className="num text-xs text-muted-foreground">
-              {t("skill_check.formula", {
+              {t(result.role_bonus !== 0 ? "skill_check.formula_role" : "skill_check.formula", {
                 stat: t(`stats.${STAT_ABBR[result.stat]}`),
                 statValue: result.stat_value,
                 level: result.level,
-                die: result.die.total,
+                role: result.role_bonus,
+                die: formatCheck(result.die),
               })}
             </p>
+            <RollNote roll={result.die} />
           </div>
         )}
       </PopoverContent>
