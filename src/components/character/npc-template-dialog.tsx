@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
+import { errorMessage } from "@/lib/errors";
 import { useTranslation } from "react-i18next";
 import type { NpcTemplate } from "@/bindings/NpcTemplate";
 import type { NpcTier } from "@/bindings/NpcTier";
 import { Button } from "@/components/ui/button";
+import { ErrorNotice } from "@/components/ui/error-notice";
 import {
   Dialog,
   DialogContent,
@@ -74,7 +76,7 @@ export function NpcTemplateDialog({
       });
       onClose();
     } catch (e) {
-      setError(t("npc.clone_error", { error: e instanceof Error ? e.message : String(e) }));
+      setError(t("npc.clone_error", { error: errorMessage(e) }));
     } finally {
       setBusy(false);
     }
@@ -122,7 +124,7 @@ export function NpcTemplateDialog({
         {selected && (
           <p className="whitespace-pre-line text-xs text-muted-foreground">{npcNotes(t, selected)}</p>
         )}
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        <ErrorNotice message={error} />
 
         <DialogFooter className="items-center">
           <Label htmlFor="npc-clone-count" className="mr-auto font-normal">

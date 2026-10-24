@@ -4,8 +4,6 @@ import type { SessionInfo } from "@/bindings/SessionInfo";
 import { api, hasBackend } from "@/lib/api";
 import { status } from "@/store/status-store";
 
-const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
-
 /**
  * Sessions (named folders with their own scene, fight and members) and the active one. The
  * first session is created here, so that its name follows the interface language.
@@ -33,7 +31,7 @@ export function useSessions() {
       .listSessions()
       .then((list) => withFallback(list))
       .then(setSessions)
-      .catch((e: unknown) => status.error(message(e), "sessions"))
+      .catch((e: unknown) => status.fail(e, "sessions"))
       .finally(() => setReady(true));
     // Only at startup: the language of the first session's name is the one at that moment.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -46,7 +44,7 @@ export function useSessions() {
         setSessions(await withFallback(await command));
         return true;
       } catch (e) {
-        status.error(message(e), "sessions");
+        status.fail(e, "sessions");
         return false;
       }
     },

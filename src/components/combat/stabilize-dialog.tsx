@@ -3,6 +3,7 @@ import { Dices } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { StabilizeApplied } from "@/bindings/StabilizeApplied";
 import { Button } from "@/components/ui/button";
+import { ErrorNotice } from "@/components/ui/error-notice";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { FieldBadge } from "@/components/ui/field-badge";
 import { Hint } from "@/components/ui/hint";
@@ -16,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { CharacterEntry } from "@/hooks/use-characters";
-import { errorMessage } from "@/hooks/use-characters";
+import { errorMessage } from "@/lib/errors";
 import { api } from "@/lib/api";
 
 /** The skills that stabilise (p. 222); must match `STABILIZE_SKILLS` in Rust. */
@@ -184,7 +185,7 @@ function StabilizeForm({ target, helpers, onDone, onClose }: StabilizeFormProps)
         </p>
       )}
       {failed && <RollNote roll={failed.roll} />}
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      <ErrorNotice message={error} />
 
       <Hint label={t("stabilize_dialog.declare_hint")}>
         <Button

@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/dialog";
 import { Hint } from "@/components/ui/hint";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { errorMessage } from "@/hooks/use-characters";
 import { api } from "@/lib/api";
 import { templateKey, templateLabel } from "@/lib/encounter";
 import { hasBackend } from "@/lib/api";
@@ -160,7 +159,7 @@ export function EncountersPage({
     try {
       await task();
     } catch (e) {
-      status.error(errorMessage(e), id);
+      status.fail(e, id);
     }
   };
 

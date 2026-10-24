@@ -6,6 +6,7 @@ import type { EncounterRecord } from "@/bindings/EncounterRecord";
 import type { NpcTemplate } from "@/bindings/NpcTemplate";
 import type { UserTemplateRecord } from "@/bindings/UserTemplateRecord";
 import { Button } from "@/components/ui/button";
+import { ErrorNotice } from "@/components/ui/error-notice";
 import {
   Dialog,
   DialogContent,
@@ -26,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { errorMessage } from "@/hooks/use-characters";
+import { errorMessage } from "@/lib/errors";
 import { templateKey, templateLabel } from "@/lib/encounter";
 
 /** Same limits as `rules_core::encounter`. */
@@ -250,7 +251,7 @@ export function EncounterEditor({
           </div>
         </div>
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        <ErrorNotice message={error} />
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>

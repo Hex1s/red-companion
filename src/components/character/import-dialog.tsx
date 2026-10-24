@@ -3,6 +3,7 @@ import { FolderOpen } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ExportFile } from "@/bindings/ExportFile";
 import { Button } from "@/components/ui/button";
+import { ErrorNotice } from "@/components/ui/error-notice";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { errorMessage } from "@/hooks/use-characters";
+import { errorMessage } from "@/lib/errors";
 
 type ImportDialogProps = {
   /** Files of the exports folder; the window is open while the list is set. */
@@ -65,7 +66,7 @@ export function ImportDialog({ files, onImport, onOpenFolder, onClose }: ImportD
             </li>
           ))}
         </ul>
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        <ErrorNotice message={error} />
         <div className="flex justify-between gap-2">
           <Button type="button" variant="outline" onClick={onOpenFolder}>
             <FolderOpen />

@@ -1,6 +1,9 @@
 use std::path::PathBuf;
 use std::sync::Mutex;
 
+mod error;
+
+use error::CmdError;
 use rules_core::RulesInfo;
 use rules_core::catalog::{Armor, BodyArea, CriticalInjury, NpcTemplate, NpcTier, Role, Skill, Weapon};
 use rules_core::character::{Character, CharacterKind, CharacterRecord, Derived};
@@ -9,7 +12,7 @@ use rules_core::damage::WoundState;
 use rules_core::damage_event::{self, DamageApplied, DamageRequest, InjuryRoll};
 use rules_core::data_source::{DataSource, Lang, SeedDataSource};
 use rules_core::dice::{
-    CheckRoll, DiceError, DiceNotation, RollResult, ThreadDice, check_manual, check_total, roll, roll_check,
+    CheckRoll, DiceNotation, RollResult, ThreadDice, check_manual, check_total, roll, roll_check,
     roll_manual,
 };
 use rules_core::skill_check::{self, SkillCheck};
@@ -40,15 +43,15 @@ pub struct AppStorage(pub Mutex<Storage>);
 pub struct ContentLang(pub Mutex<Lang>);
 
 /// Reference data source in the current content language.
-fn content(state: &State<'_, ContentLang>) -> Result<SeedDataSource, String> {
-    let lang = *state.0.lock().map_err(|_| "content language lock poisoned".to_string())?;
+fn content(state: &State<'_, ContentLang>) -> Result<SeedDataSource, CmdError> {
+    let lang = *state.0.lock().map_err(|_| CmdError::locked("content language"))?;
     Ok(SeedDataSource::new(lang))
 }
 
 /// Switches the content language (`ru`, `en`, `ru-RU`...); unknown codes mean English.
 #[tauri::command]
-fn set_content_lang(state: State<'_, ContentLang>, code: String) -> Result<(), String> {
-    *state.0.lock().map_err(|_| "content language lock poisoned".to_string())? = Lang::from_code(&code);
+fn set_content_lang(state: State<'_, ContentLang>, code: String) -> Result<(), CmdError> {
+    *state.0.lock().map_err(|_| CmdError::locked("content language"))? = Lang::from_code(&code);
     Ok(())
 }
 
@@ -58,28 +61,28 @@ fn rules_info() -> RulesInfo {
 }
 
 #[tauri::command]
-fn list_skills() -> Result<Vec<Skill>, String> {
-    SeedDataSource::default().skills().map(|c| c.entries).map_err(|e| e.to_string())
+fn list_skills() -> Result<Vec<Skill>, CmdError> {
+    SeedDataSource::default().skills().map(|c| c.entries).map_err(CmdError::from)
 }
 
 #[tauri::command]
-fn list_roles(lang: State<'_, ContentLang>) -> Result<Vec<Role>, String> {
-    content(&lang)?.roles().map(|c| c.entries).map_err(|e| e.to_string())
+fn list_roles(lang: State<'_, ContentLang>) -> Result<Vec<Role>, CmdError> {
+    content(&lang)?.roles().map(|c| c.entries).map_err(CmdError::from)
 }
 
 #[tauri::command]
-fn list_armor(lang: State<'_, ContentLang>) -> Result<Vec<Armor>, String> {
-    content(&lang)?.armor().map(|c| c.entries).map_err(|e| e.to_string())
+fn list_armor(lang: State<'_, ContentLang>) -> Result<Vec<Armor>, CmdError> {
+    content(&lang)?.armor().map(|c| c.entries).map_err(CmdError::from)
 }
 
 #[tauri::command]
-fn list_weapons(lang: State<'_, ContentLang>) -> Result<Vec<Weapon>, String> {
-    content(&lang)?.weapons().map(|c| c.entries).map_err(|e| e.to_string())
+fn list_weapons(lang: State<'_, ContentLang>) -> Result<Vec<Weapon>, CmdError> {
+    content(&lang)?.weapons().map(|c| c.entries).map_err(CmdError::from)
 }
 
 #[tauri::command]
-fn list_npc_templates(lang: State<'_, ContentLang>) -> Result<Vec<NpcTemplate>, String> {
-    content(&lang)?.npc_templates().map(|c| c.entries).map_err(|e| e.to_string())
+fn list_npc_templates(lang: State<'_, ContentLang>) -> Result<Vec<NpcTemplate>, CmdError> {
+    content(&lang)?.npc_templates().map(|c| c.entries).map_err(CmdError::from)
 }
 
 /// Clones a ready-made NPC into a new NPC sheet: own HP and SP, so one
@@ -92,38 +95,38 @@ fn create_npc_from_template(
     template_id: String,
     name: String,
     notes: String,
-) -> Result<CharacterRecord, String> {
-    let templates = content(&lang)?.npc_templates().map_err(|e| e.to_string())?;
+) -> Result<CharacterRecord, CmdError> {
+    let templates = content(&lang)?.npc_templates()?;
     let template = templates
         .entries
         .iter()
         .find(|t| t.code == template_id)
-        .ok_or_else(|| format!("NPC template {template_id:?} not found"))?;
-    let skills = SeedDataSource::default().skills().map_err(|e| e.to_string())?;
+        .ok_or_else(|| CmdError::not_found("npc_template", template_id))?;
+    let skills = SeedDataSource::default().skills()?;
     let character = template.to_character(&name, &notes, &skills.entries);
-    character.validate().map_err(|e| e.to_string())?;
-    let data = serde_json::to_string(&character).map_err(|e| e.to_string())?;
+    character.validate()?;
+    let data = serde_json::to_string(&character)?;
     let storage = lock(&state)?;
     let id = storage
         .insert_character(storage::CharacterKind::Npc, &character.name, &data)
-        .map_err(|e| e.to_string())?;
+        ?;
     join_active_session(&storage, id)?;
     Ok(CharacterRecord::new(id, character))
 }
 
-fn user_template_record(row: &DocRow) -> Result<UserTemplateRecord, String> {
-    let doc: UserTemplateDoc = serde_json::from_str(&row.data).map_err(|e| e.to_string())?;
+fn user_template_record(row: &DocRow) -> Result<UserTemplateRecord, CmdError> {
+    let doc: UserTemplateDoc = serde_json::from_str(&row.data)?;
     Ok(UserTemplateRecord { id: row.id, tier: doc.tier, character: doc.character })
 }
 
-fn encounter_record(row: &DocRow) -> Result<EncounterRecord, String> {
-    let encounter: Encounter = serde_json::from_str(&row.data).map_err(|e| e.to_string())?;
+fn encounter_record(row: &DocRow) -> Result<EncounterRecord, CmdError> {
+    let encounter: Encounter = serde_json::from_str(&row.data)?;
     Ok(EncounterRecord { id: row.id, encounter })
 }
 
 #[tauri::command]
-fn list_user_templates(state: State<'_, AppStorage>) -> Result<Vec<UserTemplateRecord>, String> {
-    let rows = lock(&state)?.list_docs(DocTable::UserTemplates).map_err(|e| e.to_string())?;
+fn list_user_templates(state: State<'_, AppStorage>) -> Result<Vec<UserTemplateRecord>, CmdError> {
+    let rows = lock(&state)?.list_docs(DocTable::UserTemplates)?;
     rows.iter().map(user_template_record).collect()
 }
 
@@ -134,39 +137,39 @@ fn save_character_as_template(
     state: State<'_, AppStorage>,
     character_id: i64,
     template_id: Option<i64>,
-) -> Result<UserTemplateRecord, String> {
+) -> Result<UserTemplateRecord, CmdError> {
     let storage = lock(&state)?;
     let row = storage
         .get_character(character_id)
-        .map_err(|e| e.to_string())?
-        .ok_or_else(|| format!("character {character_id} not found"))?;
+        ?
+        .ok_or_else(|| CmdError::not_found("character", character_id))?;
     let character = parse_row(&row)?.as_fresh();
-    character.validate().map_err(|e| e.to_string())?;
+    character.validate()?;
     // Overwriting keeps the tier the GM already chose.
     let tier = match template_id {
         Some(id) => storage
             .get_doc(DocTable::UserTemplates, id)
-            .map_err(|e| e.to_string())?
+            ?
             .map(|row| user_template_record(&row))
             .transpose()?
             .map_or(NpcTier::Mook, |t| t.tier),
         None => NpcTier::Mook,
     };
     let data = serde_json::to_string(&UserTemplateDoc { tier, character: character.clone() })
-        .map_err(|e| e.to_string())?;
+        ?;
     let id = match template_id {
         Some(id) => {
             if !storage
                 .update_doc(DocTable::UserTemplates, id, &character.name, &data)
-                .map_err(|e| e.to_string())?
+                ?
             {
-                return Err(format!("template {id} not found"));
+                return Err(CmdError::not_found("template", id));
             }
             id
         }
         None => storage
             .insert_doc(DocTable::UserTemplates, &character.name, &data)
-            .map_err(|e| e.to_string())?,
+            ?,
     };
     Ok(UserTemplateRecord { id, tier, character })
 }
@@ -177,23 +180,23 @@ fn set_user_template_tier(
     state: State<'_, AppStorage>,
     id: i64,
     tier: NpcTier,
-) -> Result<UserTemplateRecord, String> {
+) -> Result<UserTemplateRecord, CmdError> {
     let storage = lock(&state)?;
     let row = storage
         .get_doc(DocTable::UserTemplates, id)
-        .map_err(|e| e.to_string())?
-        .ok_or_else(|| format!("template {id} not found"))?;
+        ?
+        .ok_or_else(|| CmdError::not_found("template", id))?;
     let record = user_template_record(&row)?;
     let data = serde_json::to_string(&UserTemplateDoc { tier, character: record.character.clone() })
-        .map_err(|e| e.to_string())?;
-    storage.update_doc(DocTable::UserTemplates, id, &row.name, &data).map_err(|e| e.to_string())?;
+        ?;
+    storage.update_doc(DocTable::UserTemplates, id, &row.name, &data)?;
     Ok(UserTemplateRecord { id, tier, character: record.character })
 }
 
 /// Which tier the stats of a sheet are closest to (information only; the GM picks the tier).
 #[tauri::command]
-fn tier_hint(character: Character) -> Result<encounter::TierHint, String> {
-    let skills = SeedDataSource::default().skills().map_err(|e| e.to_string())?;
+fn tier_hint(character: Character) -> Result<encounter::TierHint, CmdError> {
+    let skills = SeedDataSource::default().skills()?;
     Ok(encounter::tier_hint(&character, &skills.entries))
 }
 
@@ -205,8 +208,8 @@ fn assess_encounter(
     lang: State<'_, ContentLang>,
     encounter: Encounter,
     players: u32,
-) -> Result<Assessment, String> {
-    let book = content(&lang)?.npc_templates().map_err(|e| e.to_string())?;
+) -> Result<Assessment, CmdError> {
+    let book = content(&lang)?.npc_templates()?;
     let storage = lock(&state)?;
     let (mut weight, mut skipped) = (0, 0);
     for line in &encounter.entries {
@@ -217,7 +220,7 @@ fn assess_encounter(
             TemplateSource::Custom => match line.template.parse::<i64>() {
                 Ok(id) => storage
                     .get_doc(DocTable::UserTemplates, id)
-                    .map_err(|e| e.to_string())?
+                    ?
                     .map(|row| user_template_record(&row))
                     .transpose()?
                     .map(|t| t.tier),
@@ -229,12 +232,12 @@ fn assess_encounter(
             None => skipped += line.count,
         }
     }
-    encounter::assess(weight, players, skipped).map_err(|e| e.to_string())
+    encounter::assess(weight, players, skipped).map_err(CmdError::from)
 }
 
 #[tauri::command]
-fn delete_user_template(state: State<'_, AppStorage>, id: i64) -> Result<(), String> {
-    lock(&state)?.delete_doc(DocTable::UserTemplates, id).map_err(|e| e.to_string())?;
+fn delete_user_template(state: State<'_, AppStorage>, id: i64) -> Result<(), CmdError> {
+    lock(&state)?.delete_doc(DocTable::UserTemplates, id)?;
     Ok(())
 }
 
@@ -244,26 +247,26 @@ fn create_npc_from_user_template(
     state: State<'_, AppStorage>,
     template_id: i64,
     name: String,
-) -> Result<CharacterRecord, String> {
+) -> Result<CharacterRecord, CmdError> {
     let storage = lock(&state)?;
     let row = storage
         .get_doc(DocTable::UserTemplates, template_id)
-        .map_err(|e| e.to_string())?
-        .ok_or_else(|| format!("template {template_id} not found"))?;
+        ?
+        .ok_or_else(|| CmdError::not_found("template", template_id))?;
     let mut character = user_template_record(&row)?.character.as_fresh();
     character.name = name.trim().to_string();
-    character.validate().map_err(|e| e.to_string())?;
-    let data = serde_json::to_string(&character).map_err(|e| e.to_string())?;
+    character.validate()?;
+    let data = serde_json::to_string(&character)?;
     let id = storage
         .insert_character(storage::CharacterKind::Npc, &character.name, &data)
-        .map_err(|e| e.to_string())?;
+        ?;
     join_active_session(&storage, id)?;
     Ok(CharacterRecord::new(id, character))
 }
 
 #[tauri::command]
-fn list_encounters(state: State<'_, AppStorage>) -> Result<Vec<EncounterRecord>, String> {
-    let rows = lock(&state)?.list_docs(DocTable::Encounters).map_err(|e| e.to_string())?;
+fn list_encounters(state: State<'_, AppStorage>) -> Result<Vec<EncounterRecord>, CmdError> {
+    let rows = lock(&state)?.list_docs(DocTable::Encounters)?;
     rows.iter().map(encounter_record).collect()
 }
 
@@ -273,30 +276,30 @@ fn save_encounter(
     state: State<'_, AppStorage>,
     id: Option<i64>,
     mut encounter: Encounter,
-) -> Result<EncounterRecord, String> {
-    encounter.normalize().map_err(|e| e.to_string())?;
-    let data = serde_json::to_string(&encounter).map_err(|e| e.to_string())?;
+) -> Result<EncounterRecord, CmdError> {
+    encounter.normalize()?;
+    let data = serde_json::to_string(&encounter)?;
     let storage = lock(&state)?;
     let id = match id {
         Some(id) => {
             if !storage
                 .update_doc(DocTable::Encounters, id, &encounter.name, &data)
-                .map_err(|e| e.to_string())?
+                ?
             {
-                return Err(format!("encounter {id} not found"));
+                return Err(CmdError::not_found("encounter", id));
             }
             id
         }
         None => storage
             .insert_doc(DocTable::Encounters, &encounter.name, &data)
-            .map_err(|e| e.to_string())?,
+            ?,
     };
     Ok(EncounterRecord { id, encounter })
 }
 
 #[tauri::command]
-fn delete_encounter(state: State<'_, AppStorage>, id: i64) -> Result<(), String> {
-    lock(&state)?.delete_doc(DocTable::Encounters, id).map_err(|e| e.to_string())?;
+fn delete_encounter(state: State<'_, AppStorage>, id: i64) -> Result<(), CmdError> {
+    lock(&state)?.delete_doc(DocTable::Encounters, id)?;
     Ok(())
 }
 
@@ -308,31 +311,31 @@ fn storage_kind(kind: CharacterKind) -> storage::CharacterKind {
 }
 
 /// Parses a stored character. Filler NPCs have no mortal wound: at 0 HP they are dead.
-fn parse_row(row: &CharacterRow) -> Result<Character, String> {
-    let mut character: Character = serde_json::from_str(&row.data).map_err(|e| e.to_string())?;
+fn parse_row(row: &CharacterRow) -> Result<Character, CmdError> {
+    let mut character: Character = serde_json::from_str(&row.data)?;
     if row.kind == storage::CharacterKind::Npc {
         character.settle_npc();
     }
     Ok(character)
 }
 
-fn to_record(row: CharacterRow) -> Result<CharacterRecord, String> {
+fn to_record(row: CharacterRow) -> Result<CharacterRecord, CmdError> {
     let character = parse_row(&row)?;
     Ok(CharacterRecord::new(row.id, character))
 }
 
 fn lock<'a>(
     state: &'a State<'_, AppStorage>,
-) -> Result<std::sync::MutexGuard<'a, Storage>, String> {
-    state.0.lock().map_err(|_| "storage lock poisoned".to_string())
+) -> Result<std::sync::MutexGuard<'a, Storage>, CmdError> {
+    state.0.lock().map_err(|_| CmdError::locked("storage"))
 }
 
 #[tauri::command]
 fn list_characters(
     state: State<'_, AppStorage>,
     kind: CharacterKind,
-) -> Result<Vec<CharacterRecord>, String> {
-    let rows = lock(&state)?.list_characters(storage_kind(kind)).map_err(|e| e.to_string())?;
+) -> Result<Vec<CharacterRecord>, CmdError> {
+    let rows = lock(&state)?.list_characters(storage_kind(kind))?;
     rows.into_iter().map(to_record).collect()
 }
 
@@ -342,14 +345,14 @@ fn create_character(
     state: State<'_, AppStorage>,
     kind: CharacterKind,
     name: String,
-) -> Result<CharacterRecord, String> {
+) -> Result<CharacterRecord, CmdError> {
     let character = Character::quick(&name);
-    character.validate().map_err(|e| e.to_string())?;
-    let data = serde_json::to_string(&character).map_err(|e| e.to_string())?;
+    character.validate()?;
+    let data = serde_json::to_string(&character)?;
     let storage = lock(&state)?;
     let id = storage
         .insert_character(storage_kind(kind), &character.name, &data)
-        .map_err(|e| e.to_string())?;
+        ?;
     join_active_session(&storage, id)?;
     Ok(CharacterRecord::new(id, character))
 }
@@ -366,23 +369,23 @@ fn save_character(
     state: State<'_, AppStorage>,
     id: i64,
     mut character: Character,
-) -> Result<CharacterRecord, String> {
+) -> Result<CharacterRecord, CmdError> {
     character.name = character.name.trim().to_string();
-    character.validate().map_err(|e| e.to_string())?;
-    let role_catalog = SeedDataSource::default().roles().map_err(|e| e.to_string())?.entries;
-    rules_core::roles::validate_against(&character.roles, &role_catalog).map_err(|e| e.to_string())?;
+    character.validate()?;
+    let role_catalog = SeedDataSource::default().roles()?.entries;
+    rules_core::roles::validate_against(&character.roles, &role_catalog)?;
     let storage = lock(&state)?;
     let kind = storage
         .get_character(id)
-        .map_err(|e| e.to_string())?
-        .ok_or_else(|| format!("character {id} not found"))?
+        ?
+        .ok_or_else(|| CmdError::not_found("character", id))?
         .kind;
     if kind == storage::CharacterKind::Npc {
         character.settle_npc();
     }
-    let data = serde_json::to_string(&character).map_err(|e| e.to_string())?;
-    if !storage.update_character(id, &character.name, &data).map_err(|e| e.to_string())? {
-        return Err(format!("character {id} not found"));
+    let data = serde_json::to_string(&character)?;
+    if !storage.update_character(id, &character.name, &data)? {
+        return Err(CmdError::not_found("character", id));
     }
     Ok(CharacterRecord::new(id, character))
 }
@@ -423,24 +426,24 @@ fn write_export(
     kind: ExportKind,
     base: &str,
     json: &str,
-) -> Result<(String, std::path::PathBuf), String> {
+) -> Result<(String, std::path::PathBuf), CmdError> {
     let dir = kind_dir(root, kind);
-    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    std::fs::create_dir_all(&dir)?;
     let name = free_export_name(&dir, transfer::typed_file_name(kind, base), &kind.suffix());
     let path = dir.join(&name);
-    std::fs::write(&path, json).map_err(|e| e.to_string())?;
+    std::fs::write(&path, json)?;
     Ok((name, path))
 }
 
 /// The characters with these ids (everyone when `None`) as export items.
-fn export_items(storage: &Storage, ids: Option<&[i64]>) -> Result<Vec<ExportedCharacter>, String> {
+fn export_items(storage: &Storage, ids: Option<&[i64]>) -> Result<Vec<ExportedCharacter>, CmdError> {
     let mut items = Vec::new();
     for kind in [CharacterKind::Pc, CharacterKind::Npc] {
-        for row in storage.list_characters(storage_kind(kind)).map_err(|e| e.to_string())? {
+        for row in storage.list_characters(storage_kind(kind))? {
             if ids.is_some_and(|ids| !ids.contains(&row.id)) {
                 continue;
             }
-            let character: Character = serde_json::from_str(&row.data).map_err(|e| e.to_string())?;
+            let character: Character = serde_json::from_str(&row.data)?;
             items.push(ExportedCharacter { kind, character });
         }
     }
@@ -453,7 +456,7 @@ fn export_characters(
     state: State<'_, AppStorage>,
     dir: State<'_, ExportsDir>,
     ids: Option<Vec<i64>>,
-) -> Result<ExportSaved, String> {
+) -> Result<ExportSaved, CmdError> {
     let storage = lock(&state)?;
     let items = export_items(&storage, ids.as_deref())?;
     let count = u32::try_from(items.len()).unwrap_or(u32::MAX);
@@ -462,7 +465,7 @@ fn export_characters(
         [only] => only.character.name.clone(),
         _ => String::new(),
     };
-    let json = transfer::export(items).map_err(|e| e.to_string())?;
+    let json = transfer::export(items)?;
     let (name, path) = write_export(&dir.0, ExportKind::Character, &base, &json)?;
     Ok(ExportSaved { name, path: path.display().to_string(), count })
 }
@@ -472,20 +475,20 @@ fn export_characters(
 fn export_session(
     state: State<'_, AppStorage>,
     dir: State<'_, ExportsDir>,
-) -> Result<ExportSaved, String> {
+) -> Result<ExportSaved, CmdError> {
     let storage = lock(&state)?;
     let session = ensure_session(&storage)?;
-    let members = storage.session_members(session).map_err(|e| e.to_string())?;
+    let members = storage.session_members(session)?;
     let name = storage
         .list_sessions()
-        .map_err(|e| e.to_string())?
+        ?
         .into_iter()
         .find(|s| s.id == session)
         .map(|s| s.name)
         .unwrap_or_default();
     let items = export_items(&storage, Some(&members))?;
     let count = u32::try_from(items.len()).unwrap_or(u32::MAX);
-    let json = transfer::export(items).map_err(|e| e.to_string())?;
+    let json = transfer::export(items)?;
     let (name, path) = write_export(&dir.0, ExportKind::Session, &name, &json)?;
     Ok(ExportSaved { name, path: path.display().to_string(), count })
 }
@@ -529,11 +532,11 @@ fn export_encounters(
     dir: State<'_, ExportsDir>,
     encounter_ids: Vec<i64>,
     template_ids: Vec<i64>,
-) -> Result<EncountersSaved, String> {
+) -> Result<EncountersSaved, CmdError> {
     let storage = lock(&state)?;
     let encounters: Vec<Encounter> = storage
         .list_docs(DocTable::Encounters)
-        .map_err(|e| e.to_string())?
+        ?
         .iter()
         .filter(|row| encounter_ids.contains(&row.id))
         .map(|row| encounter_record(row).map(|r| r.encounter))
@@ -546,13 +549,13 @@ fn export_encounters(
     }
     let templates: Vec<(i64, NpcTier, Character)> = storage
         .list_docs(DocTable::UserTemplates)
-        .map_err(|e| e.to_string())?
+        ?
         .iter()
         .filter(|row| wanted.contains(&row.id))
         .map(|row| user_template_record(row).map(|r| (r.id, r.tier, r.character)))
         .collect::<Result<_, _>>()?;
     if encounters.is_empty() && templates.is_empty() {
-        return Err("nothing to export".to_string());
+        return Err(CmdError::nothing_to_export());
     }
     let counts = (
         u32::try_from(encounters.len()).unwrap_or(u32::MAX),
@@ -564,7 +567,7 @@ fn export_encounters(
         ([], [(_, _, only)]) => only.name.clone(),
         _ => String::new(),
     };
-    let json = encounter_transfer::export(templates, encounters).map_err(|e| e.to_string())?;
+    let json = encounter_transfer::export(templates, encounters)?;
     let (name, path) = write_export(&dir.0, ExportKind::Encounters, &base, &json)?;
     Ok(EncountersSaved {
         name,
@@ -581,31 +584,31 @@ fn import_encounter_file(
     state: State<'_, AppStorage>,
     dir: State<'_, ExportsDir>,
     name: String,
-) -> Result<EncountersImported, String> {
+) -> Result<EncountersImported, CmdError> {
     let path = resolve_export(&dir.0, ExportKind::Encounters, &name)
-        .ok_or_else(|| format!("{name:?} is not an encounters file name"))?;
-    let json = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+        .ok_or_else(|| CmdError::wrong_file_kind(&name))?;
+    let json = std::fs::read_to_string(path)?;
     let file = encounter_transfer::parse_import(&json, &SeedDataSource::default())
-        .map_err(|e| e.to_string())?;
+        ?;
     let storage = lock(&state)?;
     let mut new_ids = std::collections::HashMap::new();
     let mut templates = Vec::new();
     for t in file.templates {
         let doc = UserTemplateDoc { tier: t.tier, character: t.character };
-        let data = serde_json::to_string(&doc).map_err(|e| e.to_string())?;
+        let data = serde_json::to_string(&doc)?;
         let id = storage
             .insert_doc(DocTable::UserTemplates, &doc.character.name, &data)
-            .map_err(|e| e.to_string())?;
+            ?;
         new_ids.insert(t.key, id);
         templates.push(UserTemplateRecord { id, tier: doc.tier, character: doc.character });
     }
     let mut encounters = Vec::new();
     for mut encounter in file.encounters {
         encounter_transfer::remap_templates(&mut encounter, &new_ids);
-        let data = serde_json::to_string(&encounter).map_err(|e| e.to_string())?;
+        let data = serde_json::to_string(&encounter)?;
         let id = storage
             .insert_doc(DocTable::Encounters, &encounter.name, &data)
-            .map_err(|e| e.to_string())?;
+            ?;
         encounters.push(EncounterRecord { id, encounter });
     }
     Ok(EncountersImported { templates, encounters })
@@ -620,24 +623,24 @@ fn import_export_file(
     dir: State<'_, ExportsDir>,
     kind: ExportKind,
     name: String,
-) -> Result<Vec<CharacterRecord>, String> {
+) -> Result<Vec<CharacterRecord>, CmdError> {
     if kind == ExportKind::Encounters {
-        return Err("encounter files have their own import".to_string());
+        return Err(CmdError::wrong_file_kind(&name));
     }
     let path = resolve_export(&dir.0, kind, &name)
-        .ok_or_else(|| format!("{name:?} is not a {} file name", kind.infix()))?;
-    let json = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
-    let items = transfer::parse_import(&json, &SeedDataSource::default()).map_err(|e| e.to_string())?;
+        .ok_or_else(|| CmdError::wrong_file_kind(&name))?;
+    let json = std::fs::read_to_string(path)?;
+    let items = transfer::parse_import(&json, &SeedDataSource::default())?;
     let storage = lock(&state)?;
     let mut records = Vec::new();
     for mut item in items {
         if item.kind == CharacterKind::Npc {
             item.character.settle_npc();
         }
-        let data = serde_json::to_string(&item.character).map_err(|e| e.to_string())?;
+        let data = serde_json::to_string(&item.character)?;
         let id = storage
             .insert_character(storage_kind(item.kind), &item.character.name, &data)
-            .map_err(|e| e.to_string())?;
+            ?;
         join_active_session(&storage, id)?;
         records.push(CharacterRecord::new(id, item.character));
     }
@@ -650,24 +653,24 @@ fn open_exports_folder(
     app: AppHandle,
     dir: State<'_, ExportsDir>,
     kind: Option<ExportKind>,
-) -> Result<(), String> {
+) -> Result<(), CmdError> {
     let target = kind.map_or_else(|| dir.0.clone(), |k| kind_dir(&dir.0, k));
-    std::fs::create_dir_all(&target).map_err(|e| e.to_string())?;
-    app.opener().open_path(target.display().to_string(), None::<&str>).map_err(|e| e.to_string())
+    std::fs::create_dir_all(&target)?;
+    app.opener().open_path(target.display().to_string(), None::<&str>).map_err(CmdError::from)
 }
 
 #[tauri::command]
-fn delete_character(state: State<'_, AppStorage>, id: i64) -> Result<(), String> {
+fn delete_character(state: State<'_, AppStorage>, id: i64) -> Result<(), CmdError> {
     let storage = lock(&state)?;
     // Membership rows go with the character (ON DELETE CASCADE).
-    storage.delete_character(id).map_err(|e| e.to_string())?;
+    storage.delete_character(id)?;
     // A deleted character must not linger behind a cover or in a fight, in any session.
-    for row in storage.all_scenes().map_err(|e| e.to_string())? {
-        let mut scene: Scene = serde_json::from_str(&row.data).map_err(|e| e.to_string())?;
+    for row in storage.all_scenes()? {
+        let mut scene: Scene = serde_json::from_str(&row.data)?;
         scene.unlink_character(id);
         if scene.combat.combatants.iter().any(|c| c.character_id == id) {
             let skip = dead_ids(&storage, &scene)?;
-            scene.combat.remove(id, &skip).map_err(|e| e.to_string())?;
+            scene.combat.remove(id, &skip)?;
             // The turn may have passed to a mortally wounded fighter (or to nobody).
             refresh_death_save_due(&mut scene, &storage)?;
         }
@@ -676,80 +679,80 @@ fn delete_character(state: State<'_, AppStorage>, id: i64) -> Result<(), String>
     Ok(())
 }
 
-fn save_scene_row(storage: &Storage, id: i64, scene: &Scene) -> Result<(), String> {
-    let data = serde_json::to_string(scene).map_err(|e| e.to_string())?;
-    storage.save_scene(id, &data).map_err(|e| e.to_string())?;
+fn save_scene_row(storage: &Storage, id: i64, scene: &Scene) -> Result<(), CmdError> {
+    let data = serde_json::to_string(scene)?;
+    storage.save_scene(id, &data)?;
     Ok(())
 }
 
 const SESSION_NAME_MAX: usize = 60;
 
-fn clean_session_name(name: &str) -> Result<String, String> {
+fn clean_session_name(name: &str) -> Result<String, CmdError> {
     let name = name.trim();
     if name.is_empty() || name.chars().count() > SESSION_NAME_MAX {
-        return Err(format!("session name must be 1..{SESSION_NAME_MAX} characters"));
+        return Err(CmdError::name_length(SESSION_NAME_MAX));
     }
     Ok(name.to_string())
 }
 
 /// Creates a session with an empty scene; returns the session id.
-fn new_session(storage: &Storage, name: &str) -> Result<i64, String> {
+fn new_session(storage: &Storage, name: &str) -> Result<i64, CmdError> {
     let name = clean_session_name(name)?;
-    let session = storage.create_session(&name).map_err(|e| e.to_string())?;
-    let data = serde_json::to_string(&Scene::default()).map_err(|e| e.to_string())?;
-    storage.create_scene(session, "Scene", &data).map_err(|e| e.to_string())?;
+    let session = storage.create_session(&name)?;
+    let data = serde_json::to_string(&Scene::default())?;
+    storage.create_scene(session, "Scene", &data)?;
     Ok(session)
 }
 
 /// The session the app works with. If none is active, the first one becomes active; with no
 /// sessions at all a default one is created (the UI normally creates a localized one first).
-fn ensure_session(storage: &Storage) -> Result<i64, String> {
-    if let Some(id) = storage.active_session().map_err(|e| e.to_string())? {
+fn ensure_session(storage: &Storage) -> Result<i64, CmdError> {
+    if let Some(id) = storage.active_session()? {
         return Ok(id);
     }
-    let first = storage.list_sessions().map_err(|e| e.to_string())?.first().map(|s| s.id);
+    let first = storage.list_sessions()?.first().map(|s| s.id);
     let id = match first {
         Some(id) => id,
         None => new_session(storage, "Session")?,
     };
-    storage.set_active_session(id).map_err(|e| e.to_string())?;
+    storage.set_active_session(id)?;
     Ok(id)
 }
 
 /// Puts a new character into the active session.
-fn join_active_session(storage: &Storage, character_id: i64) -> Result<(), String> {
+fn join_active_session(storage: &Storage, character_id: i64) -> Result<(), CmdError> {
     let session = ensure_session(storage)?;
-    storage.add_member(session, character_id).map_err(|e| e.to_string())
+    storage.add_member(session, character_id).map_err(CmdError::from)
 }
 
 /// Like `session_infos`, but an empty database stays empty: the UI creates the first session
 /// itself so that its name follows the interface language.
-fn list_session_infos(storage: &Storage) -> Result<Vec<SessionInfo>, String> {
-    if storage.list_sessions().map_err(|e| e.to_string())?.is_empty() {
+fn list_session_infos(storage: &Storage) -> Result<Vec<SessionInfo>, CmdError> {
+    if storage.list_sessions()?.is_empty() {
         return Ok(Vec::new());
     }
     session_infos(storage)
 }
 
-fn session_infos(storage: &Storage) -> Result<Vec<SessionInfo>, String> {
+fn session_infos(storage: &Storage) -> Result<Vec<SessionInfo>, CmdError> {
     ensure_session(storage)?;
-    let rows = storage.list_sessions().map_err(|e| e.to_string())?;
+    let rows = storage.list_sessions()?;
     Ok(rows.into_iter().map(|r| SessionInfo { id: r.id, name: r.name, active: r.active }).collect())
 }
 
 /// Loads the scene of the active session.
-fn load_scene(storage: &Storage) -> Result<(i64, Scene), String> {
+fn load_scene(storage: &Storage) -> Result<(i64, Scene), CmdError> {
     let session = ensure_session(storage)?;
-    match storage.active_scene().map_err(|e| e.to_string())? {
+    match storage.active_scene()? {
         Some(row) => {
-            let scene: Scene = serde_json::from_str(&row.data).map_err(|e| e.to_string())?;
-            scene.validate().map_err(|e| e.to_string())?;
+            let scene: Scene = serde_json::from_str(&row.data)?;
+            scene.validate()?;
             Ok((row.id, scene))
         }
         None => {
             let scene = Scene::default();
-            let data = serde_json::to_string(&scene).map_err(|e| e.to_string())?;
-            let id = storage.create_scene(session, "Scene", &data).map_err(|e| e.to_string())?;
+            let data = serde_json::to_string(&scene)?;
+            let id = storage.create_scene(session, "Scene", &data)?;
             Ok((id, scene))
         }
     }
@@ -758,8 +761,8 @@ fn load_scene(storage: &Storage) -> Result<(i64, Scene), String> {
 /// Loads the working scene, applies `change` and saves only when it succeeds.
 fn with_scene(
     state: &State<'_, AppStorage>,
-    change: impl FnOnce(&mut Scene) -> Result<(), String>,
-) -> Result<SceneRecord, String> {
+    change: impl FnOnce(&mut Scene) -> Result<(), CmdError>,
+) -> Result<SceneRecord, CmdError> {
     let storage = lock(state)?;
     let (id, mut scene) = load_scene(&storage)?;
     change(&mut scene)?;
@@ -768,17 +771,17 @@ fn with_scene(
 }
 
 #[tauri::command]
-fn list_sessions(state: State<'_, AppStorage>) -> Result<Vec<SessionInfo>, String> {
+fn list_sessions(state: State<'_, AppStorage>) -> Result<Vec<SessionInfo>, CmdError> {
     let storage = lock(&state)?;
     list_session_infos(&storage)
 }
 
 /// Creates a session with an empty scene and switches to it.
 #[tauri::command]
-fn create_session(state: State<'_, AppStorage>, name: String) -> Result<Vec<SessionInfo>, String> {
+fn create_session(state: State<'_, AppStorage>, name: String) -> Result<Vec<SessionInfo>, CmdError> {
     let storage = lock(&state)?;
     let id = new_session(&storage, &name)?;
-    storage.set_active_session(id).map_err(|e| e.to_string())?;
+    storage.set_active_session(id)?;
     session_infos(&storage)
 }
 
@@ -787,11 +790,11 @@ fn rename_session(
     state: State<'_, AppStorage>,
     id: i64,
     name: String,
-) -> Result<Vec<SessionInfo>, String> {
+) -> Result<Vec<SessionInfo>, CmdError> {
     let storage = lock(&state)?;
     let name = clean_session_name(&name)?;
-    if !storage.rename_session(id, &name).map_err(|e| e.to_string())? {
-        return Err(format!("session {id} not found"));
+    if !storage.rename_session(id, &name)? {
+        return Err(CmdError::not_found("session", id));
     }
     session_infos(&storage)
 }
@@ -801,31 +804,31 @@ const SESSION_NOTES_MAX: usize = 100_000;
 
 /// Notes of a session (empty text when none were written).
 #[tauri::command]
-fn session_notes(state: State<'_, AppStorage>, id: i64) -> Result<String, String> {
+fn session_notes(state: State<'_, AppStorage>, id: i64) -> Result<String, CmdError> {
     let storage = lock(&state)?;
-    match storage.session_notes(id).map_err(|e| e.to_string())? {
+    match storage.session_notes(id)? {
         Some(notes) => Ok(notes),
-        None => Err(format!("session {id} not found")),
+        None => Err(CmdError::not_found("session", id)),
     }
 }
 
 #[tauri::command]
-fn set_session_notes(state: State<'_, AppStorage>, id: i64, notes: String) -> Result<(), String> {
+fn set_session_notes(state: State<'_, AppStorage>, id: i64, notes: String) -> Result<(), CmdError> {
     if notes.chars().count() > SESSION_NOTES_MAX {
-        return Err(format!("notes are longer than {SESSION_NOTES_MAX} characters"));
+        return Err(CmdError::notes_too_long(SESSION_NOTES_MAX));
     }
     let storage = lock(&state)?;
-    if !storage.set_session_notes(id, &notes).map_err(|e| e.to_string())? {
-        return Err(format!("session {id} not found"));
+    if !storage.set_session_notes(id, &notes)? {
+        return Err(CmdError::not_found("session", id));
     }
     Ok(())
 }
 
 #[tauri::command]
-fn switch_session(state: State<'_, AppStorage>, id: i64) -> Result<Vec<SessionInfo>, String> {
+fn switch_session(state: State<'_, AppStorage>, id: i64) -> Result<Vec<SessionInfo>, CmdError> {
     let storage = lock(&state)?;
-    if !storage.set_active_session(id).map_err(|e| e.to_string())? {
-        return Err(format!("session {id} not found"));
+    if !storage.set_active_session(id)? {
+        return Err(CmdError::not_found("session", id));
     }
     session_infos(&storage)
 }
@@ -833,12 +836,12 @@ fn switch_session(state: State<'_, AppStorage>, id: i64) -> Result<Vec<SessionIn
 /// Deletes a session with its scene and fight. Its characters stay in the common list. Deleting
 /// the active session activates another one; the list comes back empty after the last one.
 #[tauri::command]
-fn delete_session(state: State<'_, AppStorage>, id: i64) -> Result<Vec<SessionInfo>, String> {
+fn delete_session(state: State<'_, AppStorage>, id: i64) -> Result<Vec<SessionInfo>, CmdError> {
     let storage = lock(&state)?;
-    if !storage.delete_session(id).map_err(|e| e.to_string())? {
-        return Err(format!("session {id} not found"));
+    if !storage.delete_session(id)? {
+        return Err(CmdError::not_found("session", id));
     }
-    if storage.list_sessions().map_err(|e| e.to_string())?.is_empty() {
+    if storage.list_sessions()?.is_empty() {
         return Ok(Vec::new());
     }
     session_infos(&storage)
@@ -846,21 +849,21 @@ fn delete_session(state: State<'_, AppStorage>, id: i64) -> Result<Vec<SessionIn
 
 /// Ids of the active session's characters, in the order they joined.
 #[tauri::command]
-fn session_members(state: State<'_, AppStorage>) -> Result<Vec<i64>, String> {
+fn session_members(state: State<'_, AppStorage>) -> Result<Vec<i64>, CmdError> {
     let storage = lock(&state)?;
     let session = ensure_session(&storage)?;
-    storage.session_members(session).map_err(|e| e.to_string())
+    storage.session_members(session).map_err(CmdError::from)
 }
 
 #[tauri::command]
-fn add_to_session(state: State<'_, AppStorage>, character_id: i64) -> Result<Vec<i64>, String> {
+fn add_to_session(state: State<'_, AppStorage>, character_id: i64) -> Result<Vec<i64>, CmdError> {
     let storage = lock(&state)?;
-    if storage.get_character(character_id).map_err(|e| e.to_string())?.is_none() {
-        return Err(format!("character {character_id} not found"));
+    if storage.get_character(character_id)?.is_none() {
+        return Err(CmdError::not_found("character", character_id));
     }
     join_active_session(&storage, character_id)?;
     let session = ensure_session(&storage)?;
-    storage.session_members(session).map_err(|e| e.to_string())
+    storage.session_members(session).map_err(CmdError::from)
 }
 
 /// Takes a character out of the active session: out of its covers and fight too. The character
@@ -869,15 +872,15 @@ fn add_to_session(state: State<'_, AppStorage>, character_id: i64) -> Result<Vec
 fn remove_from_session(
     state: State<'_, AppStorage>,
     character_id: i64,
-) -> Result<SceneRecord, String> {
+) -> Result<SceneRecord, CmdError> {
     let storage = lock(&state)?;
     let session = ensure_session(&storage)?;
-    storage.remove_member(session, character_id).map_err(|e| e.to_string())?;
+    storage.remove_member(session, character_id)?;
     let (id, mut scene) = load_scene(&storage)?;
     scene.unlink_character(character_id);
     if scene.combat.combatants.iter().any(|c| c.character_id == character_id) {
         let skip = dead_ids(&storage, &scene)?;
-        scene.combat.remove(character_id, &skip).map_err(|e| e.to_string())?;
+        scene.combat.remove(character_id, &skip)?;
         refresh_death_save_due(&mut scene, &storage)?;
     }
     save_scene_row(&storage, id, &scene)?;
@@ -890,7 +893,7 @@ fn remove_from_session(
 fn deflection_info(
     state: State<'_, AppStorage>,
     character_id: i64,
-) -> Result<damage_event::DeflectionInfo, String> {
+) -> Result<damage_event::DeflectionInfo, CmdError> {
     let storage = lock(&state)?;
     let character = require_character(&storage, character_id)?;
     let (_, scene) = load_scene(&storage)?;
@@ -898,13 +901,13 @@ fn deflection_info(
 }
 
 #[tauri::command]
-fn get_scene(state: State<'_, AppStorage>) -> Result<SceneRecord, String> {
+fn get_scene(state: State<'_, AppStorage>) -> Result<SceneRecord, CmdError> {
     with_scene(&state, |_| Ok(()))
 }
 
 #[tauri::command]
-fn list_cover_presets(lang: State<'_, ContentLang>) -> Result<Vec<CoverPreset>, String> {
-    cover_presets(&content(&lang)?).map_err(|e| e.to_string())
+fn list_cover_presets(lang: State<'_, ContentLang>) -> Result<Vec<CoverPreset>, CmdError> {
+    cover_presets(&content(&lang)?).map_err(CmdError::from)
 }
 
 /// Adds a cover from a preset (`preset` = its id) or a hand-made one (`None`,
@@ -916,19 +919,19 @@ fn add_cover(
     preset: Option<String>,
     name: String,
     hp: Option<u32>,
-) -> Result<SceneRecord, String> {
+) -> Result<SceneRecord, CmdError> {
     let preset = match preset {
         Some(id) => Some(
             cover_presets(&content(&lang)?)
-                .map_err(|e| e.to_string())?
+                ?
                 .into_iter()
                 .find(|p| p.id == id)
-                .ok_or_else(|| format!("unknown cover preset {id:?}"))?,
+                .ok_or_else(|| CmdError::unknown_preset(&id))?,
         ),
         None => None,
     };
     with_scene(&state, |scene| {
-        scene.add_cover(preset.as_ref(), &name, hp).map(|_| ()).map_err(|e| e.to_string())
+        scene.add_cover(preset.as_ref(), &name, hp).map(|_| ()).map_err(CmdError::from)
     })
 }
 
@@ -939,15 +942,15 @@ fn edit_cover(
     name: String,
     hp: u32,
     max_hp: u32,
-) -> Result<SceneRecord, String> {
+) -> Result<SceneRecord, CmdError> {
     with_scene(&state, |scene| {
-        scene.edit_cover(cover_id, &name, hp, max_hp).map_err(|e| e.to_string())
+        scene.edit_cover(cover_id, &name, hp, max_hp).map_err(CmdError::from)
     })
 }
 
 #[tauri::command]
-fn remove_cover(state: State<'_, AppStorage>, cover_id: u32) -> Result<SceneRecord, String> {
-    with_scene(&state, |scene| scene.remove_cover(cover_id).map_err(|e| e.to_string()))
+fn remove_cover(state: State<'_, AppStorage>, cover_id: u32) -> Result<SceneRecord, CmdError> {
+    with_scene(&state, |scene| scene.remove_cover(cover_id).map_err(CmdError::from))
 }
 
 /// Puts a character behind a cover, or out of cover with `cover_id = None`.
@@ -956,31 +959,31 @@ fn set_character_cover(
     state: State<'_, AppStorage>,
     character_id: i64,
     cover_id: Option<u32>,
-) -> Result<SceneRecord, String> {
+) -> Result<SceneRecord, CmdError> {
     with_scene(&state, |scene| {
-        scene.set_character_cover(character_id, cover_id).map_err(|e| e.to_string())
+        scene.set_character_cover(character_id, cover_id).map_err(CmdError::from)
     })
 }
 
-fn load_character(storage: &Storage, id: i64) -> Result<Option<Character>, String> {
-    match storage.get_character(id).map_err(|e| e.to_string())? {
+fn load_character(storage: &Storage, id: i64) -> Result<Option<Character>, CmdError> {
+    match storage.get_character(id)? {
         Some(row) => Ok(Some(parse_row(&row)?)),
         None => Ok(None),
     }
 }
 
-fn require_character(storage: &Storage, id: i64) -> Result<Character, String> {
-    load_character(storage, id)?.ok_or_else(|| format!("character {id} not found"))
+fn require_character(storage: &Storage, id: i64) -> Result<Character, CmdError> {
+    load_character(storage, id)?.ok_or_else(|| CmdError::not_found("character", id))
 }
 
-fn store_character(storage: &Storage, id: i64, character: &Character) -> Result<(), String> {
-    let data = serde_json::to_string(character).map_err(|e| e.to_string())?;
-    storage.update_character(id, &character.name, &data).map_err(|e| e.to_string())?;
+fn store_character(storage: &Storage, id: i64, character: &Character) -> Result<(), CmdError> {
+    let data = serde_json::to_string(character)?;
+    storage.update_character(id, &character.name, &data)?;
     Ok(())
 }
 
 /// Ids of fighters who cannot take a turn: dead, or no longer in the database.
-fn dead_ids(storage: &Storage, scene: &Scene) -> Result<Vec<i64>, String> {
+fn dead_ids(storage: &Storage, scene: &Scene) -> Result<Vec<i64>, CmdError> {
     let mut dead = Vec::new();
     for c in &scene.combat.combatants {
         match load_character(storage, c.character_id)? {
@@ -993,15 +996,15 @@ fn dead_ids(storage: &Storage, scene: &Scene) -> Result<Vec<i64>, String> {
 
 /// Rolls a d10 check (exploding on 10 and 1), or takes the faces read off
 /// physical dice.
-fn d10_check(manual: Option<Vec<u32>>) -> Result<CheckRoll, String> {
+fn d10_check(manual: Option<Vec<u32>>) -> Result<CheckRoll, CmdError> {
     match manual {
-        Some(faces) => check_manual(&faces).map_err(|e| e.to_string()),
+        Some(faces) => check_manual(&faces).map_err(CmdError::from),
         None => Ok(roll_check(&mut ThreadDice::new())),
     }
 }
 
 /// Marks whether the fighter whose turn just began owes a death save.
-fn refresh_death_save_due(scene: &mut Scene, storage: &Storage) -> Result<(), String> {
+fn refresh_death_save_due(scene: &mut Scene, storage: &Storage) -> Result<(), CmdError> {
     scene.combat.death_save_due = match scene.combat.active {
         Some(id) => match load_character(storage, id)? {
             Some(c) => c.wound_state() == WoundState::Mortal,
@@ -1015,8 +1018,8 @@ fn refresh_death_save_due(scene: &mut Scene, storage: &Storage) -> Result<(), St
 /// Runs a change on the working scene with access to the character storage.
 fn with_combat(
     state: &State<'_, AppStorage>,
-    change: impl FnOnce(&mut Scene, &Storage) -> Result<(), String>,
-) -> Result<SceneRecord, String> {
+    change: impl FnOnce(&mut Scene, &Storage) -> Result<(), CmdError>,
+) -> Result<SceneRecord, CmdError> {
     let storage = lock(state)?;
     let (id, mut scene) = load_scene(&storage)?;
     change(&mut scene, &storage)?;
@@ -1031,7 +1034,7 @@ fn combat_roll(
     state: State<'_, AppStorage>,
     character_id: i64,
     manual: Option<Vec<u32>>,
-) -> Result<SceneRecord, String> {
+) -> Result<SceneRecord, CmdError> {
     with_combat(&state, |scene, storage| {
         let character = require_character(storage, character_id)?;
         let (reflex, bonus) = (character.stats.reflex, rules_core::roles::initiative_bonus(&character));
@@ -1039,7 +1042,7 @@ fn combat_roll(
         scene
             .combat
             .roll_with_bonus(character_id, reflex, bonus, die)
-            .map_err(|e| e.to_string())
+            .map_err(CmdError::from)
     })
 }
 
@@ -1050,10 +1053,10 @@ fn combat_set_initiative(
     state: State<'_, AppStorage>,
     character_id: i64,
     initiative: i32,
-) -> Result<SceneRecord, String> {
+) -> Result<SceneRecord, CmdError> {
     with_combat(&state, |scene, storage| {
         let reflex = require_character(storage, character_id)?.stats.reflex;
-        scene.combat.set_or_add(character_id, reflex, initiative).map_err(|e| e.to_string())
+        scene.combat.set_or_add(character_id, reflex, initiative).map_err(CmdError::from)
     })
 }
 
@@ -1063,17 +1066,17 @@ fn combat_shift(
     state: State<'_, AppStorage>,
     character_id: i64,
     delta: i32,
-) -> Result<SceneRecord, String> {
+) -> Result<SceneRecord, CmdError> {
     with_combat(&state, |scene, _| {
-        scene.combat.shift(character_id, delta).map_err(|e| e.to_string())
+        scene.combat.shift(character_id, delta).map_err(CmdError::from)
     })
 }
 
 #[tauri::command]
-fn combat_remove(state: State<'_, AppStorage>, character_id: i64) -> Result<SceneRecord, String> {
+fn combat_remove(state: State<'_, AppStorage>, character_id: i64) -> Result<SceneRecord, CmdError> {
     with_combat(&state, |scene, storage| {
         let skip = dead_ids(storage, scene)?;
-        scene.combat.remove(character_id, &skip).map_err(|e| e.to_string())?;
+        scene.combat.remove(character_id, &skip)?;
         refresh_death_save_due(scene, storage)
     })
 }
@@ -1081,10 +1084,10 @@ fn combat_remove(state: State<'_, AppStorage>, character_id: i64) -> Result<Scen
 /// Starts the fight. Everyone in the active session fights: living characters who have no initiative
 /// yet get one rolled here, so the GM only types in the ones rolled with physical dice.
 #[tauri::command]
-fn combat_start(state: State<'_, AppStorage>) -> Result<SceneRecord, String> {
+fn combat_start(state: State<'_, AppStorage>) -> Result<SceneRecord, CmdError> {
     with_combat(&state, |scene, storage| {
         let session = ensure_session(storage)?;
-        for id in storage.session_members(session).map_err(|e| e.to_string())? {
+        for id in storage.session_members(session)? {
             let Some(character) = load_character(storage, id)? else { continue };
             if character.dead || scene.combat.is_in_fight(id) {
                 continue;
@@ -1094,25 +1097,25 @@ fn combat_start(state: State<'_, AppStorage>) -> Result<SceneRecord, String> {
             scene
                 .combat
                 .add_with_bonus(id, character.stats.reflex, bonus, die)
-                .map_err(|e| e.to_string())?;
+                ?;
         }
         let skip = dead_ids(storage, scene)?;
-        scene.combat.start(&skip).map_err(|e| e.to_string())?;
+        scene.combat.start(&skip)?;
         refresh_death_save_due(scene, storage)
     })
 }
 
 #[tauri::command]
-fn combat_next_turn(state: State<'_, AppStorage>) -> Result<SceneRecord, String> {
+fn combat_next_turn(state: State<'_, AppStorage>) -> Result<SceneRecord, CmdError> {
     with_combat(&state, |scene, storage| {
         let skip = dead_ids(storage, scene)?;
-        scene.combat.next_turn(&skip).map_err(|e| e.to_string())?;
+        scene.combat.next_turn(&skip)?;
         refresh_death_save_due(scene, storage)
     })
 }
 
 #[tauri::command]
-fn combat_end(state: State<'_, AppStorage>) -> Result<SceneRecord, String> {
+fn combat_end(state: State<'_, AppStorage>) -> Result<SceneRecord, CmdError> {
     with_combat(&state, |scene, _| {
         scene.combat.end();
         Ok(())
@@ -1125,15 +1128,15 @@ fn death_save(
     state: State<'_, AppStorage>,
     character_id: i64,
     manual: Option<u32>,
-) -> Result<DeathSaveApplied, String> {
+) -> Result<DeathSaveApplied, CmdError> {
     let storage = lock(&state)?;
     let mut character = require_character(&storage, character_id)?;
     let notation = DiceNotation { count: 1, sides: 10, modifier: 0 };
     let roll = match manual {
-        Some(face) => roll_manual(notation, &[face]).map_err(|e| e.to_string())?,
+        Some(face) => roll_manual(notation, &[face])?,
         None => roll(notation, &mut ThreadDice::new()),
     };
-    let save = vitals::apply_death_save(&mut character, roll).map_err(|e| e.to_string())?;
+    let save = vitals::apply_death_save(&mut character, roll)?;
     store_character(&storage, character_id, &character)?;
     let (scene_id, mut scene) = load_scene(&storage)?;
     if scene.combat.active == Some(character_id) {
@@ -1158,15 +1161,15 @@ fn stabilize(
     skill: String,
     manual_total: Option<i32>,
     granted: bool,
-) -> Result<StabilizeApplied, String> {
+) -> Result<StabilizeApplied, CmdError> {
     let storage = lock(&state)?;
     let mut target = require_character(&storage, target_id)?;
     let base = vitals::base_death_save_penalty(&target.injuries, &injury_table()?);
     let result = if granted {
-        vitals::stabilize_granted(&mut target, base).map_err(|e| e.to_string())?
+        vitals::stabilize_granted(&mut target, base)?
     } else {
         if !STABILIZE_SKILLS.contains(&skill.as_str()) {
-            return Err(vitals::VitalsError::BadSkill(skill).to_string());
+            return Err(vitals::VitalsError::BadSkill(skill).into());
         }
         let helper = if helper_id == target_id {
             target.clone()
@@ -1176,10 +1179,10 @@ fn stabilize(
         let bonus = i32::from(helper.stats.tech)
             + i32::from(helper.skills.get(&skill).copied().unwrap_or(0));
         let die = match manual_total {
-            Some(total) => check_total(total).map_err(|e| e.to_string())?,
+            Some(total) => check_total(total)?,
             None => roll_check(&mut ThreadDice::new()),
         };
-        vitals::stabilize(&mut target, bonus, die, base).map_err(|e| e.to_string())?
+        vitals::stabilize(&mut target, bonus, die, base)?
     };
     store_character(&storage, target_id, &target)?;
     Ok(StabilizeApplied { character: CharacterRecord::new(target_id, target), result })
@@ -1200,13 +1203,13 @@ fn heal_injury(
     bonus: Option<i32>,
     manual_total: Option<i32>,
     granted: bool,
-) -> Result<HealApplied, String> {
+) -> Result<HealApplied, CmdError> {
     let storage = lock(&state)?;
     let mut target = require_character(&storage, target_id)?;
     let injury = injury_table()?
         .into_iter()
         .find(|i| i.id == injury_id)
-        .ok_or_else(|| format!("unknown injury: {injury_id}"))?;
+        .ok_or_else(|| CmdError::not_found("injury", &injury_id))?;
     let (bonus, roll) = if granted {
         (0, None)
     } else {
@@ -1221,7 +1224,7 @@ fn heal_injury(
                         require_character(&storage, helper_id)?
                     };
                     if helper.role(rules_core::roles::MEDTECH).is_none() {
-                        return Err("surgery needs a bonus".to_string());
+                        return Err(CmdError::surgery_bonus_missing());
                     }
                     rules_core::roles::surgery_bonus(&helper)
                 }
@@ -1234,20 +1237,20 @@ fn heal_injury(
                     require_character(&storage, helper_id)?
                 };
                 let catalog =
-                    SeedDataSource::default().skills().map_err(|e| e.to_string())?.entries;
+                    SeedDataSource::default().skills()?.entries;
                 let (_, stat, level) =
-                    skill_check::skill_bonus(&helper, id, &catalog).map_err(|e| e.to_string())?;
+                    skill_check::skill_bonus(&helper, id, &catalog)?;
                 i32::from(stat) + i32::from(level)
             }
         };
         let die = match manual_total {
-            Some(total) => check_total(total).map_err(|e| e.to_string())?,
+            Some(total) => check_total(total)?,
             None => roll_check(&mut ThreadDice::new()),
         };
         (bonus, Some(die))
     };
     let result = healing::heal_injury(&mut target, &injury, kind, skill, bonus, roll)
-        .map_err(|e| e.to_string())?;
+        ?;
     store_character(&storage, target_id, &target)?;
     Ok(HealApplied { character: CharacterRecord::new(target_id, target), result })
 }
@@ -1259,14 +1262,14 @@ fn add_injury(
     state: State<'_, AppStorage>,
     id: i64,
     injury_id: String,
-) -> Result<CharacterRecord, String> {
+) -> Result<CharacterRecord, CmdError> {
     let storage = lock(&state)?;
     let mut character = require_character(&storage, id)?;
     let table = injury_table()?;
     let injury = table
         .iter()
         .find(|i| i.id == injury_id)
-        .ok_or_else(|| format!("unknown injury: {injury_id}"))?;
+        .ok_or_else(|| CmdError::not_found("injury", &injury_id))?;
     character.add_injury(&injury.id, injury.death_save_penalty);
     store_character(&storage, id, &character)?;
     Ok(CharacterRecord::new(id, character))
@@ -1278,16 +1281,16 @@ fn remove_injury(
     state: State<'_, AppStorage>,
     id: i64,
     injury_id: String,
-) -> Result<CharacterRecord, String> {
+) -> Result<CharacterRecord, CmdError> {
     let storage = lock(&state)?;
     let mut character = require_character(&storage, id)?;
     let table = injury_table()?;
     let injury = table
         .iter()
         .find(|i| i.id == injury_id)
-        .ok_or_else(|| format!("unknown injury: {injury_id}"))?;
+        .ok_or_else(|| CmdError::not_found("injury", &injury_id))?;
     if !character.remove_injury(&injury.id, injury.death_save_penalty) {
-        return Err(format!("{injury_id} is not on the sheet"));
+        return Err(CmdError::injury_not_on_sheet(&injury_id));
     }
     store_character(&storage, id, &character)?;
     Ok(CharacterRecord::new(id, character))
@@ -1300,7 +1303,7 @@ fn administer_drug(
     target_id: i64,
     helper_id: i64,
     drug: String,
-) -> Result<rules_core::roles::DrugApplied, String> {
+) -> Result<rules_core::roles::DrugApplied, CmdError> {
     let storage = lock(&state)?;
     let mut target = require_character(&storage, target_id)?;
     let helper = if helper_id == target_id {
@@ -1308,7 +1311,7 @@ fn administer_drug(
     } else {
         require_character(&storage, helper_id)?
     };
-    let result = rules_core::roles::administer_drug(&helper, &mut target, &drug).map_err(|e| e.to_string())?;
+    let result = rules_core::roles::administer_drug(&helper, &mut target, &drug)?;
     store_character(&storage, target_id, &target)?;
     Ok(rules_core::roles::DrugApplied { character: CharacterRecord::new(target_id, target), result })
 }
@@ -1319,9 +1322,9 @@ fn rest_preview(
     state: State<'_, AppStorage>,
     id: i64,
     target_hp: u32,
-) -> Result<RestPlan, String> {
+) -> Result<RestPlan, CmdError> {
     let character = require_character(&*lock(&state)?, id)?;
-    healing::rest_plan(&character, target_hp).map_err(|e| e.to_string())
+    healing::rest_plan(&character, target_hp).map_err(CmdError::from)
 }
 
 /// Rests until `target_hp` is reached; first aid wears off with the day.
@@ -1330,10 +1333,10 @@ fn rest_character(
     state: State<'_, AppStorage>,
     id: i64,
     target_hp: u32,
-) -> Result<RestApplied, String> {
+) -> Result<RestApplied, CmdError> {
     let storage = lock(&state)?;
     let mut character = require_character(&storage, id)?;
-    let plan = healing::rest(&mut character, target_hp).map_err(|e| e.to_string())?;
+    let plan = healing::rest(&mut character, target_hp)?;
     store_character(&storage, id, &character)?;
     Ok(RestApplied { character: CharacterRecord::new(id, character), plan })
 }
@@ -1345,10 +1348,10 @@ fn lose_humanity(
     state: State<'_, AppStorage>,
     id: i64,
     loss: u32,
-) -> Result<HumanityLossApplied, String> {
+) -> Result<HumanityLossApplied, CmdError> {
     let storage = lock(&state)?;
     let mut character = require_character(&storage, id)?;
-    let loss = humanity::lose_humanity(&mut character, loss).map_err(|e| e.to_string())?;
+    let loss = humanity::lose_humanity(&mut character, loss)?;
     store_character(&storage, id, &character)?;
     Ok(HumanityLossApplied { character: CharacterRecord::new(id, character), loss })
 }
@@ -1371,36 +1374,36 @@ fn therapy(
     manual_total: Option<i32>,
     granted: bool,
     restore_faces: Option<Vec<u32>>,
-) -> Result<TherapyApplied, String> {
+) -> Result<TherapyApplied, CmdError> {
     let storage = lock(&state)?;
     let mut character = require_character(&storage, id)?;
     let check = if granted {
         None
     } else {
         Some(match manual_total {
-            Some(total) => check_total(total).map_err(|e| e.to_string())?,
+            Some(total) => check_total(total)?,
             None => roll_check(&mut ThreadDice::new()),
         })
     };
     // The restoration is only rolled when the check succeeds, but a wrong set of faces should be
     // refused before anything happens.
-    let notation: DiceNotation = kind.dice().parse().map_err(|e: DiceError| e.to_string())?;
+    let notation: DiceNotation = kind.dice().parse()?;
     let restore = match restore_faces {
-        Some(faces) => roll_manual(notation, &faces).map_err(|e| e.to_string())?,
+        Some(faces) => roll_manual(notation, &faces)?,
         None => roll(notation, &mut ThreadDice::new()),
     };
     let result = humanity::therapy(&mut character, kind, bonus, check, Some(restore))
-        .map_err(|e| e.to_string())?;
+        ?;
     store_character(&storage, id, &character)?;
     Ok(TherapyApplied { character: CharacterRecord::new(id, character), result })
 }
 
-fn injury_table() -> Result<Vec<CriticalInjury>, String> {
-    SeedDataSource::default().critical_injuries().map(|c| c.entries).map_err(|e| e.to_string())
+fn injury_table() -> Result<Vec<CriticalInjury>, CmdError> {
+    SeedDataSource::default().critical_injuries().map(|c| c.entries).map_err(CmdError::from)
 }
 
 #[tauri::command]
-fn list_injuries() -> Result<Vec<CriticalInjury>, String> {
+fn list_injuries() -> Result<Vec<CriticalInjury>, CmdError> {
     injury_table()
 }
 
@@ -1412,23 +1415,23 @@ fn skill_check(
     character_id: i64,
     skill: String,
     manual_total: Option<i32>,
-) -> Result<SkillCheck, String> {
+) -> Result<SkillCheck, CmdError> {
     let character = require_character(&*lock(&state)?, character_id)?;
     let die = match manual_total {
-        Some(total) => check_total(total).map_err(|e| e.to_string())?,
+        Some(total) => check_total(total)?,
         None => roll_check(&mut ThreadDice::new()),
     };
-    let catalog = SeedDataSource::default().skills().map_err(|e| e.to_string())?.entries;
-    skill_check::skill_check(&character, &skill, &catalog, die).map_err(|e| e.to_string())
+    let catalog = SeedDataSource::default().skills()?.entries;
+    skill_check::skill_check(&character, &skill, &catalog, die).map_err(CmdError::from)
 }
 
 /// Rolls `notation` with the OS RNG, or builds the result from faces read off
 /// physical dice (`manual`).
 #[tauri::command]
-fn roll_dice(notation: String, manual: Option<Vec<u32>>) -> Result<RollResult, String> {
-    let notation: DiceNotation = notation.parse().map_err(|e: DiceError| e.to_string())?;
+fn roll_dice(notation: String, manual: Option<Vec<u32>>) -> Result<RollResult, CmdError> {
+    let notation: DiceNotation = notation.parse()?;
     match manual {
-        Some(faces) => roll_manual(notation, &faces).map_err(|e| e.to_string()),
+        Some(faces) => roll_manual(notation, &faces).map_err(CmdError::from),
         None => Ok(roll(notation, &mut ThreadDice::new())),
     }
 }
@@ -1440,7 +1443,7 @@ fn roll_injury(
     character_id: i64,
     area: BodyArea,
     manual: Option<Vec<u32>>,
-) -> Result<InjuryRoll, String> {
+) -> Result<InjuryRoll, CmdError> {
     let character = require_character(&*lock(&state)?, character_id)?;
     damage_event::roll_injury(
         &injury_table()?,
@@ -1449,7 +1452,7 @@ fn roll_injury(
         manual.as_deref(),
         &mut ThreadDice::new(),
     )
-    .map_err(|e| e.to_string())
+    .map_err(CmdError::from)
 }
 
 /// Calculates a hit against the stored state without saving anything.
@@ -1458,11 +1461,11 @@ fn preview_damage(
     state: State<'_, AppStorage>,
     character_id: i64,
     request: DamageRequest,
-) -> Result<DamageOutcome, String> {
+) -> Result<DamageOutcome, CmdError> {
     let storage = lock(&state)?;
     let character = require_character(&storage, character_id)?;
     let (_, scene) = load_scene(&storage)?;
-    damage_event::evaluate(&character, &scene, &request).map_err(|e| e.to_string())
+    damage_event::evaluate(&character, &scene, &request).map_err(CmdError::from)
 }
 
 /// Applies a hit to the character and the scene's cover; saves both or neither.
@@ -1472,12 +1475,12 @@ fn apply_damage(
     character_id: i64,
     request: DamageRequest,
     injury_id: Option<String>,
-) -> Result<DamageApplied, String> {
+) -> Result<DamageApplied, CmdError> {
     let storage = lock(&state)?;
     let row = storage
         .get_character(character_id)
-        .map_err(|e| e.to_string())?
-        .ok_or_else(|| format!("character {character_id} not found"))?;
+        ?
+        .ok_or_else(|| CmdError::not_found("character", character_id))?;
     let mut character = parse_row(&row)?;
     let (scene_id, mut scene) = load_scene(&storage)?;
     damage_event::apply(
@@ -1488,12 +1491,12 @@ fn apply_damage(
         injury_id.as_deref(),
         &injury_table()?,
     )
-    .map_err(|e| e.to_string())?;
+    ?;
     // Filler NPCs have no death save: at 0 HP they are dead on the spot.
     if row.kind == storage::CharacterKind::Npc {
         damage_event::kill_downed_npc(&mut character, &mut scene);
     }
-    character.validate().map_err(|e| e.to_string())?;
+    character.validate()?;
     store_character(&storage, character_id, &character)?;
     save_scene_row(&storage, scene_id, &scene)?;
     Ok(DamageApplied {
@@ -1507,20 +1510,20 @@ fn apply_damage(
 fn revive_character(
     state: State<'_, AppStorage>,
     id: i64,
-) -> Result<CharacterRecord, String> {
+) -> Result<CharacterRecord, CmdError> {
     let storage = lock(&state)?;
     let mut character = require_character(&storage, id)?;
-    vitals::revive(&mut character).map_err(|e| e.to_string())?;
+    vitals::revive(&mut character)?;
     store_character(&storage, id, &character)?;
     Ok(CharacterRecord::new(id, character))
 }
 
 /// Undoes the scene's last damage event.
 #[tauri::command]
-fn undo_damage(state: State<'_, AppStorage>) -> Result<DamageApplied, String> {
+fn undo_damage(state: State<'_, AppStorage>) -> Result<DamageApplied, CmdError> {
     let storage = lock(&state)?;
     let (scene_id, mut scene) = load_scene(&storage)?;
-    let event = scene.last_damage.clone().ok_or("nothing to undo")?;
+    let event = scene.last_damage.clone().ok_or_else(CmdError::nothing_to_undo)?;
     let character = match load_character(&storage, event.character_id)? {
         Some(mut character) => {
             damage_event::undo_character(&mut character, &event);

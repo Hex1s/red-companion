@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { errorDetails, errorMessage } from "@/lib/errors";
 
 export type StatusKind = "loading" | "success" | "error" | "info";
 
@@ -9,6 +10,8 @@ export type StatusItem = {
   kind: StatusKind;
   text: string;
   action?: StatusAction;
+  /** Developer text of an error (English), shown folded under the message. */
+  details?: string;
   /** Fading out: still on screen, removed a moment later. */
   closing: boolean;
 };
@@ -19,6 +22,7 @@ export type StatusInput = {
   kind: StatusKind;
   text: string;
   action?: StatusAction;
+  details?: string;
   /** Overrides how long a success / info message stays. Loading and errors never time out. */
   autoHideMs?: number;
 };
@@ -51,11 +55,11 @@ function clearTimer(id: string) {
 export const useStatusStore = create<StatusState>((set, get) => ({
   items: [],
 
-  show: ({ id, kind, text, action, autoHideMs }) => {
+  show: ({ id, kind, text, action, details, autoHideMs }) => {
     const key = id ?? `status:${++counter}`;
     clearTimer(key);
     set((state) => {
-      const item: StatusItem = { id: key, kind, text, action, closing: false };
+      const item: StatusItem = { id: key, kind, text, action, details, closing: false };
       const exists = state.items.some((i) => i.id === key);
       return {
         items: exists ? state.items.map((i) => (i.id === key ? item : i)) : [...state.items, item],
@@ -90,4 +94,19 @@ export const status = {
   dismiss: (id: string) => useStatusStore.getState().dismiss(id),
   /** Error message that stays until closed. */
   error: (text: string, id?: string) => useStatusStore.getState().show({ id, kind: "error", text }),
+  /**
+   * Error from a thrown value: translated text (or `text`, e.g. "Could not load X: …"), the
+   * developer text folded under it, and an optional retry button.
+   */
+  fail: (e: unknown, id?: string, opts: { text?: string; retry?: StatusAction } = {}) => {
+    const text = opts.text ?? errorMessage(e);
+    const raw = errorDetails(e);
+    return useStatusStore.getState().show({
+      id,
+      kind: "error",
+      text,
+      action: opts.retry,
+      details: raw && raw !== text ? raw : undefined,
+    });
+  },
 };

@@ -5,7 +5,8 @@ import type { DrugApplied } from "@/bindings/DrugApplied";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { errorMessage, type CharacterEntry } from "@/hooks/use-characters";
+import { errorMessage } from "@/lib/errors";
+import type { CharacterEntry } from "@/hooks/use-characters";
 import { useRoles } from "@/hooks/use-roles";
 import { api } from "@/lib/api";
 

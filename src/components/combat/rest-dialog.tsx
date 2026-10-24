@@ -3,11 +3,12 @@ import { useTranslation } from "react-i18next";
 import type { RestApplied } from "@/bindings/RestApplied";
 import type { RestPlan } from "@/bindings/RestPlan";
 import { Button } from "@/components/ui/button";
+import { ErrorNotice } from "@/components/ui/error-notice";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { FieldBadge } from "@/components/ui/field-badge";
 import { Input } from "@/components/ui/input";
 import type { CharacterEntry } from "@/hooks/use-characters";
-import { errorMessage } from "@/hooks/use-characters";
+import { errorMessage } from "@/lib/errors";
 import { api } from "@/lib/api";
 
 /** Pause after typing before Rust is asked how many days the rest takes. */
@@ -135,7 +136,7 @@ function RestForm({ target, onDone, onClose }: RestFormProps) {
         </div>
       )}
       <p className="text-xs text-muted-foreground">{t("rest.ends_day")}</p>
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      <ErrorNotice message={error} />
 
       <Button type="button" className="w-full" disabled={!canApply} onClick={() => void apply()}>
         {t("rest.apply")}

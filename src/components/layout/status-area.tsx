@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { AlertCircle, Check, Info, Loader2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,7 @@ function StatusMessage({ item }: { item: StatusItem }) {
   const { t } = useTranslation();
   const dismiss = useStatusStore((s) => s.dismiss);
   const Icon = ICON[item.kind];
+  const [open, setOpen] = useState(false);
   return (
     <div
       role={item.kind === "error" ? "alert" : "status"}
@@ -57,7 +59,14 @@ function StatusMessage({ item }: { item: StatusItem }) {
       <Icon
         className={cn("mt-0.5 size-4 shrink-0", TONE[item.kind], item.kind === "loading" && "animate-spin")}
       />
-      <span className="min-w-0 break-words">{item.text}</span>
+      <div className="min-w-0 flex-1">
+        <span className="break-words">{item.text}</span>
+        {item.details && open && (
+          <pre className="mt-1 whitespace-pre-wrap break-words text-xs text-muted-foreground select-text">
+            {item.details}
+          </pre>
+        )}
+      </div>
       {item.action && (
         <Button
           type="button"
@@ -67,6 +76,18 @@ function StatusMessage({ item }: { item: StatusItem }) {
           onClick={item.action.run}
         >
           {item.action.label}
+        </Button>
+      )}
+      {item.details && (
+        <Button
+          type="button"
+          variant="link"
+          size="xs"
+          className="shrink-0"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+        >
+          {t("status.details")}
         </Button>
       )}
       {item.kind === "error" && (

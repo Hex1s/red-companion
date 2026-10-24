@@ -12,14 +12,16 @@
   "app": {
     "windows": [
       {
-        "title": "red-companion",
-        "width": 800,
-        "height": 600
+        "title": "red-companion"
       }
     ],
     "security": {
       "csp": null
-    }
+    },
+    "trayIcon": {
+      "iconPath": "icons/64x64.png",
+      "tooltip": "Red Companion"
+  }
   },
   "bundle": {
     "active": true,

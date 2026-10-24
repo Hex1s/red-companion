@@ -27,7 +27,8 @@ import { SessionNotes } from "@/components/session/session-notes";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { errorMessage, useCharacters } from "@/hooks/use-characters";
+import { errorMessage } from "@/lib/errors";
+import { useCharacters } from "@/hooks/use-characters";
 import { useEncounters } from "@/hooks/use-encounters";
 import { useInjuries } from "@/hooks/use-injuries";
 import { useNpcTemplates } from "@/hooks/use-npc-templates";
@@ -89,13 +90,20 @@ export default function App() {
 
   // Failed loads are reported in the status area, not in the page.
   useEffect(() => {
-    if (error) status.error(t("characters.load_error", { error }), "characters:load");
-  }, [error, t]);
+    if (!error) return;
+    status.fail(error, "characters:load", {
+      text: t("characters.load_error", { error: errorMessage(error) }),
+      retry: { label: t("status.retry"), run: () => void reload() },
+    });
+  }, [error, t, reload]);
   useEffect(() => {
     if (encounterState.error) {
-      status.error(t("encounters.load_error", { error: encounterState.error }), "encounters:load");
+      status.fail(encounterState.error, "encounters:load", {
+        text: t("encounters.load_error", { error: errorMessage(encounterState.error) }),
+        retry: { label: t("status.retry"), run: () => void encounterState.reload() },
+      });
     }
-  }, [encounterState.error, t]);
+  }, [encounterState.error, encounterState.reload, t]);
 
   // A death save result is shown until the turn moves on.
   useEffect(() => setLastSave(null), [combat?.active, combat?.round]);
@@ -138,7 +146,7 @@ export default function App() {
       sceneState.replaceScene(await api.removeFromSession(id));
       await reload();
     } catch (e) {
-      status.error(errorMessage(e), "session:leave");
+      status.fail(e, "session:leave");
     }
   };
 
@@ -165,7 +173,7 @@ export default function App() {
       await (change === "add" ? api.addInjury(id, injuryId) : api.removeInjury(id, injuryId));
       await reload();
     } catch (e) {
-      status.error(errorMessage(e), "injury");
+      status.fail(e, "injury");
     }
   };
 
@@ -173,7 +181,7 @@ export default function App() {
     try {
       await addToSession(id);
     } catch (e) {
-      status.error(errorMessage(e), "session:join");
+      status.fail(e, "session:join");
     }
   };
 
@@ -256,12 +264,12 @@ export default function App() {
         text: t("encounters.template_saved", { name: saved.character.name }),
       });
     } catch (e) {
-      status.error(t("encounters.save_error", { error: errorMessage(e) }), "encounter:template");
+      status.fail(e, "encounter:template", { text: t("encounters.save_error", { error: errorMessage(e) }) });
     }
   };
 
   const openExportsFolder = (kind?: ExportKind) =>
-    api.openExportsFolder(kind).catch((e: unknown) => status.error(errorMessage(e), "transfer:open"));
+    api.openExportsFolder(kind).catch((e: unknown) => status.fail(e, "transfer:open"));
 
   /** Writes one character, or the active session, into the export folder and says where it went. */
   const exportCharacters = async (what: { ids: number[] } | "session") => {
@@ -281,7 +289,7 @@ export default function App() {
         autoHideMs: 9000,
       });
     } catch (e) {
-      status.error(t("transfer.error", { error: errorMessage(e) }), "transfer");
+      status.fail(e, "transfer", { text: t("transfer.error", { error: errorMessage(e) }) });
     }
   };
 
@@ -305,7 +313,7 @@ export default function App() {
         setImportFiles(files);
       }
     } catch (e) {
-      status.error(t("transfer.error", { error: errorMessage(e) }), "transfer");
+      status.fail(e, "transfer", { text: t("transfer.error", { error: errorMessage(e) }) });
     }
   };
 
@@ -325,7 +333,7 @@ export default function App() {
         autoHideMs: 9000,
       });
     } catch (e) {
-      status.error(t("transfer.error", { error: errorMessage(e) }), "transfer:encounters");
+      status.fail(e, "transfer:encounters", { text: t("transfer.error", { error: errorMessage(e) }) });
     }
   };
 
@@ -344,7 +352,7 @@ export default function App() {
         setEncounterImportFiles(files);
       }
     } catch (e) {
-      status.error(t("transfer.error", { error: errorMessage(e) }), "transfer:encounters");
+      status.fail(e, "transfer:encounters", { text: t("transfer.error", { error: errorMessage(e) }) });
     }
   };
 
@@ -354,7 +362,7 @@ export default function App() {
       sceneState.replaceScene(result.scene);
       await reload();
     } catch (e) {
-      status.error(errorMessage(e), "damage:undo");
+      status.fail(e, "damage:undo");
     }
   };
 
@@ -366,7 +374,7 @@ export default function App() {
       await reload();
       return true;
     } catch (e) {
-      status.error(errorMessage(e), "death-save");
+      status.fail(e, "death-save");
       return false;
     }
   };
@@ -483,7 +491,7 @@ export default function App() {
                       sceneState.replaceScene(await api.getScene());
                       selectCharacter(null);
                     } catch (e) {
-                      status.error(errorMessage(e), "character:delete");
+                      status.fail(e, "character:delete");
                     }
                   }}
                 />
@@ -590,7 +598,7 @@ export default function App() {
                   onRevive={() =>
                     api.reviveCharacter(e.id).then(
                       () => reload(),
-                      (err: unknown) => status.error(errorMessage(err), "revive"),
+                      (err: unknown) => status.fail(err, "revive"),
                     )
                   }
                   onDeathSave={(manual) => deathSave(e.id, manual)}

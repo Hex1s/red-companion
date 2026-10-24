@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Textarea } from "@/components/ui/textarea";
-import { errorMessage } from "@/hooks/use-characters";
+import { errorMessage } from "@/lib/errors";
 import { api } from "@/lib/api";
 import { status } from "@/store/status-store";
 
@@ -38,10 +38,9 @@ export function SessionNotes({ sessionId, sessionName }: SessionNotesProps) {
       const wait = Math.max(0, MIN_SAVING_MS - (Date.now() - started));
       window.setTimeout(() => status.show({ id: saveId, kind: "success", text: t("status.saved") }), wait);
     } catch (e) {
-      status.show({
-        id: saveId,
-        kind: "error",
+      status.fail(e, saveId, {
         text: t("notes.save_error", { error: errorMessage(e) }),
+        retry: { label: t("status.retry"), run: () => void save.current() },
       });
     }
   };
@@ -54,7 +53,7 @@ export function SessionNotes({ sessionId, sessionName }: SessionNotesProps) {
         latest.current = loaded;
         setText(loaded);
       },
-      (e: unknown) => status.error(t("notes.load_error", { error: errorMessage(e) }), saveId),
+      (e: unknown) => status.fail(e, saveId, { text: t("notes.load_error", { error: errorMessage(e) }) }),
     );
     return () => {
       cancelled = true;

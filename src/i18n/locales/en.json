@@ -74,6 +74,7 @@
     "ablation": "Ablation"
   },
   "injury": {
+    "load_error": "Could not load the injury tables: {{error}}",
     "dismembered_arm": {
       "name": "Dismembered Arm",
       "effect": "Arm lost; anything held in it is dropped."
@@ -491,6 +492,7 @@
     "formula_short": "TECH {{tech}} + skill {{level}}"
   },
   "npc": {
+    "load_error": "Could not load NPC templates: {{error}}",
     "tier": {
       "mook": "Mook",
       "lieutenant": "Lieutenant",
@@ -522,9 +524,16 @@
   "rail": {
     "start_hint": "Start the fight: anyone without initiative gets one rolled"
   },
+  "crash": {
+    "title": "Interface crashed",
+    "hint": "Something broke in the app window. Your data is saved in the database. Reload the window; if it happens again, restart the app.",
+    "reload": "Reload"
+  },
   "status": {
     "saving": "Saving…",
     "saved": "Saved",
+    "retry": "Retry",
+    "details": "Details",
     "close": "Close"
   },
   "transfer": {
@@ -831,5 +840,166 @@
     "hint": "Speedheal heals at once; the other drugs only mark the limit, the GM plays out the effect. A day of rest clears the daily marks, the cross clears weekly ones.",
     "done": "{{name}}: {{drug}} given.",
     "done_hp": "{{name}}: {{drug}}, +{{hp}} HP."
+  },
+  "errors": {
+    "unhandled": "The action failed. Try again; if it repeats, restart the app.",
+    "unknown": "Something went wrong ({{code}}). Try again; if it keeps happening, restart the app. Details: {{details}}",
+    "internal": {
+      "unknown": "Internal app error. Try again; if it keeps happening, restart the app.",
+      "locked": "The app got stuck inside ({{what}}). Restart it; the data in the database is safe."
+    },
+    "storage": {
+      "database": "Could not reach the database. Try again; if it keeps happening, restart the app and check the free disk space.",
+      "migration": "Could not update the database to the new version. Close the app, copy the database file and start again.",
+      "corrupt_data": "A stored record is damaged and cannot be read. If it is one character, delete it and create it again (or import it from a file)."
+    },
+    "file": {
+      "not_found": "The file or folder was not found. It may have been deleted or moved: refresh the list and try again.",
+      "permission_denied": "No access to the file or folder. Close the programs that use it, or pick another place.",
+      "io": "Could not read or write the file. Check the free disk space and try again.",
+      "open_folder": "Could not open the folder. Open it by hand: it lies in the app data folder."
+    },
+    "not_found": {
+      "character": "The character was not found (maybe it was already deleted). Refresh the list.",
+      "template": "The template was not found (maybe it was already deleted). Refresh the list.",
+      "npc_template": "The ready-made NPC is not in the reference. Pick another one.",
+      "encounter": "The encounter was not found (maybe it was already deleted). Refresh the list.",
+      "session": "The session was not found (maybe it was already deleted). Pick another one in the header.",
+      "injury": "The injury is not in the reference. Pick it from the list again.",
+      "cover_preset": "This cover is not in the reference. Pick another one."
+    },
+    "session": {
+      "name_length": "The session name must be 1 to {{max}} characters.",
+      "notes_too_long": "The notes are longer than {{max}} characters. Shorten the text."
+    },
+    "scene": {
+      "nothing_to_undo": "Nothing to undo: there is no last damage anymore.",
+      "cover_not_found": "The cover was not found (maybe it was already removed). Refresh the scene.",
+      "bad_hp": "Cover HP must be between 1 and {{max}}.",
+      "hp_required": "This cover has no default HP: enter it.",
+      "unsupported_version": "The scene was saved by a newer version of the app (format {{version}}). Update the app."
+    },
+    "initiative": {
+      "not_in_fight": "The character is not in the fight. Refresh the session column.",
+      "already_in_fight": "The character is already in the fight.",
+      "out_of_range": "Initiative is outside the allowed range. Check the number you entered.",
+      "not_started": "The fight has not started. Press “Start” first.",
+      "nobody_can_act": "Nobody can act: everyone is dead. Bring someone back or end the fight."
+    },
+    "damage": {
+      "cover_not_found": "The cover was not found (maybe it was already removed). Pick another one or refresh the scene.",
+      "aim_mismatch": "The aimed shot ({{aim}}) does not match the hit area. Change the area or clear the aim.",
+      "unknown_injury": "The injury “{{injury}}” is not in the reference. Pick an injury from the list.",
+      "wrong_injury_area": "The injury “{{injury}}” belongs to another body area. Pick one from the right table.",
+      "injury_owned": "The target already has the injury “{{injury}}”. Pick another one.",
+      "no_critical": "This hit causes no critical injury.",
+      "no_free_injury": "No injury is left in this table that the target does not already have. Add an injury by hand on the sheet."
+    },
+    "dice": {
+      "invalid_notation": "Could not parse the roll “{{text}}”. Write it like 2d6 or 1d10+2.",
+      "out_of_range": "Too many dice or sides. Use fewer dice or sides.",
+      "wrong_manual_count": "Dice values needed: {{expected}}, entered: {{got}}. Check the input.",
+      "manual_value_out_of_range": "{{value}} is not possible on a d{{sides}}. Enter a number from 1 to {{sides}}.",
+      "check_total_out_of_range": "The roll total {{total}} is outside the allowed range. Check the number you entered."
+    },
+    "vitals": {
+      "not_mortal": "Only a mortally wounded character makes a death save.",
+      "cannot_stabilize": "Only a living, mortally wounded character can be stabilised.",
+      "bad_skill": "The skill “{{skill}}” cannot stabilise. Pick First Aid, Paramedic or Surgery.",
+      "not_dead": "Only a dead character can be brought back."
+    },
+    "healing": {
+      "dead": "A dead character cannot be healed. Bring them back first.",
+      "not_injured": "The character does not have this injury. Refresh the sheet.",
+      "no_such_option": "This injury has no such way of healing. Pick another.",
+      "already_first_aided": "First aid has already lifted this injury's effect today. It needs proper treatment.",
+      "needs_stabilization": "A mortally wounded character must be stabilised before resting.",
+      "bad_target": "Target HP must be above the current HP and at most the maximum.",
+      "surgery_bonus_missing": "Enter the skill bonus for surgery: the helper is not a Medtech."
+    },
+    "injury": {
+      "not_on_sheet": "The injury “{{id}}” is not on the character's sheet. Refresh the sheet."
+    },
+    "humanity": {
+      "dead": "A dead character's humanity does not change.",
+      "no_loss": "Humanity loss must be above zero.",
+      "already_full": "Humanity is already at its maximum.",
+      "missing_restore": "Enter the humanity restoration roll."
+    },
+    "drug": {
+      "not_available": "Only a Medtech who has picked this drug can give it.",
+      "dead": "A dead character cannot be given drugs.",
+      "already_dosed": "The target already got this drug's benefit in this period.",
+      "mortally_wounded": "This drug does not work on a mortally wounded target. Stabilise them first.",
+      "unknown": "The drug “{{drug}}” was not found. Pick it from the list."
+    },
+    "skill_check": {
+      "unknown_skill": "The skill “{{skill}}” is not in the reference. Check the character sheet."
+    },
+    "character": {
+      "empty_name": "Enter the character's name.",
+      "stat_out_of_range": "The value of stat {{stat}} ({{value}}) is outside the allowed range.",
+      "bad_armor": "Armor SP on “{{area}}” is invalid ({{sp}} of {{max_sp}}). Check SP and max SP.",
+      "hp_above_max": "HP ({{hp}}) is above the maximum ({{max_hp}}). Lower the HP.",
+      "skill_out_of_range": "The level of skill “{{skill}}” ({{level}}) is outside the allowed range.",
+      "first_aid_without_injury": "First aid is recorded for the injury “{{injury}}”, which the character does not have.",
+      "reputation_out_of_range": "Reputation {{value}} is outside the allowed range.",
+      "unsupported_version": "The character was saved by a newer version of the app (format {{version}}). Update the app."
+    },
+    "role": {
+      "duplicate": "The role “{{role}}” is listed twice. Keep one.",
+      "rank_out_of_range": "The rank of role “{{role}}” ({{rank}}) is outside the allowed range.",
+      "overspent": "In role “{{role}}” {{spent}} points are spent, only {{allowed}} allowed. Remove the extra.",
+      "sub_above_rank": "In role “{{role}}” the ability “{{sub}}” ({{points}}) is above the rank ({{rank}}).",
+      "unknown_role": "The role “{{role}}” is not in the reference. Pick it from the list.",
+      "unknown_sub_ability": "The role “{{role}}” has no ability “{{sub}}”.",
+      "too_many_points": "In role “{{role}}” the ability “{{sub}}” takes at most {{max}} points.",
+      "unknown_option": "The role “{{role}}” has no option “{{option}}”.",
+      "duplicate_pick": "In role “{{role}}” the option “{{option}}” is picked twice.",
+      "too_many_picks": "In role “{{role}}” the ability “{{sub}}” has {{picks}} picks for {{points}} points.",
+      "bad_custom_field": "In role “{{role}}” the field “{{what}}” is filled in wrongly."
+    },
+    "encounter": {
+      "empty_name": "Enter the encounter name.",
+      "no_entries": "Add at least one NPC to the encounter.",
+      "too_many_entries": "The encounter has more than {{max}} lines. Remove the extra.",
+      "bad_count": "Count {{count}} must be 1 to {{max}}.",
+      "bad_players": "Players {{players}} must be 1 to {{max}}.",
+      "bad_template_id": "Custom template “{{id}}” is invalid. Pick the template again."
+    },
+    "transfer": {
+      "json": "The file does not read as JSON. Pick a file exported from Red Companion.",
+      "wrong_format": "This is not a Red Companion characters file. Pick a file exported from the app.",
+      "unsupported_version": "The file was made by another version of the app (format {{version}}). Update the app or export the file again.",
+      "empty": "The file has no characters.",
+      "invalid": "Character #{{index}} (“{{name}}”): {{cause}}",
+      "unknown_skill": "Character #{{index}} (“{{name}}”): unknown skill “{{skill}}”. The file may have been edited by hand.",
+      "unknown_injury": "Character #{{index}} (“{{name}}”): unknown injury “{{injury}}”. The file may have been edited by hand.",
+      "nothing_to_export": "Nothing to export: there are no characters.",
+      "wrong_file_kind": "The file “{{name}}” does not fit this import. Pick a file of the right type from the list."
+    },
+    "encounter_transfer": {
+      "json": "The file does not read as JSON. Pick a file exported from Red Companion.",
+      "wrong_format": "This is not a Red Companion encounters file. Pick a file exported from the app.",
+      "unsupported_version": "The file was made by another version of the app (format {{version}}). Update the app or export the file again.",
+      "empty": "The file has no templates and no encounters.",
+      "too_many": "The file has more than {{max}} templates and encounters. Split it into parts.",
+      "duplicate_key": "The template “{{key}}” appears twice in the file.",
+      "invalid_template": "Template “{{name}}”: {{cause}}",
+      "unknown_skill": "Template “{{name}}”: unknown skill “{{skill}}”. The file may have been edited by hand.",
+      "unknown_injury": "Template “{{name}}”: unknown injury “{{injury}}”. The file may have been edited by hand.",
+      "invalid_encounter": "Encounter “{{name}}”: {{cause}}",
+      "missing_template": "Encounter “{{name}}”: its own template “{{key}}” is not in the file.",
+      "unknown_book_template": "Encounter “{{name}}”: the reference has no NPC “{{template}}”."
+    },
+    "data": {
+      "malformed": "The reference “{{name}}” is damaged. Reinstall or update the app."
+    },
+    "catalog": {
+      "duplicate_id": "The reference has the entry “{{id}}” twice. Update the app.",
+      "missing_field": "The reference entry “{{id}}” lacks data. Update the app.",
+      "out_of_range": "The reference entry “{{id}}” has a value out of range. Update the app.",
+      "incomplete_injury_table": "The injury table of area “{{area}}” is incomplete. Update the app."
+    }
   }
 }

@@ -13,13 +13,14 @@ import type { RollResult } from "@/bindings/RollResult";
 import { DiceButton } from "@/components/combat/dice-button";
 import { InjuryIcon } from "@/components/combat/injury-icons";
 import { Button } from "@/components/ui/button";
+import { ErrorNotice } from "@/components/ui/error-notice";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { FieldBadge } from "@/components/ui/field-badge";
 import { Hint } from "@/components/ui/hint";
 import { Input } from "@/components/ui/input";
 import type { CharacterEntry } from "@/hooks/use-characters";
-import { errorMessage } from "@/hooks/use-characters";
+import { errorMessage } from "@/lib/errors";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -393,7 +394,7 @@ function DamageForm({ target, cover, injuries, onApplied, onClose }: DamageFormP
         </section>
       )}
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      <ErrorNotice message={error} />
 
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onClose}>

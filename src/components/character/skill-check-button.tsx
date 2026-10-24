@@ -8,7 +8,6 @@ import { Hint } from "@/components/ui/hint";
 import { Input } from "@/components/ui/input";
 import { RollNote } from "@/components/ui/roll-note";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { errorMessage } from "@/hooks/use-characters";
 import { api } from "@/lib/api";
 import { formatCheck } from "@/lib/dice";
 import { STAT_ABBR } from "@/lib/stat-abbr";
@@ -60,7 +59,7 @@ export function SkillCheckButton({ characterId, skillKey, label, disabledReason 
         }),
       });
     } catch (e) {
-      status.error(errorMessage(e), "skill-check");
+      status.fail(e, "skill-check");
     } finally {
       setBusy(false);
     }

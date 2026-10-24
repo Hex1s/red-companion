@@ -5,12 +5,13 @@ import type { TherapyApplied } from "@/bindings/TherapyApplied";
 import type { TherapyInfo } from "@/bindings/TherapyInfo";
 import type { TherapyKind } from "@/bindings/TherapyKind";
 import { Button } from "@/components/ui/button";
+import { ErrorNotice } from "@/components/ui/error-notice";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { FieldBadge } from "@/components/ui/field-badge";
 import { Hint } from "@/components/ui/hint";
 import { Input } from "@/components/ui/input";
 import type { CharacterEntry } from "@/hooks/use-characters";
-import { errorMessage } from "@/hooks/use-characters";
+import { errorMessage } from "@/lib/errors";
 import { api } from "@/lib/api";
 import { parseFaces } from "@/lib/dice";
 
@@ -216,7 +217,7 @@ function TherapyForm({ target, onDone, onClose }: TherapyFormProps) {
           — {t("humanity.failed")}
         </p>
       )}
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      <ErrorNotice message={error} />
 
       <Hint label={t("humanity.declare_hint")}>
         <Button

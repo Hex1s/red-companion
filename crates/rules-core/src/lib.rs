@@ -11,6 +11,8 @@ pub mod data_source;
 pub mod dice;
 pub mod encounter;
 pub mod encounter_transfer;
+pub mod error;
+mod error_codes;
 pub mod healing;
 pub mod humanity;
 pub mod initiative;

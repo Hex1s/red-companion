@@ -4,11 +4,12 @@ import type { HumanityLossApplied } from "@/bindings/HumanityLossApplied";
 import type { RollResult } from "@/bindings/RollResult";
 import { DiceButton } from "@/components/combat/dice-button";
 import { Button } from "@/components/ui/button";
+import { ErrorNotice } from "@/components/ui/error-notice";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { FieldBadge } from "@/components/ui/field-badge";
 import { Input } from "@/components/ui/input";
 import type { CharacterEntry } from "@/hooks/use-characters";
-import { errorMessage } from "@/hooks/use-characters";
+import { errorMessage } from "@/lib/errors";
 import { api } from "@/lib/api";
 
 /** Largest loss accepted in one go: well past a whole character's humanity. */
@@ -134,7 +135,7 @@ function LossForm({ target, onDone, onClose }: LossFormProps) {
           {after < 0 && <span className="ml-2 text-state-mortal">{t("humanity.cyberpsychosis")}</span>}
         </p>
       )}
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      <ErrorNotice message={error} />
 
       <Button type="button" className="w-full" disabled={!lossOk || busy} onClick={() => void apply()}>
         {t("humanity.loss_apply")}

@@ -5,13 +5,11 @@ import type { NpcTier } from "@/bindings/NpcTier";
 import type { UserTemplateRecord } from "@/bindings/UserTemplateRecord";
 import { api, hasBackend } from "@/lib/api";
 
-const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
-
 /** The GM's own NPC templates and encounters (user data in SQLite) with their CRUD commands. */
 export function useEncounters() {
   const [templates, setTemplates] = useState<UserTemplateRecord[]>([]);
   const [encounters, setEncounters] = useState<EncounterRecord[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
 
   const reload = useCallback(async () => {
     if (!hasBackend) return;
@@ -24,7 +22,7 @@ export function useEncounters() {
       setEncounters(userEncounters);
       setError(null);
     } catch (e) {
-      setError(message(e));
+      setError(e ?? "unknown");
     }
   }, []);
 
