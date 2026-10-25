@@ -1,3 +1,4 @@
+import { formatHotkey } from "@/lib/hotkeys";
 import { BookOpen, Bomb, Crosshair, Rocket, Scan, Sparkles, Target, Wind, Zap } from "lucide-react";
 import type { ComponentType } from "react";
 import { useEffect, useState } from "react";
@@ -53,7 +54,7 @@ export function AttackReference() {
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <Hint label={`${t("attackRef.title")} (A)`}>
+      <Hint label={`${t("attackRef.title")} ${formatHotkey("attackRef")}`}>
         <PopoverTrigger asChild>
           <Button type="button" size="icon-sm" variant="outline" aria-label={t("attackRef.title")}>
             <BookOpen />

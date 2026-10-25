@@ -1,6 +1,9 @@
-import { PanelLeft, Search } from "lucide-react";
+import { Keyboard, PanelLeft, Search } from "lucide-react";
 import { useDeferredValue, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useHotkeys } from "@/hooks/use-hotkeys";
+import { ShortcutsDialog } from "@/components/layout/shortcuts-dialog";
+import { formatHotkey } from "@/lib/hotkeys";
 import type { CharacterKind } from "@/bindings/CharacterKind";
 import type { DeathSave } from "@/bindings/DeathSave";
 import type { ExportFile } from "@/bindings/ExportFile";
@@ -75,6 +78,7 @@ export default function App() {
   const npcTemplates = useNpcTemplates();
   const encounterState = useEncounters();
   const [searchOpen, setSearchOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [stabilizeTargetId, setStabilizeTargetId] = useState<number | null>(null);
   const [restTargetId, setRestTargetId] = useState<number | null>(null);
   const [humanityLossTargetId, setHumanityLossTargetId] = useState<number | null>(null);
@@ -129,49 +133,6 @@ export default function App() {
       });
     }
   }, [encounterState.error, encounterState.reload, t]);
-
-  // Ctrl+B shows or hides the explorer, like the side bar of an editor.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.code === "KeyB") {
-        e.preventDefault();
-        toggleExplorer();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [toggleExplorer]);
-
-  // Ctrl+K (or "/" outside a text field) opens the reference search over whatever page is open.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      const typing = target?.closest("input, textarea, select, [contenteditable=true]") != null;
-      const ctrlK = (e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.code === "KeyK";
-      const slash = e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey && !typing;
-      if (ctrlK || slash) {
-        e.preventDefault();
-        setSearchOpen(true);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
-  // "A" (outside a text field) toggles the quick attack reference; the physical key, so it works in any layout.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      const typing = target?.closest("input, textarea, select, [contenteditable=true]") != null;
-      if (e.code === "KeyA" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && !typing) {
-        e.preventDefault();
-        const { attackRefOpen, setAttackRefOpen } = useUiStore.getState();
-        setAttackRefOpen(!attackRefOpen);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
 
   // A death save result is shown until the turn moves on.
   useEffect(() => setLastSave(null), [combat?.active, combat?.round]);
@@ -580,6 +541,38 @@ export default function App() {
     }
   };
 
+  // Every shortcut lives in `lib/hotkeys`; this is what each one does here.
+  const stepCharacter = (delta: number) => {
+    const list = railEntries.length > 0 ? railEntries : sessionEntries;
+    if (list.length === 0) return;
+    const at = list.findIndex((e) => e.id === selectedCharacterId);
+    const next = list[(at + delta + list.length) % list.length];
+    selectCharacter(next.id);
+    setTab("characters");
+  };
+  useHotkeys({
+    explorer: toggleExplorer,
+    search: () => setSearchOpen(true),
+    help: () => setHelpOpen((open) => !open),
+    attackRef: () => {
+      const { attackRefOpen, setAttackRefOpen } = useUiStore.getState();
+      setAttackRefOpen(!attackRefOpen);
+    },
+    nextTurn: () => combat && void sceneState.combatNextTurn(),
+    damage: () => {
+      // The one whose turn it is; outside a fight, the one open on the sheet.
+      const target = combat?.active ?? selectedCharacterId;
+      if (target !== null && entries.some((e) => e.id === target)) openDamage(target);
+    },
+    undoDamage: () => scene?.last_damage && void undoDamage(),
+    prevCharacter: () => stepCharacter(-1),
+    nextCharacter: () => stepCharacter(1),
+    tab1: () => setTab("characters"),
+    tab2: () => setTab("encounters"),
+    tab3: () => setTab("notes"),
+    tab4: () => setTab("rules"),
+  });
+
   const deathSave = async (id: number, manual: number | null) => {
     try {
       const applied = await api.deathSave(id, manual);
@@ -663,7 +656,7 @@ export default function App() {
               size="xs"
               variant="outline"
               aria-label={t(explorerOpen ? "explorer.hide" : "explorer.show")}
-              title={t(explorerOpen ? "explorer.hide" : "explorer.show")}
+              title={`${t(explorerOpen ? "explorer.hide" : "explorer.show")} ${formatHotkey("explorer")}`}
               onClick={toggleExplorer}
             >
               <PanelLeft className="size-4" />
@@ -680,7 +673,16 @@ export default function App() {
             />
             <Button size="xs" variant="outline" onClick={() => setSearchOpen(true)}>
               <Search className="size-4" />
-              {t("reference.global_button")}
+              {t("reference.global_button")} {formatHotkey("search")}
+            </Button>
+            <Button
+              size="xs"
+              variant="outline"
+              aria-label={t("hotkeys.button")}
+              title={`${t("hotkeys.button")} ${formatHotkey("help")}`}
+              onClick={() => setHelpOpen(true)}
+            >
+              <Keyboard className="size-4" />
             </Button>
             <div className="flex gap-1">
               {SUPPORTED_LANGUAGES.map((lng) => (
@@ -864,6 +866,7 @@ export default function App() {
               <p className="p-2 text-sm text-muted-foreground">{t("rail.empty")}</p>
             )}
             <ReferenceSearch open={searchOpen} onOpenChange={setSearchOpen} />
+            <ShortcutsDialog open={helpOpen} onOpenChange={setHelpOpen} />
             <ImportDialog
               files={importFiles}
               onImport={async (name) => {

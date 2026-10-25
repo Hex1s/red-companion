@@ -713,7 +713,7 @@
     "global_hint": "Name or description: weapons, armor, injuries, skills, roles, NPCs.",
     "global_placeholder": "Search every reference…",
     "global_keys": "↑↓ choose · Enter open in section · Esc close",
-    "global_button": "Search Ctrl+K",
+    "global_button": "Search",
     "open_in_section": "Open in section",
     "detail": {
       "dv": "DV",
@@ -800,8 +800,8 @@
   "explorer": {
     "title": "Explorer",
     "actions": "Actions",
-    "hide": "Hide explorer (Ctrl+B)",
-    "show": "Show explorer (Ctrl+B)",
+    "hide": "Hide explorer",
+    "show": "Show explorer",
     "sessions": "Sessions",
     "library": "Library",
     "tools": "Sections",
@@ -957,6 +957,31 @@
     "change": "Change",
     "remove": "Remove portrait",
     "hint": "Portrait: click to choose or change the picture"
+  },
+  "hotkeys": {
+    "title": "Keyboard shortcuts",
+    "rule": "Ctrl (⌘ on Mac) is for the interface, Alt (⌥) for game actions. There are no bare letters, so nothing fires by accident.",
+    "button": "Keyboard shortcuts",
+    "group": {
+      "interface": "Interface",
+      "combat": "Combat",
+      "navigation": "Navigation"
+    },
+    "action": {
+      "explorer": "Show or hide the explorer",
+      "search": "Search the reference",
+      "help": "This window",
+      "attackRef": "Attack reference",
+      "nextTurn": "Next turn",
+      "damage": "Damage to the active character",
+      "undoDamage": "Undo the last damage",
+      "prevCharacter": "Previous character on the rail",
+      "nextCharacter": "Next character on the rail",
+      "tab1": "Characters tab",
+      "tab2": "Encounters tab",
+      "tab3": "Notes tab",
+      "tab4": "Reference tab"
+    }
   },
   "color": {
     "label": "Colour label",
