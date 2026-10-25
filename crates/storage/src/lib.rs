@@ -44,6 +44,8 @@ pub struct CharacterRow {
     pub name: String,
     pub data: String,
     pub kind: CharacterKind,
+    /// The session this character is an instance of; `None` for a library character.
+    pub owner_session: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -131,6 +133,38 @@ impl Storage {
         Ok(self.conn.last_insert_rowid())
     }
 
+    /// Inserts a character as an instance owned by `session_id` (it is deleted with the session).
+    pub fn insert_instance(&self, kind: CharacterKind, name: &str, data: &str, session_id: i64) -> Result<i64> {
+        self.conn.execute(
+            "INSERT INTO characters (kind, name, data, owner_session_id) VALUES (?1, ?2, ?3, ?4)",
+            params![kind.as_str(), name, data, session_id],
+        )?;
+        Ok(self.conn.last_insert_rowid())
+    }
+
+    /// Hands a character to a session (`Some`) or to the library (`None`).
+    pub fn set_character_owner(&self, id: i64, owner: Option<i64>) -> Result<bool> {
+        Ok(self.conn.execute("UPDATE characters SET owner_session_id = ?2 WHERE id = ?1", params![id, owner])? > 0)
+    }
+
+    /// The instances of one session, oldest first.
+    pub fn instances_of(&self, session_id: i64) -> Result<Vec<i64>> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT id FROM characters WHERE owner_session_id = ?1 ORDER BY id")?;
+        let rows = stmt.query_map([session_id], |r| r.get(0))?;
+        Ok(rows.collect::<std::result::Result<_, _>>()?)
+    }
+
+    /// Every instance as `(session, character)`, for building the explorer tree in one pass.
+    pub fn all_instances(&self) -> Result<Vec<(i64, i64)>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT owner_session_id, id FROM characters WHERE owner_session_id IS NOT NULL ORDER BY id",
+        )?;
+        let rows = stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?;
+        Ok(rows.collect::<std::result::Result<_, _>>()?)
+    }
+
     pub fn update_character(&self, id: i64, name: &str, data: &str) -> Result<bool> {
         let n = self.conn.execute(
             "UPDATE characters SET name = ?2, data = ?3, updated_at = datetime('now') WHERE id = ?1",
@@ -142,14 +176,14 @@ impl Storage {
     pub fn get_character(&self, id: i64) -> Result<Option<CharacterRow>> {
         Ok(self
             .conn
-            .query_row("SELECT id, name, data, kind FROM characters WHERE id = ?1", [id], character_row)
+            .query_row("SELECT id, name, data, kind, owner_session_id FROM characters WHERE id = ?1", [id], character_row)
             .optional()?)
     }
 
     pub fn list_characters(&self, kind: CharacterKind) -> Result<Vec<CharacterRow>> {
         let mut stmt = self
             .conn
-            .prepare("SELECT id, name, data, kind FROM characters WHERE kind = ?1 ORDER BY name, id")?;
+            .prepare("SELECT id, name, data, kind, owner_session_id FROM characters WHERE kind = ?1 ORDER BY name, id")?;
         let rows = stmt.query_map([kind.as_str()], character_row)?;
         Ok(rows.collect::<std::result::Result<_, _>>()?)
     }
@@ -160,10 +194,19 @@ impl Storage {
 
     /// Puts a deleted character back under its old id (ids are never reused, so it is free).
     /// False, and nothing changes, when a character with that id exists.
-    pub fn restore_character(&self, id: i64, kind: CharacterKind, name: &str, data: &str) -> Result<bool> {
+    /// `owner` is the session the character was an instance of; the caller passes it only while that
+    /// session still exists.
+    pub fn restore_character(
+        &self,
+        id: i64,
+        kind: CharacterKind,
+        name: &str,
+        data: &str,
+        owner: Option<i64>,
+    ) -> Result<bool> {
         let n = self.conn.execute(
-            "INSERT OR IGNORE INTO characters (id, kind, name, data) VALUES (?1, ?2, ?3, ?4)",
-            params![id, kind.as_str(), name, data],
+            "INSERT OR IGNORE INTO characters (id, kind, name, data, owner_session_id) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![id, kind.as_str(), name, data, owner],
         )?;
         Ok(n > 0)
     }
@@ -456,6 +499,7 @@ fn character_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<CharacterRow> {
         name: r.get(1)?,
         data: r.get(2)?,
         kind: CharacterKind::parse(&r.get::<_, String>(3)?),
+        owner_session: r.get(4)?,
     })
 }
 
@@ -479,6 +523,30 @@ mod tests {
         assert!(s.delete_character(pc).unwrap());
         assert!(s.get_character(pc).unwrap().is_none());
         assert!(!s.delete_character(pc).unwrap());
+    }
+
+    #[test]
+    fn instances_belong_to_a_session_and_go_with_it() {
+        let s = Storage::open_in_memory().unwrap();
+        let session = s.create_session("Night").unwrap();
+        let other = s.create_session("Day").unwrap();
+        let library = s.insert_character(CharacterKind::Npc, "Fixer", "{}").unwrap();
+        let a = s.insert_instance(CharacterKind::Npc, "Cyberpsycho 1", "{}", session).unwrap();
+        let b = s.insert_instance(CharacterKind::Npc, "Cyberpsycho 2", "{}", session).unwrap();
+        let elsewhere = s.insert_instance(CharacterKind::Npc, "Ganger", "{}", other).unwrap();
+
+        assert_eq!(s.get_character(library).unwrap().unwrap().owner_session, None);
+        assert_eq!(s.get_character(a).unwrap().unwrap().owner_session, Some(session));
+        assert_eq!(s.instances_of(session).unwrap(), vec![a, b]);
+        assert_eq!(s.all_instances().unwrap(), vec![(session, a), (session, b), (other, elsewhere)]);
+
+        // Saving to the library clears the owner, so the character survives the session.
+        assert!(s.set_character_owner(b, None).unwrap());
+        s.delete_container(session).unwrap();
+        assert!(s.get_character(a).unwrap().is_none());
+        assert!(s.get_character(b).unwrap().is_some());
+        assert!(s.get_character(library).unwrap().is_some());
+        assert!(s.get_character(elsewhere).unwrap().is_some());
     }
 
     #[test]

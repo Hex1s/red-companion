@@ -55,6 +55,8 @@ type CharacterSheetProps = {
   onSave: (character: Character) => Promise<unknown>;
   /** Saves a copy of this NPC as one of the GM's own templates; only NPCs offer it. */
   onSaveAsTemplate: () => Promise<unknown>;
+  /** The sheet is an own NPC template: no "save as template", the badge says it is a template. */
+  asTemplate?: boolean;
   /** Critical injury table, to offer the ways each injury can be healed. */
   injuryTable: CriticalInjury[];
   /** Opens the healing window for one injury of this character. */
@@ -104,6 +106,7 @@ export function CharacterSheet({
   entry,
   onSave,
   onSaveAsTemplate,
+  asTemplate = false,
   injuryTable,
   onHeal,
   onAddInjury,
@@ -170,7 +173,8 @@ export function CharacterSheet({
     try {
       // Level 0 is the default, so only trained skills are stored.
       const trained = Object.entries(values.skills).filter(([, level]) => level > 0);
-      await onSave({ ...values, skills: Object.fromEntries(trained) });
+      // HP typed above the maximum is saved as the maximum (the field itself is clamped on blur).
+      await onSave({ ...values, hp: Math.min(values.hp, derived.max_hp), skills: Object.fromEntries(trained) });
       const wait = Math.max(0, MIN_SAVING_MS - (Date.now() - started));
       window.setTimeout(() => status.show({ id: saveId, kind: "success", text: t("status.saved") }), wait);
     } catch (e) {
@@ -303,9 +307,9 @@ export function CharacterSheet({
             </FieldBadge>
           </div>
           <span className="pb-2 text-xs text-muted-foreground uppercase">
-            {t(`characters.kind.${entry.kind}`)}
+            {asTemplate ? t("templates.badge") : t(`characters.kind.${entry.kind}`)}
           </span>
-          {entry.kind === "npc" && (
+          {entry.kind === "npc" && !asTemplate && (
             <Button type="button" variant="outline" onClick={() => void onSaveAsTemplate()}>
               {t("encounters.save_as_template")}
             </Button>
@@ -316,19 +320,33 @@ export function CharacterSheet({
               <div className="w-28 space-y-1">
                 <Label htmlFor="hp">{t("characters.hp")}</Label>
                 <FieldBadge error={errorText(errors.hp, { min: 0, max: derived.max_hp })}>
-                  {(invalid) => (
-                    <NumberInput
-                      id="hp"
-                      min={0}
-                      className="num"
-                      aria-invalid={invalid}
-                      {...num("hp")}
-                    />
-                  )}
+                  {(invalid) => {
+                    const hpField = num("hp");
+                    return (
+                      <NumberInput
+                        id="hp"
+                        min={0}
+                        className="num"
+                        aria-invalid={invalid}
+                        {...hpField}
+                        // Typing 999 is the quick way to "heal fully": the field is clamped to max HP on leaving.
+                        onBlur={(e) => {
+                          if (Number(getValues("hp")) > derived.max_hp) {
+                            setValue("hp", derived.max_hp, { shouldDirty: true, shouldValidate: true });
+                          }
+                          return hpField.onBlur(e);
+                        }}
+                      />
+                    );
+                  }}
                 </FieldBadge>
               </div>
-              <HpBar current={Number(watch("hp")) || 0} max={derived.max_hp} className="flex-1 pb-3" />
-              <WoundBadge state={derived.wound_state} className="pb-2" />
+              <HpBar
+                current={Math.min(Number(watch("hp")) || 0, derived.max_hp)}
+                max={derived.max_hp}
+                className="flex-1 pb-3"
+              />
+              <WoundBadge state={derived.wound_state} className="w-32 text-nowrap shrink-0 pb-3 text-right" />
             </div>
             <div className="grid grid-cols-2 gap-2">
               {armorField("armor_head", t("armor.head"))}

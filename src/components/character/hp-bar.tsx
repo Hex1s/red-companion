@@ -23,7 +23,8 @@ export function HpBar({ current, max, className }: HpBarProps) {
       <div className="h-1.5 flex-1 bg-muted">
         <div className={cn("h-full transition-[width,background-color] duration-300", tone)} style={{ width: `${ratio * 100}%` }} />
       </div>
-      <span className="num text-xs text-muted-foreground">
+      {/* Fixed width for up to 3+3 digits, so the bar does not creep when HP gains or loses a digit. */}
+      <span className="num min-w-[7ch] text-right text-xs text-muted-foreground">
         {current}/{max}
       </span>
     </div>

@@ -160,6 +160,10 @@ pub struct DeletedCharacter {
     pub containers: Vec<i64>,
     /// Scenes that had the character in a fight or behind a cover.
     pub scenes: Vec<SceneSnapshot>,
+    /// The session the character was an instance of (it comes back as one); `None` for the library.
+    #[serde(default)]
+    #[ts(type = "number | null")]
+    pub owner_session: Option<i64>,
 }
 
 /// One node of the explorer tree. The list is flat: the UI nests it by `parent_id`.
@@ -177,6 +181,11 @@ pub struct ExplorerNode {
     /// Shortcuts to characters lying in this node, in the order they were put there.
     #[ts(type = "number[]")]
     pub members: Vec<i64>,
+    /// Characters that are instances of this session (always a subset of `members` for a session,
+    /// empty for a folder): temporary copies from templates that go away with the session.
+    #[serde(default)]
+    #[ts(type = "number[]")]
+    pub instances: Vec<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]

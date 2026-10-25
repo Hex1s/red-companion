@@ -66,8 +66,9 @@ export const api = {
   listNpcTemplates: (lang: string) =>
     inLanguage(lang, () => invoke<NpcTemplate[]>("list_npc_templates")),
   /** Clones a ready-made NPC into a new NPC sheet; `notes` is the localized weapons and gear text. */
-  createNpcFromTemplate: (templateId: string, name: string, notes: string) =>
-    invoke<CharacterRecord>("create_npc_from_template", { templateId, name, notes }),
+  /** A fresh NPC copy (an instance) in `sessionId`, or in the active session when `null`. */
+  createNpcFromTemplate: (templateId: string, name: string, notes: string, sessionId: number | null = null) =>
+    invoke<CharacterRecord>("create_npc_from_template", { templateId, name, notes, sessionId }),
   /** The tier a sheet's stats are closest to; information only. */
   tierHint: (character: Character) => invoke<TierHint>("tier_hint", { character }),
   listUserTemplates: () => invoke<UserTemplateRecord[]>("list_user_templates"),
@@ -80,8 +81,23 @@ export const api = {
   assessEncounter: (encounter: Encounter, players: number) =>
     invoke<Assessment>("assess_encounter", { encounter, players }),
   deleteUserTemplate: (id: number) => invoke<void>("delete_user_template", { id }),
-  createNpcFromUserTemplate: (templateId: number, name: string) =>
-    invoke<CharacterRecord>("create_npc_from_user_template", { templateId, name }),
+  createNpcFromUserTemplate: (templateId: number, name: string, sessionId: number | null = null) =>
+    invoke<CharacterRecord>("create_npc_from_user_template", { templateId, name, sessionId }),
+  /** The sheet a book template starts from, to open it in the editor before the first edit. */
+  bookTemplateSheet: (code: string, notes: string) =>
+    invoke<Character>("book_template_sheet", { code, notes }),
+  /** The first (and every later) edit of a book template: stores the GM's copy, which replaces it. */
+  saveBookTemplateCopy: (code: string, character: Character) =>
+    invoke<UserTemplateRecord>("save_book_template_copy", { code, character }),
+  /** Saves the edited sheet of an own template. */
+  updateUserTemplate: (id: number, character: Character) =>
+    invoke<UserTemplateRecord>("update_user_template", { id, character }),
+  /** Keeps an instance: it becomes a library character and no longer goes away with its session. */
+  saveInstanceToLibrary: (characterId: number) =>
+    invoke<ExplorerNode[]>("save_instance_to_library", { characterId }),
+  /** Deletes every instance of a session; the snapshots restore them one by one. */
+  clearSessionInstances: (sessionId: number) =>
+    invoke<DeletedCharacter[]>("clear_session_instances", { sessionId }),
   listEncounters: () => invoke<EncounterRecord[]>("list_encounters"),
   /** Creates an encounter (`id` null) or overwrites one. */
   saveEncounter: (id: number | null, encounter: Encounter) =>

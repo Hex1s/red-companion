@@ -12,4 +12,9 @@ active: boolean,
 /**
  * Shortcuts to characters lying in this node, in the order they were put there.
  */
-members: number[], };
+members: number[], 
+/**
+ * Characters that are instances of this session (always a subset of `members` for a session,
+ * empty for a folder): temporary copies from templates that go away with the session.
+ */
+instances: number[], };

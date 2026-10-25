@@ -17,4 +17,8 @@ containers: number[],
 /**
  * Scenes that had the character in a fight or behind a cover.
  */
-scenes: Array<SceneSnapshot>, };
+scenes: Array<SceneSnapshot>, 
+/**
+ * The session the character was an instance of (it comes back as one); `None` for the library.
+ */
+owner_session: number | null, };

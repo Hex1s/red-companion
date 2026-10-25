@@ -56,6 +56,10 @@ pub struct UserTemplateDoc {
     #[serde(default = "default_tier")]
     pub tier: NpcTier,
     pub character: Character,
+    /// `code` of the book template this one replaces: the GM edited a book NPC, the copy takes its
+    /// place in lists and in new fights, and deleting it brings the original back.
+    #[serde(default)]
+    pub based_on: Option<String>,
 }
 
 fn default_tier() -> NpcTier {
@@ -70,6 +74,10 @@ pub struct UserTemplateRecord {
     pub id: i64,
     pub tier: NpcTier,
     pub character: Character,
+    /// `code` of the book template this one replaces (see `UserTemplateDoc::based_on`).
+    #[serde(default)]
+    #[ts(type = "string | null")]
+    pub based_on: Option<String>,
 }
 
 /// How many edgerunners an NPC of the tier stands for. The book (p. 413-415) says: mooks fight

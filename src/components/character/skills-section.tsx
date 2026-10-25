@@ -260,7 +260,7 @@ export function SkillsSection({ characterId, form, skills, onChange }: SkillsSec
               </button>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <ul className="space-y-1 px-3 pb-3">{visible.map(skillRow)}</ul>
+              <ul className="space-y-1 p-3">{visible.map(skillRow)}</ul>
             </CollapsibleContent>
           </Collapsible>
         );

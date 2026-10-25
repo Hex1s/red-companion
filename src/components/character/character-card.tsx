@@ -1,5 +1,5 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { ChevronDown, ChevronUp, Dices, RotateCcw, Swords, UserMinus, Zap } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { RotateCcw, Swords } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { CheckRoll } from "@/bindings/CheckRoll";
 import type { DeathSave } from "@/bindings/DeathSave";
@@ -55,6 +55,8 @@ type CharacterCardProps = {
   inSession: boolean;
   /** Takes the character out of the active session (the character itself is kept). */
   onLeaveSession: () => void;
+  /** Set for an instance (a temporary copy from a template): the menu offers to keep it instead of "leave session". */
+  onKeepInLibrary?: () => void;
   onExport: () => void;
   /** Saves a copy as one of the GM's own templates; only NPCs offer it. */
   onSaveAsTemplate: () => void;
@@ -98,6 +100,7 @@ export function CharacterCard({
   onTherapy,
   inSession,
   onLeaveSession,
+  onKeepInLibrary,
   onExport,
   onSaveAsTemplate,
   onDelete,
@@ -109,6 +112,14 @@ export function CharacterCard({
   const { character, derived } = entry;
   const [text, setText] = useState(initiative === null ? "" : String(initiative));
   useEffect(() => setText(initiative === null ? "" : String(initiative)), [initiative]);
+
+  // HP went down (damage, not healing): the card glitches once. The ref skips the first render.
+  const [hit, setHit] = useState(false);
+  const lastHp = useRef(character.hp);
+  useEffect(() => {
+    if (character.hp < lastHp.current) setHit(true);
+    lastHp.current = character.hp;
+  }, [character.hp]);
 
   // The total commits on blur / Enter; invalid text snaps back.
   const commit = () => {
@@ -139,6 +150,15 @@ export function CharacterCard({
   // Rest needs a living character who is not mortally wounded (stabilise first) and not at full HP.
   const canRest = !dead && !mortal && character.hp < derived.max_hp;
   const menu = tidy([
+    item("roll-initiative", t("card.initiative_roll", { reflex: character.stats.reflex }), onRollInitiative),
+    ...(place
+      ? [
+          item("order-up", t("initiative.up"), () => onShift(-1), { disabled: place.first }),
+          item("order-down", t("initiative.down"), () => onShift(1), { disabled: place.last }),
+        ]
+      : []),
+    item("leave-fight", t("initiative.remove_from_fight"), onLeave),
+    separator("s0"),
     item("rest", t("rest.button"), onRest, { disabled: !canRest }),
     item("stabilize", t("initiative.stabilize"), onStabilize, { disabled: !mortal }),
     item("humanity-loss", t("humanity.loss_button"), onLoseHumanity, { disabled: dead }),
@@ -146,7 +166,9 @@ export function CharacterCard({
       disabled: dead || derived.humanity >= derived.max_humanity,
     }),
     separator("s1"),
-    item("leave-session", t("sessions.leave"), onLeaveSession, { disabled: !inSession }),
+    onKeepInLibrary
+      ? item("keep", t("explorer.keep_in_library"), onKeepInLibrary)
+      : item("leave-session", t("sessions.leave"), onLeaveSession, { disabled: !inSession }),
     item("export", t("characters.export_selected"), onExport),
     ...(entry.kind === "npc" ? [item("template", t("encounters.save_as_template"), onSaveAsTemplate)] : []),
     separator("s2"),
@@ -156,7 +178,7 @@ export function CharacterCard({
   return (
     <div
       className={cn(
-        "cut animate-in cursor-pointer space-y-2 p-3 text-left duration-200 fade-in-0 slide-in-from-right-4 [--cut:8px]",
+        "cut animate-in cursor-pointer p-3 text-left duration-200 fade-in-0 slide-in-from-right-4 [--cut:8px]",
         inCover && "[--cut-border:var(--cover)]",
         selected && !active && !inCover && "[--cut-border:var(--muted-foreground)]",
         active && "[--cut-border:var(--primary)]",
@@ -164,15 +186,28 @@ export function CharacterCard({
       )}
       onClick={select}
     >
+      {/* The glitch plays on this inner box: `glitch-hit` would replace the card's own entry animation. */}
+      <div
+        className={cn("space-y-2", hit && "glitch-hit")}
+        onAnimationEnd={(e) => e.target === e.currentTarget && e.animationName === "glitch-shake" && setHit(false)}
+      >
       <div className="flex items-center gap-1.5">
         <Hint
           label={
-            initiativeBonus !== 0 ? (
+            initiativeBonus !== 0 || explosionOf(initiativeRoll) ? (
               <span className="block max-w-64">
                 {t("card.initiative_hint")}
-                <span className="num mt-1 block text-primary">
-                  {t("solo.initiative_from", { value: initiativeBonus })}
-                </span>
+                {initiativeBonus !== 0 && (
+                  <span className="num mt-1 block text-primary">
+                    {t("solo.initiative_from", { value: initiativeBonus })}
+                  </span>
+                )}
+                {/* A d10 that exploded is told here, not with an icon that takes room on the row. */}
+                {explosionOf(initiativeRoll) && (
+                  <span className="mt-1 block">
+                    <RollNote roll={initiativeRoll} />
+                  </span>
+                )}
               </span>
             ) : (
               t("card.initiative_hint")
@@ -190,84 +225,20 @@ export function CharacterCard({
             className="num h-7 w-12 px-1 text-center text-base font-bold text-primary"
           />
         </Hint>
-        {explosionOf(initiativeRoll) && (
-          <Hint label={<RollNote roll={initiativeRoll} />}>
-            <Zap
-              className={cn(
-                "size-3.5 shrink-0",
-                explosionOf(initiativeRoll)?.direction === "up" ? "text-primary" : "text-state-serious",
-              )}
-            />
-          </Hint>
-        )}
-        <Hint label={t("card.initiative_roll", { reflex: character.stats.reflex })}>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            aria-label={t("card.initiative_roll", { reflex: character.stats.reflex })}
-            onClick={onRollInitiative}
-          >
-            <Dices />
-          </Button>
-        </Hint>
-        {place && (
-          <div className="flex flex-col">
-            <Hint label={t("initiative.up")}>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-xs"
-                className="h-3 w-5"
-                disabled={place.first}
-                aria-label={t("initiative.up")}
-                onClick={() => onShift(-1)}
-              >
-                <ChevronUp />
-              </Button>
-            </Hint>
-            <Hint label={t("initiative.down")}>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-xs"
-                className="h-3 w-5"
-                disabled={place.last}
-                aria-label={t("initiative.down")}
-                onClick={() => onShift(1)}
-              >
-                <ChevronDown />
-              </Button>
-            </Hint>
-          </div>
-        )}
         <span className="min-w-0 flex-1 truncate font-display text-sm font-semibold uppercase">
           {character.name}
         </span>
-        <Hint label={t("initiative.remove_from_fight")}>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            aria-label={t("initiative.remove_from_fight")}
-            onClick={onLeave}
-          >
-            <UserMinus />
-          </Button>
-        </Hint>
+        {/* Popovers and menus are portals: their clicks must not reach the card. */}
+        <span onClick={stop}>
+          <MoreMenu entries={menu} alwaysVisible />
+        </span>
       </div>
 
-      <HpBar current={character.hp} max={derived.max_hp} />
-
-      <div className="num flex items-center gap-3 text-xs text-muted-foreground">
-        <span>
-          {t("armor.head")} {character.armor_head.sp}
-        </span>
-        <span>
-          {t("armor.body")} {character.armor_body.sp}
-        </span>
-        <WoundBadge state={derived.wound_state} className="ml-auto text-xs" />
+      <div className="flex items-center gap-2">
+        <HpBar current={character.hp} max={derived.max_hp} className="flex-1" />
+        <WoundBadge state={derived.wound_state} className="w-20 shrink-0 text-right text-xs" />
       </div>
+
       {hasSoloEffects && (
         <Hint
           label={
@@ -294,6 +265,14 @@ export function CharacterCard({
       )}
 
       <div className="flex items-center gap-1.5">
+        <span className="num flex items-center gap-3 text-xs text-muted-foreground">
+          <span>
+            {t("armor.head")} {character.armor_head.sp}
+          </span>
+          <span>
+            {t("armor.body")} {character.armor_body.sp}
+          </span>
+        </span>
         {mortal && (
           <Button type="button" size="xs" variant="outline" onClick={onStabilize}>
             {t("initiative.stabilize")}
@@ -310,9 +289,6 @@ export function CharacterCard({
         <span className="ml-auto flex items-center gap-1.5">
           {/* Popovers and menus are portals: their clicks must not reach the card. */}
           <span onClick={stop}>{coverControl}</span>
-          <span onClick={stop}>
-            <MoreMenu entries={menu} alwaysVisible />
-          </span>
           {!dead && (
             <Hint label={t("combat.damage")}>
               <Button type="button" size="xs" onClick={onDamage}>
@@ -333,6 +309,7 @@ export function CharacterCard({
           </span>
         </p>
       )}
+      </div>
     </div>
   );
 }

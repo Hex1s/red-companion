@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { StatusArea } from "@/components/layout/status-area";
-import { CHARACTER_DRAG_TYPE, draggedCharacter } from "@/lib/drag";
+import { CHARACTER_DRAG_TYPE, TEMPLATE_DRAG_TYPE, draggedCharacter, draggedTemplate } from "@/lib/drag";
 import { cn } from "@/lib/utils";
 
 type AppShellProps = {
@@ -12,10 +12,12 @@ type AppShellProps = {
   rail: ReactNode;
   /** A character from the explorer was dropped on the rail: it joins the fight. */
   onRailDrop: (characterId: number) => void;
+  /** An NPC template was dropped on the rail: a fresh copy joins the fight. */
+  onRailDropTemplate: (templateKey: string) => void;
 };
 
 /** Shell: header, explorer on the left, main text area, right rail with character cards. */
-export function AppShell({ header, explorer, explorerOpen, main, rail, onRailDrop }: AppShellProps) {
+export function AppShell({ header, explorer, explorerOpen, main, rail, onRailDrop, onRailDropTemplate }: AppShellProps) {
   const [railTarget, setRailTarget] = useState(false);
   return (
     <div className="grid h-dvh grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background text-foreground">
@@ -42,7 +44,8 @@ export function AppShell({ header, explorer, explorerOpen, main, rail, onRailDro
             railTarget && "outline-2 -outline-offset-2 outline-primary",
           )}
           onDragOver={(e) => {
-            if (!e.dataTransfer.types.includes(CHARACTER_DRAG_TYPE)) return;
+            const types = e.dataTransfer.types;
+            if (!types.includes(CHARACTER_DRAG_TYPE) && !types.includes(TEMPLATE_DRAG_TYPE)) return;
             e.preventDefault();
             e.dataTransfer.dropEffect = "copy";
             setRailTarget(true);
@@ -52,10 +55,14 @@ export function AppShell({ header, explorer, explorerOpen, main, rail, onRailDro
           }}
           onDrop={(e) => {
             const id = draggedCharacter(e);
+            const template = draggedTemplate(e);
             setRailTarget(false);
             if (id !== null) {
               e.preventDefault();
               onRailDrop(id);
+            } else if (template !== null) {
+              e.preventDefault();
+              onRailDropTemplate(template);
             }
           }}
         >

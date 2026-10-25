@@ -3,6 +3,9 @@ import { useState, type DragEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { CharacterKind } from "@/bindings/CharacterKind";
 import type { ExplorerNode } from "@/bindings/ExplorerNode";
+import type { NpcTemplate } from "@/bindings/NpcTemplate";
+import type { NpcTier } from "@/bindings/NpcTier";
+import type { UserTemplateRecord } from "@/bindings/UserTemplateRecord";
 import {
   ContextEntries,
   MoreMenu,
@@ -26,13 +29,17 @@ import type { CharacterEntry } from "@/hooks/use-characters";
 import {
   CHARACTER_DRAG_TYPE,
   FOLDER_DRAG_TYPE,
+  TEMPLATE_DRAG_TYPE,
   draggedCharacter,
   draggedFolder,
+  draggedTemplate,
 } from "@/lib/drag";
+import { templateKey } from "@/lib/encounter";
 import { cn } from "@/lib/utils";
 import { useUiStore, type AppTab } from "@/store/ui-store";
 
 const NAME_MAX = 60;
+const TIERS: NpcTier[] = ["mook", "lieutenant", "mini_boss", "boss"];
 
 export type ExplorerActions = {
   openCharacter: (id: number) => void;
@@ -51,7 +58,19 @@ export type ExplorerActions = {
   /** A new character, and a shortcut to it in `containerId` when given. */
   newCharacter: (kind: CharacterKind, containerId?: number) => void;
   moveFolder: (id: number, parent: number | null) => void;
-  fromTemplate: () => void;
+  /** Opens a template in the main area: an own one for editing, a book one in the reference. */
+  openTemplate: (key: string) => void;
+  /** Deletes the GM's copy of a book template: the book one shows again. */
+  resetTemplate: (id: number) => void;
+  /** Keeps an instance: it becomes a library character and stays after its session is deleted. */
+  saveInstanceToLibrary: (id: number) => void;
+  /** Deletes every instance of a session (the app offers "Undo" afterwards). */
+  clearInstances: (sessionId: number) => void;
+  /**
+   * A fresh NPC copy per `count` from a template (`book:<code>` / `custom:<id>`), numbered after the
+   * existing ones; into `containerId` (default: the active session), optionally into the fight.
+   */
+  spawnTemplate: (key: string, count: number, toCombat: boolean, containerId?: number) => void;
   importCharacters: () => void;
   importSession: () => void;
   exportCharacter: (id: number) => void;
@@ -68,7 +87,9 @@ type ExplorerProps = {
   tab: AppTab;
   /** Commands need the Rust backend; without it (plain browser) the menus offer nothing. */
   enabled: boolean;
-  hasTemplates: boolean;
+  /** Ready-made NPCs from the book and the GM's own templates: the library keeps them as references. */
+  bookTemplates: NpcTemplate[];
+  userTemplates: UserTemplateRecord[];
   /** Ids in the initiative order: who fights is separate from who lies in the session. */
   fighters: number[];
   actions: ExplorerActions;
@@ -87,22 +108,27 @@ export function Explorer({
   selectedId,
   tab,
   enabled,
-  hasTemplates,
+  bookTemplates,
+  userTemplates,
   fighters,
   actions,
 }: ExplorerProps) {
   const { t } = useTranslation();
   const expanded = useUiStore((s) => s.expanded);
   const setExpanded = useUiStore((s) => s.setExpanded);
+  const selectedTemplateKey = useUiStore((s) => s.selectedTemplateKey);
   const [nameDialog, setNameDialog] = useState<NameDialog | null>(null);
   const [deleting, setDeleting] = useState<ExplorerNode | null>(null);
   const [dropTarget, setDropTarget] = useState<number | null>(null);
+  const [resetting, setResetting] = useState<UserTemplateRecord | null>(null);
 
   const sessions = nodes.filter((n) => n.kind === "session");
   const rootFolders = nodes.filter((n) => n.kind === "folder" && n.parent_id === null);
   const folderCount = nodes.filter((n) => n.kind === "folder").length;
   const active = sessions.find((s) => s.active) ?? null;
   const byId = new Map(entries.map((e) => [e.id, e]));
+  // Temporary copies from templates: they live in their session only, not in the library lists.
+  const instanceIds = new Set(nodes.flatMap((n) => n.instances));
 
   const isOpen = (key: string, fallback: boolean) => expanded[key] ?? fallback;
   const toggle = (key: string, fallback: boolean) => setExpanded(key, !isOpen(key, fallback));
@@ -129,7 +155,6 @@ export function Explorer({
   const libraryAdd: MenuEntry[] = tidy([
     item("new-pc", t("characters.new_pc"), () => actions.newCharacter("pc")),
     item("new-npc", t("characters.new_npc"), () => actions.newCharacter("npc")),
-    item("template", t("npc.from_template"), actions.fromTemplate, { disabled: !hasTemplates }),
     separator("s1"),
     item("folder", t("explorer.new_folder"), () => askCreateFolder(null)),
     separator("s2"),
@@ -143,6 +168,9 @@ export function Explorer({
         disabled: node.active,
       }),
       item("notes", t("nav.notes"), () => actions.openNotes(node.id)),
+      item("clear-npcs", t("explorer.clear_npcs"), () => actions.clearInstances(node.id), {
+        disabled: node.instances.length === 0,
+      }),
       separator("s1"),
       item("rename", t("sessions.rename"), () => setNameDialog({ kind: "rename", node })),
       item("export", t("explorer.export_session"), actions.exportSession, { disabled: !node.active }),
@@ -166,8 +194,22 @@ export function Explorer({
       item("delete", t("sessions.delete"), () => setDeleting(node), { destructive: true }),
     ]);
 
-  const characterMenu = (entry: CharacterEntry, container: ExplorerNode | null): MenuEntry[] =>
-    tidy([
+  const characterMenu = (entry: CharacterEntry, container: ExplorerNode | null): MenuEntry[] => {
+    if (instanceIds.has(entry.id)) {
+      return tidy([
+        item("open", t("explorer.open"), () => actions.openCharacter(entry.id)),
+        fighters.includes(entry.id)
+          ? item("combat", t("initiative.remove_from_fight"), () => actions.removeFromCombat(entry.id))
+          : item("combat", t("initiative.add"), () => actions.addToCombat(entry.id)),
+        item("keep", t("explorer.keep_in_library"), () => actions.saveInstanceToLibrary(entry.id)),
+        separator("s1"),
+        item("template", t("encounters.save_as_template"), () => actions.saveAsTemplate(entry.id)),
+        item("export", t("characters.export_selected"), () => actions.exportCharacter(entry.id)),
+        separator("s2"),
+        item("delete", t("characters.delete"), () => actions.deleteCharacter(entry.id), { destructive: true }),
+      ]);
+    }
+    return tidy([
       item("open", t("explorer.open"), () => actions.openCharacter(entry.id)),
       item(
         "to-active",
@@ -195,12 +237,96 @@ export function Explorer({
       separator("s2"),
       item("delete", t("characters.delete"), () => actions.deleteCharacter(entry.id), { destructive: true }),
     ]);
+  };
+
+  const templateMenu = (key: string, edited?: UserTemplateRecord): MenuEntry[] => tidy([
+    item("to-combat", t("templates.to_combat"), () => actions.spawnTemplate(key, 1, true), { disabled: !active }),
+    item("to-session", t("templates.to_session"), () => actions.spawnTemplate(key, 1, false), { disabled: !active }),
+    separator("s1"),
+    item("open", t("explorer.open"), () => actions.openTemplate(key)),
+    ...(edited ? [item("reset", t("templates.reset"), () => setResetting(edited))] : []),
+  ]);
+
+  const templateRow = (key: string, name: string, edited?: UserTemplateRecord) => (
+    <TreeRow
+      key={key}
+      depth={2}
+      label={name}
+      tag={edited ? t("templates.edited") : undefined}
+      menu={enabled ? templateMenu(key, edited) : []}
+      selected={tab === "characters" && selectedTemplateKey === key}
+      onClick={() => actions.openTemplate(key)}
+      dragTemplate={key}
+    />
+  );
+
+  // A book template the GM edited is shown as their copy; the original is hidden until it is reset.
+  const bookCodes = new Set(bookTemplates.map((x) => x.code));
+  const editedOf = (code: string) => userTemplates.find((x) => x.based_on === code);
+  const ownTemplates = userTemplates.filter((x) => !x.based_on || !bookCodes.has(x.based_on));
+
+  const tierGroup = (tier: NpcTier) => {
+    const list = bookTemplates.filter((x) => x.tier === tier);
+    if (list.length === 0) return null;
+    const groupKey = `templates:${tier}`;
+    const open = isOpen(groupKey, false);
+    return (
+      <div key={groupKey}>
+        <TreeRow
+          depth={1}
+          label={t(`npc.tier.${tier}`)}
+          count={list.length}
+          open={open}
+          onToggle={() => toggle(groupKey, false)}
+          onClick={() => toggle(groupKey, false)}
+        />
+        {open && (
+          <div className="animate-in fade-in-0 slide-in-from-top-1 duration-150">
+            {list.map((x) => {
+              const copy = editedOf(x.code);
+              return copy
+                ? templateRow(templateKey("custom", String(copy.id)), copy.character.name, copy)
+                : templateRow(templateKey("book", x.code), x.name);
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const ownGroup = () => {
+    const groupKey = "templates:own";
+    const open = isOpen(groupKey, true);
+    return (
+      <div key={groupKey}>
+        <TreeRow
+          depth={1}
+          label={t("templates.own")}
+          count={ownTemplates.length}
+          open={open}
+          onToggle={() => toggle(groupKey, true)}
+          onClick={() => toggle(groupKey, true)}
+        />
+        {open &&
+          (ownTemplates.length === 0 ? (
+            <p className="py-1 text-xs text-muted-foreground" style={{ paddingLeft: indent(2) }}>
+              {t("templates.own_empty")}
+            </p>
+          ) : (
+            <div className="animate-in fade-in-0 slide-in-from-top-1 duration-150">
+              {ownTemplates.map((x) => templateRow(templateKey("custom", String(x.id)), x.character.name))}
+            </div>
+          ))}
+      </div>
+    );
+  };
 
   // Dropping a character on a session or a folder puts a shortcut there.
   const dropProps = (containerId: number, accepts: "any" | "characters" = "any") => ({
     onDragOver: (e: DragEvent) => {
       const types = e.dataTransfer.types;
-      if (!types.includes(CHARACTER_DRAG_TYPE) && !(accepts === "any" && types.includes(FOLDER_DRAG_TYPE))) return;
+      const template = accepts === "characters" && types.includes(TEMPLATE_DRAG_TYPE);
+      if (!template && !types.includes(CHARACTER_DRAG_TYPE) && !(accepts === "any" && types.includes(FOLDER_DRAG_TYPE))) return;
       e.preventDefault();
       e.dataTransfer.dropEffect = "copy";
       setDropTarget(containerId);
@@ -209,8 +335,12 @@ export function Explorer({
     onDrop: (e: DragEvent) => {
       const id = draggedCharacter(e);
       const folder = accepts === "any" ? draggedFolder(e) : null;
+      const template = accepts === "characters" ? draggedTemplate(e) : null;
       setDropTarget(null);
-      if (id !== null) {
+      if (template !== null) {
+        e.preventDefault();
+        actions.spawnTemplate(template, 1, false, containerId);
+      } else if (id !== null) {
         e.preventDefault();
         actions.addToContainer(containerId, id);
       } else if (folder !== null) {
@@ -225,7 +355,7 @@ export function Explorer({
       key={`${container?.id ?? "all"}-${entry.id}`}
       depth={depth}
       label={entry.character.name}
-      tag={t(`explorer.kind.${entry.kind}`)}
+      tag={t(instanceIds.has(entry.id) ? "explorer.kind.instance" : `explorer.kind.${entry.kind}`)}
       selected={tab === "characters" && selectedId === entry.id}
       menu={characterMenu(entry, container)}
       onClick={() => actions.openCharacter(entry.id)}
@@ -308,6 +438,7 @@ export function Explorer({
   };
 
   const allOpen = isOpen("all", false);
+  const libraryEntries = entries.filter((e) => !instanceIds.has(e.id));
 
   return (
     <nav aria-label={t("explorer.title")} className="space-y-3">
@@ -331,12 +462,22 @@ export function Explorer({
         <TreeRow
           depth={1}
           label={t("sessions.all_characters")}
-          count={entries.length}
+          count={libraryEntries.length}
           open={allOpen}
           onToggle={() => toggle("all", false)}
           onClick={() => toggle("all", false)}
         />
-        {allOpen && entries.map((entry) => characterRow(entry, 2, null))}
+        {allOpen && libraryEntries.map((entry) => characterRow(entry, 2, null))}
+      </Section>
+
+      <Section
+        label={t("templates.title")}
+        open={isOpen("templates", true)}
+        onToggle={() => toggle("templates", true)}
+        add={[]}
+      >
+        {ownGroup()}
+        {TIERS.map(tierGroup)}
       </Section>
 
       <Section label={t("explorer.tools")} open onToggle={() => {}} add={[]} plain>
@@ -368,6 +509,31 @@ export function Explorer({
           return actions.rename(nameDialog.node.id, name);
         }}
       />
+
+      <Dialog open={resetting !== null} onOpenChange={(o) => !o && setResetting(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("templates.reset_title")}</DialogTitle>
+            <DialogDescription>
+              {t("templates.reset_body", { name: resetting?.character.name ?? "" })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setResetting(null)}>
+              {t("characters.cancel")}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (resetting) actions.resetTemplate(resetting.id);
+                setResetting(null);
+              }}
+            >
+              {t("templates.reset")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={deleting !== null} onOpenChange={(o) => !o && setDeleting(null)}>
         <DialogContent>
@@ -465,6 +631,8 @@ type TreeRowProps = {
   onClick?: () => void;
   dragCharacter?: number;
   dragFolder?: number;
+  /** Key of the NPC template this row stands for; dragging copies it into a session or the fight. */
+  dragTemplate?: string;
   drop?: {
     onDragOver: (e: DragEvent) => void;
     onDragLeave: () => void;
@@ -487,6 +655,7 @@ function TreeRow({
   onClick,
   dragCharacter,
   dragFolder,
+  dragTemplate,
   drop,
 }: TreeRowProps) {
   const expandable = open !== undefined;
@@ -497,9 +666,12 @@ function TreeRow({
         selected ? "border-primary bg-accent text-foreground" : "hover:bg-accent/50",
         highlighted && "border-primary bg-primary/20",
       )}
-      draggable={dragCharacter !== undefined || dragFolder !== undefined}
+      draggable={dragCharacter !== undefined || dragFolder !== undefined || dragTemplate !== undefined}
       onDragStart={(e) => {
-        if (dragCharacter !== undefined) {
+        if (dragTemplate !== undefined) {
+          e.dataTransfer.setData(TEMPLATE_DRAG_TYPE, dragTemplate);
+          e.dataTransfer.effectAllowed = "copy";
+        } else if (dragCharacter !== undefined) {
           e.dataTransfer.setData(CHARACTER_DRAG_TYPE, String(dragCharacter));
           e.dataTransfer.effectAllowed = "copy";
         } else if (dragFolder !== undefined) {

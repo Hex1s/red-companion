@@ -5,11 +5,11 @@ import type { CharacterKind } from "@/bindings/CharacterKind";
 import type { DeathSave } from "@/bindings/DeathSave";
 import type { ExportFile } from "@/bindings/ExportFile";
 import type { ExportKind } from "@/bindings/ExportKind";
+import { TemplateEditor } from "@/components/character/template-editor";
 import { CharacterCard } from "@/components/character/character-card";
 import { CharacterSheet } from "@/components/character/character-sheet";
 import { Explorer } from "@/components/explorer/explorer";
 import { ImportDialog } from "@/components/character/import-dialog";
-import { NpcTemplateDialog, type CloneRequest } from "@/components/character/npc-template-dialog";
 import { EncountersPage } from "@/components/encounter/encounters-page";
 import { CombatBar } from "@/components/combat/combat-bar";
 import { DamageDialog } from "@/components/combat/damage-dialog";
@@ -47,6 +47,8 @@ import { useUiStore } from "@/store/ui-store";
 
 /** How long the "deleted — undo" message stays. */
 const UNDO_DELETE_MS = 8000;
+/** Copies of one template that the "add more" button of the toast builds up to. */
+const SPAWN_MAX = 3;
 
 export default function App() {
   const { t, i18n } = useTranslation();
@@ -54,6 +56,8 @@ export default function App() {
     tab,
     setTab,
     selectedCharacterId,
+    selectedTemplateKey,
+    selectTemplate,
     selectCharacter,
     damageTargetId,
     openDamage,
@@ -69,7 +73,6 @@ export default function App() {
   const injuries = useInjuries();
   const npcTemplates = useNpcTemplates();
   const encounterState = useEncounters();
-  const [templatesOpen, setTemplatesOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [stabilizeTargetId, setStabilizeTargetId] = useState<number | null>(null);
   const [restTargetId, setRestTargetId] = useState<number | null>(null);
@@ -84,6 +87,13 @@ export default function App() {
   const [lastSave, setLastSave] = useState<{ id: number; save: DeathSave } | null>(null);
   const damageTarget = entries.find((e) => e.id === damageTargetId) ?? null;
   const selected = entries.find((e) => e.id === selectedCharacterId) ?? null;
+  const openedTemplate =
+    encounterState.templates.find((x) => templateKey("custom", String(x.id)) === selectedTemplateKey) ?? null;
+  // A book template opened as printed: nothing is stored until it is edited.
+  const openedBook =
+    openedTemplate?.based_on !== undefined && openedTemplate.based_on !== null
+      ? (npcTemplates.find((x) => x.code === openedTemplate.based_on) ?? null)
+      : (npcTemplates.find((x) => templateKey("book", x.code) === selectedTemplateKey) ?? null);
   // The sheet is heavy to build; while the next one renders, the previous stays on screen
   // (dimmed) instead of the page going blank and flickering.
   const deferredCharacterId = useDeferredValue(selectedCharacterId);
@@ -224,18 +234,124 @@ export default function App() {
     setTab("characters");
   };
 
-  /** Clones a ready-made NPC once per name. */
-  const cloneTemplate = async ({ templateId, names, notes }: CloneRequest) => {
-    let last: number | null = null;
+  /**
+   * The template a key stands for. A book template the GM has edited resolves to their copy: the
+   * copy takes the original's place in new fights (and in encounters that name the original).
+   */
+  const resolveTemplate = (key: string) => {
+    const book = npcTemplates.find((x) => templateKey("book", x.code) === key);
+    const edited = book ? encounterState.templates.find((x) => x.based_on === book.code) : undefined;
+    const own =
+      edited ?? encounterState.templates.find((x) => templateKey("custom", String(x.id)) === key);
+    return { book: edited ? undefined : book, own };
+  };
+
+  /**
+   * Makes `count` fresh NPCs from a template (`book:<code>` / `custom:<id>`): instances of the
+   * target session (`containerId`, default the active one), numbered after the existing names, each
+   * with its own HP and SP. With `toCombat` they also join the fight (active session only). The
+   * toast offers more copies up to `SPAWN_MAX` in total; `already` is how many this burst made.
+   */
+  const spawnTemplate = async (
+    key: string,
+    count: number,
+    toCombat: boolean,
+    containerId?: number,
+    already = 0,
+  ) => {
+    const { book, own } = resolveTemplate(key);
+    const target = containerId ?? sessionId;
+    if ((!book && !own) || target === null) return;
+    const names = cloneNames(book?.name ?? own!.character.name, count, entries.map((e) => e.character.name));
+    const created: { id: number; name: string }[] = [];
     try {
       for (const name of names) {
-        last = (await api.createNpcFromTemplate(templateId, name, notes)).id;
+        const record = book
+          ? await api.createNpcFromTemplate(book.code, name, npcNotes(t, book), target)
+          : await api.createNpcFromUserTemplate(own!.id, name, target);
+        created.push({ id: record.id, name });
       }
+    } catch (e) {
+      status.fail(e, "npc:spawn");
     } finally {
-      // Even after a partial failure the clones that exist must show up.
+      // Even after a partial failure the copies that exist must show up.
       await reload();
     }
-    if (last !== null) selectCharacter(last);
+    if (toCombat && target === sessionId) {
+      for (const { id, name } of created) await addToCombat(id, name);
+    }
+    if (created.length === 0) return;
+    const total = already + created.length;
+    const more = SPAWN_MAX - total;
+    status.show({
+      id: `npc:spawn:${key}`,
+      kind: "success",
+      text: t(toCombat ? "templates.added_to_combat" : "templates.added", { names: created.map((c) => c.name).join(", ") }),
+      action:
+        more > 0
+          ? {
+              label: t("templates.add_more", { count: more }),
+              run: () => void spawnTemplate(key, more, toCombat, containerId, total),
+            }
+          : undefined,
+      autoHideMs: 6000,
+    });
+  };
+
+  /** Opens a template in the main area; a book one the GM has edited opens as their copy. */
+  const openTemplate = (key: string) => {
+    const edited = key.startsWith("book:")
+      ? encounterState.templates.find((x) => x.based_on === key.slice("book:".length))
+      : undefined;
+    selectTemplate(edited ? templateKey("custom", String(edited.id)) : key);
+  };
+
+  /** Throws the GM's copy away: the book template shows again, as printed. */
+  const resetTemplate = async (id: number) => {
+    const record = encounterState.templates.find((x) => x.id === id);
+    try {
+      await encounterState.deleteTemplate(id);
+      if (record?.based_on && selectedTemplateKey === templateKey("custom", String(id))) {
+        selectTemplate(templateKey("book", record.based_on));
+      }
+    } catch (e) {
+      status.fail(e, "template:reset");
+    }
+  };
+
+  /** Deletes all instances of a session; "Undo" in the status area brings them all back. */
+  const clearInstances = async (session: number) => {
+    const toastId = `session:clear:${session}`;
+    try {
+      const deleted = await api.clearSessionInstances(session);
+      if (deleted.length === 0) return;
+      if (selectedCharacterId !== null && deleted.some((d) => d.id === selectedCharacterId)) selectCharacter(null);
+      await reload();
+      sceneState.replaceScene(await api.getScene());
+      status.show({
+        id: toastId,
+        kind: "info",
+        text: t("explorer.cleared_npcs", { count: deleted.length }),
+        action: {
+          label: t("damage.undo"),
+          run: () => {
+            status.dismiss(toastId);
+            void (async () => {
+              try {
+                for (const d of deleted) await api.restoreCharacter(d);
+                await reload();
+                sceneState.replaceScene(await api.getScene());
+              } catch (e) {
+                status.fail(e, "session:clear");
+              }
+            })();
+          },
+        },
+        autoHideMs: UNDO_DELETE_MS,
+      });
+    } catch (e) {
+      status.fail(e, "session:clear");
+    }
   };
 
   /** Clones one own template into the session; returns the new NPC's id. */
@@ -256,8 +372,7 @@ export default function App() {
     try {
       for (const line of encounter.entries) {
         const key = templateKey(line.source, line.template);
-        const book = npcTemplates.find((x) => templateKey("book", x.code) === key);
-        const own = encounterState.templates.find((x) => templateKey("custom", String(x.id)) === key);
+        const { book, own } = resolveTemplate(key);
         if (!book && !own) {
           missing += line.count;
           continue;
@@ -469,6 +584,7 @@ export default function App() {
           const entry = entries.find((e) => e.id === id);
           if (entry) void addToCombat(id, entry.character.name);
         }}
+        onRailDropTemplate={(key) => void spawnTemplate(key, 1, true)}
         explorerOpen={explorerOpen}
         explorer={
           <Explorer
@@ -477,7 +593,8 @@ export default function App() {
             selectedId={selectedCharacterId}
             tab={tab}
             enabled={hasBackend}
-            hasTemplates={npcTemplates.length > 0}
+            bookTemplates={npcTemplates}
+            userTemplates={encounterState.templates}
             fighters={combat?.combatants.map((c) => c.character_id) ?? []}
             actions={{
               openCharacter: (id) => {
@@ -509,7 +626,12 @@ export default function App() {
               removeFromCombat: (id) => void sceneState.combatRemove(id),
               newCharacter: (kind, containerId) => void createCharacter(kind, containerId),
               moveFolder: (id, parent) => void explorer.moveFolder(id, parent),
-              fromTemplate: () => setTemplatesOpen(true),
+              spawnTemplate: (key, count, toCombat, containerId) =>
+                void spawnTemplate(key, count, toCombat, containerId),
+              openTemplate,
+              resetTemplate: (id) => void resetTemplate(id),
+              saveInstanceToLibrary: (id) => void explorer.run(api.saveInstanceToLibrary(id)),
+              clearInstances: (id) => void clearInstances(id),
               importCharacters: () => void startImport("character"),
               importSession: () => void startImport("session"),
               exportCharacter: (id) => void exportCharacters({ ids: [id] }),
@@ -554,7 +676,20 @@ export default function App() {
           {tab === "characters" ? (
             <div className="space-y-6">
               {!hasBackend && <p className="text-muted-foreground">{t("characters.no_backend")}</p>}
-              {shown ? (
+              {openedTemplate || openedBook ? (
+                <TemplateEditor
+                  key={openedTemplate?.based_on ? templateKey("book", openedTemplate.based_on) : selectedTemplateKey}
+                  record={openedTemplate}
+                  book={openedBook}
+                  notes={openedBook ? npcNotes(t, openedBook) : ""}
+                  injuries={injuries}
+                  onUpdate={encounterState.updateTemplate}
+                  onFork={async (code, character) => {
+                    const copy = await encounterState.saveBookCopy(code, character);
+                    selectTemplate(templateKey("custom", String(copy.id)));
+                  }}
+                />
+              ) : shown ? (
                 <div className={shown.id === selectedCharacterId ? undefined : "opacity-60 transition-opacity"}>
                 <CharacterSheet
                   key={shown.id}
@@ -675,6 +810,11 @@ export default function App() {
                   onTherapy={() => setTherapyTargetId(e.id)}
                   inSession={members.includes(e.id)}
                   onLeaveSession={() => sessionId !== null && void explorer.removeFrom(sessionId, e.id)}
+                  onKeepInLibrary={
+                    explorer.active?.instances.includes(e.id)
+                      ? () => void explorer.run(api.saveInstanceToLibrary(e.id))
+                      : undefined
+                  }
                   onExport={() => void exportCharacters({ ids: [e.id] })}
                   onSaveAsTemplate={() => void saveAsTemplate(e.id)}
                   onDelete={() => void deleteCharacter(e.id)}
@@ -693,13 +833,6 @@ export default function App() {
               <p className="p-2 text-sm text-muted-foreground">{t("rail.empty")}</p>
             )}
             <ReferenceSearch open={searchOpen} onOpenChange={setSearchOpen} />
-            <NpcTemplateDialog
-              open={templatesOpen}
-              templates={npcTemplates}
-              existingNames={entries.map((e) => e.character.name)}
-              onClone={cloneTemplate}
-              onClose={() => setTemplatesOpen(false)}
-            />
             <ImportDialog
               files={importFiles}
               onImport={async (name) => {

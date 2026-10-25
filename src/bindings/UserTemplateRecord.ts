@@ -5,4 +5,8 @@ import type { NpcTier } from "./NpcTier";
 /**
  * The GM's own NPC template: a fresh sheet that is cloned into the session.
  */
-export type UserTemplateRecord = { id: number, tier: NpcTier, character: Character, };
+export type UserTemplateRecord = { id: number, tier: NpcTier, character: Character, 
+/**
+ * `code` of the book template this one replaces (see `UserTemplateDoc::based_on`).
+ */
+based_on: string | null, };

@@ -69,6 +69,8 @@ export function useExplorer() {
     /** False until the first load has finished: nothing session-related may be asked before. */
     ready,
     reload,
+    /** Runs a tree command and shows the tree it answers with. */
+    run,
     createSession: (name: string) => run(api.createSession(name), true),
     createFolder: (parent: number | null, name: string) => run(api.createFolder(parent, name)),
     rename: (id: number, name: string) => run(api.renameNode(id, name)),

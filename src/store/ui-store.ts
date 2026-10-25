@@ -35,6 +35,9 @@ function saveExplorer(state: StoredExplorer) {
 type UiState = {
   tab: AppTab;
   selectedCharacterId: number | null;
+  /** Own template open in the main area (`custom:<id>`); `null` when a character is shown. */
+  selectedTemplateKey: string | null;
+  selectTemplate: (key: string | null) => void;
   /** Character the "damage taken" window is open for. */
   damageTargetId: number | null;
   sheetTab: SheetTab;
@@ -64,6 +67,8 @@ const initialExplorer = loadExplorer();
 export const useUiStore = create<UiState>((set, get) => ({
   tab: "characters",
   selectedCharacterId: null,
+  selectedTemplateKey: null,
+  selectTemplate: (selectedTemplateKey) => set({ selectedTemplateKey, tab: "characters" }),
   damageTargetId: null,
   sheetTab: "general",
   setSheetTab: (sheetTab) => set({ sheetTab }),
@@ -77,7 +82,7 @@ export const useUiStore = create<UiState>((set, get) => ({
     set({ tab: "rules", referenceSection, referenceId, referenceQuery: "" }),
   openDamage: (id) => set({ damageTargetId: id }),
   setTab: (tab) => set({ tab }),
-  selectCharacter: (id) => set({ selectedCharacterId: id }),
+  selectCharacter: (id) => set({ selectedCharacterId: id, selectedTemplateKey: null }),
   explorerOpen: initialExplorer.open,
   toggleExplorer: () => {
     set({ explorerOpen: !get().explorerOpen });

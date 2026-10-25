@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import type { Character } from "@/bindings/Character";
 import type { Encounter } from "@/bindings/Encounter";
 import type { EncounterRecord } from "@/bindings/EncounterRecord";
 import type { NpcTier } from "@/bindings/NpcTier";
@@ -55,6 +56,24 @@ export function useEncounters() {
     [reload],
   );
 
+  const updateTemplate = useCallback(
+    async (id: number, character: Character) => {
+      const record = await api.updateUserTemplate(id, character);
+      await reload();
+      return record;
+    },
+    [reload],
+  );
+
+  const saveBookCopy = useCallback(
+    async (code: string, character: Character) => {
+      const record = await api.saveBookTemplateCopy(code, character);
+      await reload();
+      return record;
+    },
+    [reload],
+  );
+
   const deleteTemplate = useCallback(
     async (id: number) => {
       await api.deleteUserTemplate(id);
@@ -63,5 +82,5 @@ export function useEncounters() {
     [reload],
   );
 
-  return { templates, encounters, error, reload, saveEncounter, deleteEncounter, deleteTemplate, setTemplateTier };
+  return { templates, encounters, error, reload, saveEncounter, deleteEncounter, deleteTemplate, setTemplateTier, updateTemplate, saveBookCopy };
 }

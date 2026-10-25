@@ -37,6 +37,10 @@
 
   /* A character standing behind cover: a steel blue, not a wound colour. */
   --cover: #5b8fb9;
+
+  /* The two colour layers of the glitch (RGB split). Decoration only, never state. */
+  --glitch-a: #c413f0;
+  --glitch-b: #05d9e8;
 }
 
 @theme inline {
@@ -69,6 +73,8 @@
   --color-state-mortal: var(--state-mortal);
   --color-state-dead: var(--state-dead);
   --color-cover: var(--cover);
+  --color-glitch-a: var(--glitch-a);
+  --color-glitch-b: var(--glitch-b);
 
   --radius-sm: 0px;
   --radius-md: 0px;
@@ -180,4 +186,77 @@
 
 @utility animate-fade {
   animation: fade-plain 0.18s ease-out;
+}
+
+/*
+ * Glitch: a short RGB split of the text (flat colour layers, no blur) in jumpy steps. Text only, so
+ * nothing moves in the layout. `glitch-hover` plays while hovered or focused by keyboard; `glitch-hit`
+ * is a one-shot for an element that was just hit (it also shakes the element by a pixel or two).
+ * Numbers (`num`) are left alone: shaking digits are hard to read.
+ */
+@keyframes glitch-split {
+  0% {
+    text-shadow: none;
+  }
+  20% {
+    text-shadow:
+      -2px 0 var(--glitch-a),
+      2px 0 var(--glitch-b);
+  }
+  40% {
+    text-shadow:
+      2px 0 var(--glitch-a),
+      -1px 0 var(--glitch-b);
+  }
+  60% {
+    text-shadow:
+      -1px 0 var(--glitch-a),
+      1px 0 var(--glitch-b);
+  }
+  80% {
+    text-shadow:
+      1px 0 var(--glitch-a),
+      -2px 0 var(--glitch-b);
+  }
+  100% {
+    text-shadow: none;
+  }
+}
+
+@keyframes glitch-shake {
+  0%,
+  100% {
+    transform: none;
+  }
+  15% {
+    transform: translateX(-2px);
+  }
+  30% {
+    transform: translateX(2px);
+  }
+  45% {
+    transform: translateX(-1px);
+  }
+  60% {
+    transform: translateX(1px);
+  }
+  75% {
+    transform: translateX(-1px);
+  }
+}
+
+@utility glitch-hover {
+  &:hover:not(:disabled),
+  &:focus-visible {
+    animation: glitch-split 0.22s steps(1, end);
+  }
+  & :is(.num, [class~="num"]) {
+    text-shadow: none;
+  }
+}
+
+@utility glitch-hit {
+  animation:
+    glitch-split 0.32s steps(1, end),
+    glitch-shake 0.32s steps(1, end);
 }

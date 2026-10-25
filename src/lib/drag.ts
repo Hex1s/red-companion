@@ -17,3 +17,12 @@ export function draggedFolder(e: { dataTransfer: DataTransfer }): number | null 
   const id = Number(e.dataTransfer.getData(FOLDER_DRAG_TYPE));
   return Number.isNaN(id) ? null : id;
 }
+
+/** Drag payload type: the key of an NPC template (`book:<code>` or `custom:<id>`) dragged onto a session or the fight. */
+export const TEMPLATE_DRAG_TYPE = "application/x-red-companion-template";
+
+/** The template key carried by a drag event, or null when it carries something else. */
+export function draggedTemplate(e: { dataTransfer: DataTransfer }): string | null {
+  if (!e.dataTransfer.types.includes(TEMPLATE_DRAG_TYPE)) return null;
+  return e.dataTransfer.getData(TEMPLATE_DRAG_TYPE) || null;
+}

@@ -500,17 +500,27 @@
       "mini_boss": "Mini-boss",
       "boss": "Boss"
     },
-    "from_template": "From template",
-    "dialog_title": "Ready-made NPCs",
-    "dialog_hint": "Filler NPCs from the book (p. 412–416): pick one and clone it. Every clone has its own HP and SP.",
     "count": "How many",
     "clone": "Clone",
-    "clone_to_combat": "Clone into combat",
-    "clone_error": "Could not clone: {{error}}",
     "notes": {
       "weapons": "Weapons",
       "gear": "Gear"
     }
+  },
+  "templates": {
+    "title": "Templates",
+    "own": "My templates",
+    "own_empty": "Empty. Use “Save as template” in an NPC's menu.",
+    "to_combat": "Into the fight",
+    "to_session": "Into the session",
+    "badge": "Template",
+    "added": "Added to the session: {{names}}",
+    "added_to_combat": "Added to the fight: {{names}}",
+    "add_more": "Add {{count}} more",
+    "edited": "EDIT",
+    "reset": "Reset to the book",
+    "reset_title": "Bring back the book template?",
+    "reset_body": "Your edits to “{{name}}” will be deleted and the template from the book will show again. NPCs already added to sessions stay as they are."
   },
   "card": {
     "initiative_hint": "Initiative: type the total (REF + d10) from physical dice, or press the die",
@@ -722,8 +732,12 @@
     "delete_folder_body": "The folder \"{{name}}\" goes away with its subfolders. The characters stay in the library.",
     "kind": {
       "pc": "PC",
-      "npc": "NPC"
-    }
+      "npc": "NPC",
+      "instance": "COPY"
+    },
+    "clear_npcs": "Clear NPCs",
+    "cleared_npcs": "Session NPCs deleted: {{count}}",
+    "keep_in_library": "Keep in the library"
   },
   "sessions": {
     "current": "Session",

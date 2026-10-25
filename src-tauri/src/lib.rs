@@ -98,6 +98,7 @@ fn create_npc_from_template(
     template_id: String,
     name: String,
     notes: String,
+    session_id: Option<i64>,
 ) -> Result<CharacterRecord, CmdError> {
     let templates = content(&lang)?.npc_templates()?;
     let template = templates
@@ -110,16 +111,30 @@ fn create_npc_from_template(
     character.validate()?;
     let data = serde_json::to_string(&character)?;
     let storage = lock(&state)?;
-    let id = storage
-        .insert_character(storage::CharacterKind::Npc, &character.name, &data)
-        ?;
-    join_active_session(&storage, id)?;
+    let id = spawn_instance(&storage, &character.name, &data, session_id)?;
     Ok(CharacterRecord::new(id, character))
+}
+
+/// Stores a fresh NPC copy from a template as an instance of a session (`session_id`, or the active
+/// one): it lies in that session and goes away with it. Player characters are never instances.
+fn spawn_instance(storage: &Storage, name: &str, data: &str, session_id: Option<i64>) -> Result<i64, CmdError> {
+    let session = match session_id {
+        Some(id) => {
+            if !storage.container(id)?.is_some_and(|c| c.kind == storage::ContainerKind::Session) {
+                return Err(CmdError::not_found("session", id));
+            }
+            id
+        }
+        None => ensure_session(storage)?,
+    };
+    let id = storage.insert_instance(storage::CharacterKind::Npc, name, data, session)?;
+    storage.add_member(session, id)?;
+    Ok(id)
 }
 
 fn user_template_record(row: &DocRow) -> Result<UserTemplateRecord, CmdError> {
     let doc: UserTemplateDoc = serde_json::from_str(&row.data)?;
-    Ok(UserTemplateRecord { id: row.id, tier: doc.tier, character: doc.character })
+    Ok(UserTemplateRecord { id: row.id, tier: doc.tier, character: doc.character, based_on: doc.based_on })
 }
 
 fn encounter_record(row: &DocRow) -> Result<EncounterRecord, CmdError> {
@@ -148,17 +163,18 @@ fn save_character_as_template(
         .ok_or_else(|| CmdError::not_found("character", character_id))?;
     let character = parse_row(&row)?.as_fresh();
     character.validate()?;
-    // Overwriting keeps the tier the GM already chose.
-    let tier = match template_id {
+    // Overwriting keeps the tier the GM already chose, and the book template it replaces.
+    let existing = match template_id {
         Some(id) => storage
             .get_doc(DocTable::UserTemplates, id)
             ?
             .map(|row| user_template_record(&row))
-            .transpose()?
-            .map_or(NpcTier::Mook, |t| t.tier),
-        None => NpcTier::Mook,
+            .transpose()?,
+        None => None,
     };
-    let data = serde_json::to_string(&UserTemplateDoc { tier, character: character.clone() })
+    let tier = existing.as_ref().map_or(NpcTier::Mook, |t| t.tier);
+    let based_on = existing.and_then(|t| t.based_on);
+    let data = serde_json::to_string(&UserTemplateDoc { tier, character: character.clone(), based_on: based_on.clone() })
         ?;
     let id = match template_id {
         Some(id) => {
@@ -174,7 +190,7 @@ fn save_character_as_template(
             .insert_doc(DocTable::UserTemplates, &character.name, &data)
             ?,
     };
-    Ok(UserTemplateRecord { id, tier, character })
+    Ok(UserTemplateRecord { id, tier, character, based_on })
 }
 
 /// Files an own template under a tier (it counts for that much in the encounter assessment).
@@ -190,10 +206,100 @@ fn set_user_template_tier(
         ?
         .ok_or_else(|| CmdError::not_found("template", id))?;
     let record = user_template_record(&row)?;
-    let data = serde_json::to_string(&UserTemplateDoc { tier, character: record.character.clone() })
-        ?;
-    storage.update_doc(DocTable::UserTemplates, id, &row.name, &data)?;
-    Ok(UserTemplateRecord { id, tier, character: record.character })
+    let doc = UserTemplateDoc { tier, character: record.character.clone(), based_on: record.based_on.clone() };
+    storage.update_doc(DocTable::UserTemplates, id, &row.name, &serde_json::to_string(&doc)?)?;
+    Ok(UserTemplateRecord { id, tier, character: record.character, based_on: record.based_on })
+}
+
+/// Saves the edited sheet of an own template (name, stats, gear...). The template keeps its tier and
+/// stays a fresh sheet: full HP and armor, no injuries, so every copy starts clean.
+#[tauri::command]
+fn update_user_template(
+    state: State<'_, AppStorage>,
+    id: i64,
+    mut character: Character,
+) -> Result<UserTemplateRecord, CmdError> {
+    character.name = character.name.trim().to_string();
+    character.validate()?;
+    let role_catalog = SeedDataSource::default().roles()?.entries;
+    rules_core::roles::validate_against(&character.roles, &role_catalog)?;
+    let storage = lock(&state)?;
+    let row = storage
+        .get_doc(DocTable::UserTemplates, id)?
+        .ok_or_else(|| CmdError::not_found("template", id))?;
+    let current = user_template_record(&row)?;
+    let (tier, based_on) = (current.tier, current.based_on);
+    let character = character.as_fresh();
+    let data = serde_json::to_string(&UserTemplateDoc { tier, character: character.clone(), based_on: based_on.clone() })?;
+    storage.update_doc(DocTable::UserTemplates, id, &character.name, &data)?;
+    Ok(UserTemplateRecord { id, tier, character, based_on })
+}
+
+/// The own template that replaces the book template `code`, if the GM has edited it.
+fn book_override(storage: &Storage, code: &str) -> Result<Option<UserTemplateRecord>, CmdError> {
+    for row in storage.list_docs(DocTable::UserTemplates)? {
+        let record = user_template_record(&row)?;
+        if record.based_on.as_deref() == Some(code) {
+            return Ok(Some(record));
+        }
+    }
+    Ok(None)
+}
+
+/// The sheet a book template starts from, so it can be opened in the editor before anything is
+/// changed (nothing is stored until the first edit, see `save_book_template_copy`).
+#[tauri::command]
+fn book_template_sheet(
+    lang: State<'_, ContentLang>,
+    code: String,
+    notes: String,
+) -> Result<Character, CmdError> {
+    let templates = content(&lang)?.npc_templates()?;
+    let template = templates
+        .entries
+        .iter()
+        .find(|t| t.code == code)
+        .ok_or_else(|| CmdError::not_found("npc_template", code))?;
+    let skills = SeedDataSource::default().skills()?;
+    Ok(template.to_character(&template.name, &notes, &skills.entries))
+}
+
+/// The GM edited a book template: the edited sheet is stored as their copy, which takes the book
+/// one's place everywhere (the original stays untouched and comes back when the copy is deleted).
+/// Further edits overwrite the same copy.
+#[tauri::command]
+fn save_book_template_copy(
+    state: State<'_, AppStorage>,
+    lang: State<'_, ContentLang>,
+    code: String,
+    mut character: Character,
+) -> Result<UserTemplateRecord, CmdError> {
+    character.name = character.name.trim().to_string();
+    character.validate()?;
+    let role_catalog = SeedDataSource::default().roles()?.entries;
+    rules_core::roles::validate_against(&character.roles, &role_catalog)?;
+    let templates = content(&lang)?.npc_templates()?;
+    let tier = templates
+        .entries
+        .iter()
+        .find(|t| t.code == code)
+        .ok_or_else(|| CmdError::not_found("npc_template", code.clone()))?
+        .tier;
+    let character = character.as_fresh();
+    let storage = lock(&state)?;
+    let based_on = Some(code.clone());
+    match book_override(&storage, &code)? {
+        Some(existing) => {
+            let doc = UserTemplateDoc { tier: existing.tier, character: character.clone(), based_on: based_on.clone() };
+            storage.update_doc(DocTable::UserTemplates, existing.id, &character.name, &serde_json::to_string(&doc)?)?;
+            Ok(UserTemplateRecord { id: existing.id, tier: existing.tier, character, based_on })
+        }
+        None => {
+            let doc = UserTemplateDoc { tier, character: character.clone(), based_on: based_on.clone() };
+            let id = storage.insert_doc(DocTable::UserTemplates, &character.name, &serde_json::to_string(&doc)?)?;
+            Ok(UserTemplateRecord { id, tier, character, based_on })
+        }
+    }
 }
 
 /// Which tier the stats of a sheet are closest to (information only; the GM picks the tier).
@@ -250,6 +356,7 @@ fn create_npc_from_user_template(
     state: State<'_, AppStorage>,
     template_id: i64,
     name: String,
+    session_id: Option<i64>,
 ) -> Result<CharacterRecord, CmdError> {
     let storage = lock(&state)?;
     let row = storage
@@ -260,10 +367,7 @@ fn create_npc_from_user_template(
     character.name = name.trim().to_string();
     character.validate()?;
     let data = serde_json::to_string(&character)?;
-    let id = storage
-        .insert_character(storage::CharacterKind::Npc, &character.name, &data)
-        ?;
-    join_active_session(&storage, id)?;
+    let id = spawn_instance(&storage, &character.name, &data, session_id)?;
     Ok(CharacterRecord::new(id, character))
 }
 
@@ -604,13 +708,13 @@ fn import_encounter_file(
     let mut new_ids = std::collections::HashMap::new();
     let mut templates = Vec::new();
     for t in file.templates {
-        let doc = UserTemplateDoc { tier: t.tier, character: t.character };
+        let doc = UserTemplateDoc { tier: t.tier, character: t.character, based_on: None };
         let data = serde_json::to_string(&doc)?;
         let id = storage
             .insert_doc(DocTable::UserTemplates, &doc.character.name, &data)
             ?;
         new_ids.insert(t.key, id);
-        templates.push(UserTemplateRecord { id, tier: doc.tier, character: doc.character });
+        templates.push(UserTemplateRecord { id, tier: doc.tier, character: doc.character, based_on: None });
     }
     let mut encounters = Vec::new();
     for mut encounter in file.encounters {
@@ -696,6 +800,7 @@ fn delete_character_in(storage: &Storage, id: i64) -> Result<DeletedCharacter, C
     Ok(DeletedCharacter {
         id,
         kind: rules_kind(row.kind),
+        owner_session: row.owner_session,
         name: row.name,
         data: row.data,
         containers,
@@ -715,7 +820,12 @@ fn restore_character(state: State<'_, AppStorage>, deleted: DeletedCharacter) ->
 fn restore_character_in(storage: &Storage, deleted: DeletedCharacter) -> Result<(), CmdError> {
     // The sheet must still parse; the row is put back exactly as it was.
     serde_json::from_str::<Character>(&deleted.data)?;
-    if !storage.restore_character(deleted.id, storage_kind(deleted.kind), &deleted.name, &deleted.data)? {
+    // An instance comes back as one only while its session exists; otherwise it joins the library.
+    let owner = match deleted.owner_session {
+        Some(session) if storage.container(session)?.is_some() => Some(session),
+        _ => None,
+    };
+    if !storage.restore_character(deleted.id, storage_kind(deleted.kind), &deleted.name, &deleted.data, owner)? {
         return Err(CmdError::already_exists("character", deleted.id));
     }
     for container in deleted.containers {
@@ -876,6 +986,7 @@ fn switch_session(state: State<'_, AppStorage>, id: i64) -> Result<Vec<SessionIn
 /// The explorer tree as a flat list: sessions and folders with the characters lying in them.
 fn explorer_nodes(storage: &Storage) -> Result<Vec<ExplorerNode>, CmdError> {
     let memberships = storage.all_memberships()?;
+    let instances = storage.all_instances()?;
     Ok(storage
         .list_containers()?
         .into_iter()
@@ -889,6 +1000,7 @@ fn explorer_nodes(storage: &Storage) -> Result<Vec<ExplorerNode>, CmdError> {
             name: c.name,
             active: c.active,
             members: memberships.iter().filter(|(n, _)| *n == c.id).map(|(_, ch)| *ch).collect(),
+            instances: instances.iter().filter(|(n, _)| *n == c.id).map(|(_, ch)| *ch).collect(),
         })
         .collect())
 }
@@ -971,11 +1083,47 @@ fn add_to_container(
     if storage.container(container_id)?.is_none() {
         return Err(CmdError::not_found("container", container_id));
     }
-    if storage.get_character(character_id)?.is_none() {
+    let Some(row) = storage.get_character(character_id)? else {
         return Err(CmdError::not_found("character", character_id));
+    };
+    // An instance put anywhere but its own session (a folder, another session) is meant to be kept:
+    // it becomes an ordinary library character, otherwise it would vanish with its session.
+    if row.owner_session.is_some_and(|owner| owner != container_id) {
+        storage.set_character_owner(character_id, None)?;
     }
     storage.add_member(container_id, character_id)?;
     explorer_nodes(&storage)
+}
+
+/// Keeps an instance: it stops belonging to its session and becomes a library character.
+#[tauri::command]
+fn save_instance_to_library(
+    state: State<'_, AppStorage>,
+    character_id: i64,
+) -> Result<Vec<ExplorerNode>, CmdError> {
+    let storage = lock(&state)?;
+    if !storage.set_character_owner(character_id, None)? {
+        return Err(CmdError::not_found("character", character_id));
+    }
+    explorer_nodes(&storage)
+}
+
+/// Deletes every instance of a session ("clear NPCs"); returns the snapshots, one per instance, for
+/// "undo" (`restore_character` each).
+#[tauri::command]
+fn clear_session_instances(
+    state: State<'_, AppStorage>,
+    session_id: i64,
+) -> Result<Vec<DeletedCharacter>, CmdError> {
+    let storage = lock(&state)?;
+    if !storage.container(session_id)?.is_some_and(|c| c.kind == storage::ContainerKind::Session) {
+        return Err(CmdError::not_found("session", session_id));
+    }
+    let mut deleted = Vec::new();
+    for id in storage.instances_of(session_id)? {
+        deleted.push(delete_character_in(&storage, id)?);
+    }
+    Ok(deleted)
 }
 
 /// Takes the shortcut out of a session or a folder; the character stays in the library. Who
@@ -990,7 +1138,12 @@ fn remove_from_container(
     if storage.container(container_id)?.is_none() {
         return Err(CmdError::not_found("container", container_id));
     }
-    storage.remove_member(container_id, character_id)?;
+    // An instance has no life outside its session: taking it out of that session deletes it.
+    if storage.get_character(character_id)?.is_some_and(|row| row.owner_session == Some(container_id)) {
+        delete_character_in(&storage, character_id)?;
+    } else {
+        storage.remove_member(container_id, character_id)?;
+    }
     explorer_nodes(&storage)
 }
 
@@ -1695,6 +1848,9 @@ pub fn run() {
             save_character_as_template,
             delete_user_template,
             set_user_template_tier,
+            update_user_template,
+            book_template_sheet,
+            save_book_template_copy,
             assess_encounter,
             tier_hint,
             create_npc_from_user_template,
@@ -1706,6 +1862,8 @@ pub fn run() {
             save_character,
             delete_character,
             restore_character,
+            save_instance_to_library,
+            clear_session_instances,
             export_characters,
             list_exports,
             export_session,
@@ -1845,6 +2003,87 @@ mod tests {
 
         // A second undo finds the id taken.
         assert_eq!(restore_character_in(&s, deleted).unwrap_err().0.code, "already_exists.character");
+    }
+
+    #[test]
+    fn an_edited_book_template_is_found_by_its_code_and_old_documents_still_load() {
+        let s = storage();
+        let character = Character::quick("Booster");
+        // A document written before `based_on` existed has no such field.
+        let old = serde_json::json!({ "tier": "mook", "character": character }).to_string();
+        let plain = s.insert_doc(DocTable::UserTemplates, "Plain", &old).unwrap();
+        assert_eq!(user_template_record(&s.get_doc(DocTable::UserTemplates, plain).unwrap().unwrap()).unwrap().based_on, None);
+
+        assert!(book_override(&s, "booster").unwrap().is_none());
+        let doc = UserTemplateDoc { tier: NpcTier::Mook, character, based_on: Some("booster".into()) };
+        let copy = s.insert_doc(DocTable::UserTemplates, "Booster", &serde_json::to_string(&doc).unwrap()).unwrap();
+        assert_eq!(book_override(&s, "booster").unwrap().unwrap().id, copy);
+        assert!(book_override(&s, "other").unwrap().is_none());
+
+        // Deleting the copy brings the book template back.
+        s.delete_doc(DocTable::UserTemplates, copy).unwrap();
+        assert!(book_override(&s, "booster").unwrap().is_none());
+    }
+
+    fn spawn_ganger(s: &Storage, name: &str, session: Option<i64>) -> i64 {
+        let data = serde_json::to_string(&Character::quick(name)).unwrap();
+        spawn_instance(s, name, &data, session).unwrap()
+    }
+
+    #[test]
+    fn an_instance_lies_in_its_session_and_the_tree_lists_it() {
+        let s = storage();
+        let night = new_session(&s, "Night").unwrap();
+        let day = new_session(&s, "Day").unwrap();
+        s.set_active_session(night).unwrap();
+
+        let a = spawn_ganger(&s, "Ganger 1", None);
+        let b = spawn_ganger(&s, "Ganger 2", Some(day));
+        let kept = add_character(&s, storage::CharacterKind::Npc, "Fixer");
+
+        assert_eq!(s.get_character(a).unwrap().unwrap().owner_session, Some(night));
+        assert_eq!(s.get_character(b).unwrap().unwrap().owner_session, Some(day));
+        assert_eq!(s.get_character(kept).unwrap().unwrap().owner_session, None);
+        let tree = explorer_nodes(&s).unwrap();
+        let node = |id| tree.iter().find(|n| n.id == id).unwrap();
+        assert_eq!(node(night).members, vec![a]);
+        assert_eq!(node(night).instances, vec![a]);
+        assert_eq!(node(day).instances, vec![b]);
+
+        let missing = spawn_instance(&s, "X", "{}", Some(999)).unwrap_err();
+        assert_eq!(missing.0.code, "not_found.session");
+    }
+
+    #[test]
+    fn deleting_a_session_takes_its_instances_with_it_but_not_the_library() {
+        let s = storage();
+        let night = new_session(&s, "Night").unwrap();
+        let ganger = spawn_ganger(&s, "Ganger", Some(night));
+        let kept = add_character(&s, storage::CharacterKind::Npc, "Fixer");
+        s.add_member(night, kept).unwrap();
+
+        s.delete_container(night).unwrap();
+        assert!(s.get_character(ganger).unwrap().is_none());
+        assert!(s.get_character(kept).unwrap().is_some());
+    }
+
+    #[test]
+    fn an_undone_instance_comes_back_as_an_instance_or_joins_the_library_when_its_session_is_gone() {
+        let s = storage();
+        let night = new_session(&s, "Night").unwrap();
+        let a = spawn_ganger(&s, "Ganger 1", Some(night));
+        let b = spawn_ganger(&s, "Ganger 2", Some(night));
+
+        let deleted = delete_character_in(&s, a).unwrap();
+        assert_eq!(deleted.owner_session, Some(night));
+        restore_character_in(&s, deleted).unwrap();
+        assert_eq!(s.get_character(a).unwrap().unwrap().owner_session, Some(night));
+        assert_eq!(s.containers_of(a).unwrap(), vec![night]);
+
+        let deleted = delete_character_in(&s, b).unwrap();
+        s.delete_container(night).unwrap();
+        restore_character_in(&s, deleted).unwrap();
+        assert_eq!(s.get_character(b).unwrap().unwrap().owner_session, None);
     }
 
     #[test]
