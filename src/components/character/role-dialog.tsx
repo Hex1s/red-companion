@@ -84,7 +84,7 @@ export function RoleDialog({ role, entry, derived, onChange, onAdminister, onClo
           >
             {t("roles.rank_up")}
           </Button>
-          <span className={cn("text-sm", free > 0 ? "text-primary" : "text-muted-foreground")}>
+          <span className={cn("text-sm", free > 0 ? "text-emphasis" : "text-muted-foreground")}>
             {t("roles.free_points", { count: free })}
           </span>
         </div>
@@ -121,7 +121,7 @@ export function RoleDialog({ role, entry, derived, onChange, onAdminister, onClo
                   r.rank <= entry.rank ? "text-foreground" : "text-muted-foreground",
                 )}
               >
-                <span className={cn("num w-5 shrink-0", r.rank <= entry.rank && "text-primary")}>
+                <span className={cn("num w-5 shrink-0", r.rank <= entry.rank && "text-emphasis")}>
                   {r.rank}
                 </span>
                 <span>{r.summary}</span>
@@ -224,7 +224,7 @@ export function RoleDialog({ role, entry, derived, onChange, onAdminister, onClo
                         points >= l.points ? "text-foreground" : "text-muted-foreground",
                       )}
                     >
-                      <span className="num w-4 shrink-0 text-primary">{l.points}</span>
+                      <span className="num w-4 shrink-0 text-emphasis">{l.points}</span>
                       <span>{l.summary}</span>
                     </li>
                   ))}

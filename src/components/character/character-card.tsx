@@ -147,8 +147,8 @@ export function CharacterCard({
     derived.solo_precision > 0 ||
     derived.solo_spot_weakness > 0;
   const dead = derived.wound_state === "dead";
-  // Rest needs a living character who is not mortally wounded (stabilise first) and not at full HP.
-  const canRest = !dead && !mortal && character.hp < derived.max_hp;
+  // Rest needs a living character who is not mortally wounded (stabilise first); a day passes even at full HP.
+  const canRest = !dead && !mortal;
   const menu = tidy([
     item("roll-initiative", t("card.initiative_roll", { reflex: character.stats.reflex }), onRollInitiative),
     ...(place
@@ -198,7 +198,7 @@ export function CharacterCard({
               <span className="block max-w-64">
                 {t("card.initiative_hint")}
                 {initiativeBonus !== 0 && (
-                  <span className="num mt-1 block text-primary">
+                  <span className="num mt-1 block text-emphasis">
                     {t("solo.initiative_from", { value: initiativeBonus })}
                   </span>
                 )}
@@ -222,7 +222,7 @@ export function CharacterCard({
             onChange={(e) => setText(e.target.value)}
             onBlur={commit}
             onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLElement).blur()}
-            className="num h-7 w-12 px-1 text-center text-base font-bold text-primary"
+            className="num h-7 w-12 px-1 text-center text-base font-bold text-emphasis"
           />
         </Hint>
         <span className="min-w-0 flex-1 truncate font-display text-sm font-semibold uppercase">
@@ -253,12 +253,12 @@ export function CharacterCard({
             </ul>
           }
         >
-          <p className="font-display text-xs font-semibold text-primary uppercase">{t("solo.badge")}</p>
+          <p className="font-display text-xs font-semibold text-emphasis uppercase">{t("solo.badge")}</p>
         </Hint>
       )}
       {derived.cyberpsychosis && (
         <Hint label={t("humanity.cyberpsychosis_hint")}>
-          <p className="font-display text-xs font-semibold text-state-mortal uppercase">
+          <p className="font-display text-xs font-semibold text-state-mortal-text uppercase">
             {t("humanity.cyberpsychosis")} <span className="num">{derived.humanity}</span>
           </p>
         </Hint>
@@ -328,7 +328,7 @@ function DeathSaveRow({ character, onRoll }: DeathSaveRowProps) {
 
   return (
     <div className="space-y-1 border-t pt-2">
-      <p className="num text-xs text-state-mortal">
+      <p className="num text-xs text-state-mortal-text">
         {t("initiative.death_save_rule", {
           body: character.character.stats.body,
           penalty: character.character.death_save_penalty,

@@ -156,10 +156,59 @@ pub fn rest_plan(character: &Character, target_hp: u32) -> Result<RestPlan, Heal
 /// Rests until `target_hp` is reached: restores the HP and ends the day, so first aid wears off.
 pub fn rest(character: &mut Character, target_hp: u32) -> Result<RestPlan, HealingError> {
     let plan = rest_plan(character, target_hp)?;
+    apply_rest(character, &plan);
+    Ok(plan)
+}
+
+/// Longest rest the GM can ask for in one go.
+pub const MAX_REST_DAYS: u32 = 365;
+
+/// What a rest of `days` full days gives. Unlike [`rest_plan`] it also works at full HP: the days
+/// still pass, so first aid and daily marks wear off.
+pub fn rest_days_plan(character: &Character, days: u32) -> Result<RestPlan, HealingError> {
+    if character.dead {
+        return Err(HealingError::Dead);
+    }
+    if character.wound_state() == WoundState::Mortal {
+        return Err(HealingError::NeedsStabilization);
+    }
+    if days == 0 || days > MAX_REST_DAYS {
+        return Err(HealingError::BadTarget);
+    }
+    let max_hp = character.max_hp();
+    let hp_per_day = u32::from(character.stats.body).max(1);
+    let final_hp = (character.hp + days * hp_per_day).min(max_hp).max(character.hp);
+    Ok(RestPlan { from_hp: character.hp, target_hp: final_hp, hp_per_day, days, final_hp, max_hp })
+}
+
+/// What the GM wants from a rest: HP to reach, or a number of days to pass.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum RestGoal {
+    Hp { target: u32 },
+    Days { days: u32 },
+}
+
+/// The plan for either kind of goal; changes nothing.
+pub fn rest_plan_for(character: &Character, goal: RestGoal) -> Result<RestPlan, HealingError> {
+    match goal {
+        RestGoal::Hp { target } => rest_plan(character, target),
+        RestGoal::Days { days } => rest_days_plan(character, days),
+    }
+}
+
+/// Rests for either kind of goal and ends the day.
+pub fn rest_for(character: &mut Character, goal: RestGoal) -> Result<RestPlan, HealingError> {
+    let plan = rest_plan_for(character, goal)?;
+    apply_rest(character, &plan);
+    Ok(plan)
+}
+
+fn apply_rest(character: &mut Character, plan: &RestPlan) {
     character.hp = plan.final_hp;
     character.first_aided.clear();
     crate::roles::end_of_day(character);
-    Ok(plan)
 }
 
 #[cfg(test)]
@@ -344,5 +393,32 @@ mod tests {
         assert!(c.first_aided.is_empty(), "the mark leaves with its injury");
         assert!(!c.remove_injury(&penalising.id, true), "nothing left to remove");
         assert_eq!(c.death_save_penalty, 0);
+    }
+
+    #[test]
+    fn rest_days_restore_body_hp_a_day_and_work_at_full_hp() {
+        let mut c = Character::quick("T"); // BODY 5: max 35
+        let max = c.max_hp();
+        c.hp = 10;
+        let plan = rest_days_plan(&c, 2).unwrap();
+        assert_eq!((plan.days, plan.final_hp), (2, 20));
+        assert_eq!(rest_days_plan(&c, 99).unwrap().final_hp, max);
+        c.first_aided.push("broken_ribs".into());
+        c.hp = max;
+        let plan = rest_for(&mut c, RestGoal::Days { days: 1 }).unwrap();
+        assert_eq!((plan.final_hp, c.hp), (max, max));
+        assert!(c.first_aided.is_empty());
+    }
+
+    #[test]
+    fn rest_days_are_refused_for_zero_too_many_the_mortal_and_the_dead() {
+        let mut c = Character::quick("T");
+        c.hp = 10;
+        assert_eq!(rest_days_plan(&c, 0), Err(HealingError::BadTarget));
+        assert_eq!(rest_days_plan(&c, MAX_REST_DAYS + 1), Err(HealingError::BadTarget));
+        c.hp = 0;
+        assert_eq!(rest_days_plan(&c, 1), Err(HealingError::NeedsStabilization));
+        c.dead = true;
+        assert_eq!(rest_days_plan(&c, 1), Err(HealingError::Dead));
     }
 }

@@ -94,7 +94,7 @@ function DrugForm({ request, targets, onDone, onClose }: DrugFormProps) {
         </SelectContent>
       </Select>
       <p className="text-xs text-muted-foreground">{t("drug.hint")}</p>
-      {error && <p className="text-sm text-primary">{error}</p>}
+      {error && <p className="text-sm text-emphasis">{error}</p>}
       <div className="flex justify-end">
         <Button type="button" disabled={busy} onClick={() => void give()}>
           <Syringe />

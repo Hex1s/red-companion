@@ -1,0 +1,567 @@
+{
+  "name": "rules",
+  "version": 8,
+  "entries": [
+    {
+      "id": "combat_turn",
+      "name_key": "article.combat_turn.name",
+      "summary_key": "article.combat_turn.summary",
+      "details_key": "article.combat_turn.details",
+      "tags": [
+        "combat"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 168
+      }
+    },
+    {
+      "id": "martial_arts",
+      "name_key": "article.martial_arts.name",
+      "summary_key": "article.martial_arts.summary",
+      "details_key": "article.martial_arts.details",
+      "tags": [
+        "combat"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 178
+      }
+    },
+    {
+      "id": "other_damage",
+      "name_key": "article.other_damage.name",
+      "summary_key": "article.other_damage.summary",
+      "details_key": "article.other_damage.details",
+      "tags": [
+        "combat"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 180
+      }
+    },
+    {
+      "id": "attack_ranged",
+      "name_key": "article.attack_ranged.name",
+      "summary_key": "article.attack_ranged.summary",
+      "details_key": "article.attack_ranged.details",
+      "tags": [
+        "combat",
+        "attack"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 172
+      }
+    },
+    {
+      "id": "attack_melee",
+      "name_key": "article.attack_melee.name",
+      "summary_key": "article.attack_melee.summary",
+      "details_key": "article.attack_melee.details",
+      "tags": [
+        "combat",
+        "attack"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 176
+      }
+    },
+    {
+      "id": "attack_autofire",
+      "name_key": "article.attack_autofire.name",
+      "summary_key": "article.attack_autofire.summary",
+      "details_key": "article.attack_autofire.details",
+      "tags": [
+        "combat",
+        "attack"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 173
+      }
+    },
+    {
+      "id": "attack_suppression",
+      "name_key": "article.attack_suppression.name",
+      "summary_key": "article.attack_suppression.summary",
+      "details_key": "article.attack_suppression.details",
+      "tags": [
+        "combat",
+        "attack"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 174
+      }
+    },
+    {
+      "id": "attack_shotgun",
+      "name_key": "article.attack_shotgun.name",
+      "summary_key": "article.attack_shotgun.summary",
+      "details_key": "article.attack_shotgun.details",
+      "tags": [
+        "combat",
+        "attack"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 174
+      }
+    },
+    {
+      "id": "attack_explosives",
+      "name_key": "article.attack_explosives.name",
+      "summary_key": "article.attack_explosives.summary",
+      "details_key": "article.attack_explosives.details",
+      "tags": [
+        "combat",
+        "attack"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 174
+      }
+    },
+    {
+      "id": "attack_throw",
+      "name_key": "article.attack_throw.name",
+      "summary_key": "article.attack_throw.summary",
+      "details_key": "article.attack_throw.details",
+      "tags": [
+        "combat",
+        "attack"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 177
+      }
+    },
+    {
+      "id": "attack_aimed",
+      "name_key": "article.attack_aimed.name",
+      "summary_key": "article.attack_aimed.summary",
+      "details_key": "article.attack_aimed.details",
+      "tags": [
+        "combat",
+        "attack"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 170
+      }
+    },
+    {
+      "id": "attack_items",
+      "name_key": "article.attack_items.name",
+      "summary_key": "article.attack_items.summary",
+      "details_key": "article.attack_items.details",
+      "tags": [
+        "combat",
+        "attack"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 170
+      }
+    },
+    {
+      "id": "attack_brawl",
+      "name_key": "article.attack_brawl.name",
+      "summary_key": "article.attack_brawl.summary",
+      "details_key": "article.attack_brawl.details",
+      "tags": [
+        "combat",
+        "attack"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 176
+      }
+    },
+    {
+      "id": "attack_grapple",
+      "name_key": "article.attack_grapple.name",
+      "summary_key": "article.attack_grapple.summary",
+      "details_key": "article.attack_grapple.details",
+      "tags": [
+        "combat",
+        "attack"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 177
+      }
+    },
+    {
+      "id": "attack_choke",
+      "name_key": "article.attack_choke.name",
+      "summary_key": "article.attack_choke.summary",
+      "details_key": "article.attack_choke.details",
+      "tags": [
+        "combat",
+        "attack"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 177
+      }
+    },
+    {
+      "id": "attack_throw_person",
+      "name_key": "article.attack_throw_person.name",
+      "summary_key": "article.attack_throw_person.summary",
+      "details_key": "article.attack_throw_person.details",
+      "tags": [
+        "combat",
+        "attack"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 177
+      }
+    },
+    {
+      "id": "combat_actions",
+      "name_key": "article.combat_actions.name",
+      "summary_key": "article.combat_actions.summary",
+      "details_key": "article.combat_actions.details",
+      "tags": [
+        "combat"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 168
+      }
+    },
+    {
+      "id": "combat_movement",
+      "name_key": "article.combat_movement.name",
+      "summary_key": "article.combat_movement.summary",
+      "details_key": "article.combat_movement.details",
+      "tags": [
+        "combat"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 169
+      }
+    },
+    {
+      "id": "damage_taking",
+      "name_key": "article.damage_taking.name",
+      "summary_key": "article.damage_taking.summary",
+      "details_key": "article.damage_taking.details",
+      "tags": [
+        "combat"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 186
+      }
+    },
+    {
+      "id": "wound_states",
+      "name_key": "article.wound_states.name",
+      "summary_key": "article.wound_states.summary",
+      "details_key": "article.wound_states.details",
+      "tags": [
+        "combat"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 186
+      }
+    },
+    {
+      "id": "armor_rules",
+      "name_key": "article.armor_rules.name",
+      "summary_key": "article.armor_rules.summary",
+      "details_key": "article.armor_rules.details",
+      "tags": [
+        "combat"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 184
+      }
+    },
+    {
+      "id": "critical_hits",
+      "name_key": "article.critical_hits.name",
+      "summary_key": "article.critical_hits.summary",
+      "details_key": "article.critical_hits.details",
+      "tags": [
+        "combat"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 187
+      }
+    },
+    {
+      "id": "cover_rules",
+      "name_key": "article.cover_rules.name",
+      "summary_key": "article.cover_rules.summary",
+      "details_key": "article.cover_rules.details",
+      "tags": [
+        "combat"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 182
+      }
+    },
+    {
+      "id": "shields",
+      "name_key": "article.shields.name",
+      "summary_key": "article.shields.summary",
+      "details_key": "article.shields.details",
+      "tags": [
+        "combat"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 183
+      }
+    },
+    {
+      "id": "human_shield",
+      "name_key": "article.human_shield.name",
+      "summary_key": "article.human_shield.summary",
+      "details_key": "article.human_shield.details",
+      "tags": [
+        "combat"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 184
+      }
+    },
+    {
+      "id": "death_save",
+      "name_key": "article.death_save.name",
+      "summary_key": "article.death_save.summary",
+      "details_key": "article.death_save.details",
+      "tags": [
+        "medicine",
+        "combat"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 222
+      }
+    },
+    {
+      "id": "stabilization",
+      "name_key": "article.stabilization.name",
+      "summary_key": "article.stabilization.summary",
+      "details_key": "article.stabilization.details",
+      "tags": [
+        "medicine"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 222
+      }
+    },
+    {
+      "id": "natural_healing",
+      "name_key": "article.natural_healing.name",
+      "summary_key": "article.natural_healing.summary",
+      "details_key": "article.natural_healing.details",
+      "tags": [
+        "medicine"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 222
+      }
+    },
+    {
+      "id": "healing_skills",
+      "name_key": "article.healing_skills.name",
+      "summary_key": "article.healing_skills.summary",
+      "details_key": "article.healing_skills.details",
+      "tags": [
+        "medicine"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 223
+      }
+    },
+    {
+      "id": "injury_treatment",
+      "name_key": "article.injury_treatment.name",
+      "summary_key": "article.injury_treatment.summary",
+      "details_key": "article.injury_treatment.details",
+      "tags": [
+        "medicine"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 223
+      }
+    },
+    {
+      "id": "hospital_costs",
+      "name_key": "article.hospital_costs.name",
+      "summary_key": "article.hospital_costs.summary",
+      "details_key": "article.hospital_costs.details",
+      "tags": [
+        "medicine"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 225
+      }
+    },
+    {
+      "id": "medical_replacements",
+      "name_key": "article.medical_replacements.name",
+      "summary_key": "article.medical_replacements.summary",
+      "details_key": "article.medical_replacements.details",
+      "tags": [
+        "medicine"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 226
+      }
+    },
+    {
+      "id": "cyberware_install",
+      "name_key": "article.cyberware_install.name",
+      "summary_key": "article.cyberware_install.summary",
+      "details_key": "article.cyberware_install.details",
+      "tags": [
+        "medicine"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 226
+      }
+    },
+    {
+      "id": "humanity",
+      "name_key": "article.humanity.name",
+      "summary_key": "article.humanity.summary",
+      "details_key": "article.humanity.details",
+      "tags": [
+        "humanity"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 229
+      }
+    },
+    {
+      "id": "humanity_trauma",
+      "name_key": "article.humanity_trauma.name",
+      "summary_key": "article.humanity_trauma.summary",
+      "details_key": "article.humanity_trauma.details",
+      "tags": [
+        "humanity"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 231
+      }
+    },
+    {
+      "id": "therapy",
+      "name_key": "article.therapy.name",
+      "summary_key": "article.therapy.summary",
+      "details_key": "article.therapy.details",
+      "tags": [
+        "humanity",
+        "medicine"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 230
+      }
+    },
+    {
+      "id": "skill_checks",
+      "name_key": "article.skill_checks.name",
+      "summary_key": "article.skill_checks.summary",
+      "details_key": "article.skill_checks.details",
+      "tags": [
+        "rules"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 129
+      }
+    },
+    {
+      "id": "task_dv",
+      "name_key": "article.task_dv.name",
+      "summary_key": "article.task_dv.summary",
+      "details_key": "article.task_dv.details",
+      "tags": [
+        "rules"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 129
+      }
+    },
+    {
+      "id": "roll_crits",
+      "name_key": "article.roll_crits.name",
+      "summary_key": "article.roll_crits.summary",
+      "details_key": "article.roll_crits.details",
+      "tags": [
+        "rules"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 130
+      }
+    },
+    {
+      "id": "roll_modifiers",
+      "name_key": "article.roll_modifiers.name",
+      "summary_key": "article.roll_modifiers.summary",
+      "details_key": "article.roll_modifiers.details",
+      "tags": [
+        "rules"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 130
+      }
+    },
+    {
+      "id": "check_options",
+      "name_key": "article.check_options.name",
+      "summary_key": "article.check_options.summary",
+      "details_key": "article.check_options.details",
+      "tags": [
+        "rules"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 130
+      }
+    },
+    {
+      "id": "scale_and_movement",
+      "name_key": "article.scale_and_movement.name",
+      "summary_key": "article.scale_and_movement.summary",
+      "details_key": "article.scale_and_movement.details",
+      "tags": [
+        "rules"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 126
+      }
+    }
+  ]
+}

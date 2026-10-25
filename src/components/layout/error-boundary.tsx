@@ -27,7 +27,7 @@ class ErrorBoundaryBase extends Component<ErrorBoundaryProps, ErrorBoundaryState
     return (
       <div role="alert" className="flex h-screen items-center justify-center bg-background p-6">
         <div className="cut flex w-full max-w-xl flex-col gap-4 p-6 [--cut:12px] [--cut-border:var(--destructive)]">
-          <h1 className="text-destructive">{t("crash.title")}</h1>
+          <h1 className="text-destructive-text">{t("crash.title")}</h1>
           <p className="text-sm">{t("crash.hint")}</p>
           <details className="text-xs text-muted-foreground">
             <summary className="cursor-pointer">{t("status.details")}</summary>

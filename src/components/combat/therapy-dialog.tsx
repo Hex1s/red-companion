@@ -207,7 +207,7 @@ function TherapyForm({ target, onDone, onClose }: TherapyFormProps) {
 
       {full && <p className="text-sm text-muted-foreground">{t("humanity.already_full")}</p>}
       {failed && failed.check && (
-        <p className="num text-sm text-state-mortal">
+        <p className="num text-sm text-state-mortal-text">
           {t("heal.result", {
             bonus: failed.bonus,
             die: failed.check.total,

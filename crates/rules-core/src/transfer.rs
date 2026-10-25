@@ -15,7 +15,9 @@ use crate::character::{skill_base_id, Character, CharacterError, CharacterKind};
 use crate::data_source::{DataError, DataSource};
 
 /// Value of the `format` field.
-pub const FORMAT: &str = "red-companion/characters";
+pub const FORMAT: &str = "favoterm/characters";
+/// The `format` value of files written before the app was renamed (Red Companion); still accepted.
+const LEGACY_FORMAT: &str = "red-companion/characters";
 /// Current version of the envelope.
 pub const FILE_VERSION: u32 = 1;
 
@@ -36,7 +38,7 @@ pub struct CharacterFile {
 pub enum TransferError {
     #[error("not a valid JSON file: {0}")]
     Json(#[from] serde_json::Error),
-    #[error("this is not a Red Companion characters file")]
+    #[error("this is not a Favoterm characters file")]
     WrongFormat,
     #[error("unsupported file version {0}")]
     UnsupportedVersion(u32),
@@ -81,9 +83,12 @@ pub struct ExportSaved {
 }
 
 /// Every export file ends in this; the type of the file stands before it (`ivan.character.…`).
-pub const FILE_EXT: &str = ".redcompanion.json";
-/// What the app wrote before files carried their type (`name.redcompanion.json` in the folder
-/// itself); such files can still be imported.
+pub const FILE_EXT: &str = ".favoterm.json";
+/// The extension of files written before the app was renamed (Red Companion); such files can
+/// still be imported, typed (`ivan.character.redcompanion.json`) or from before types
+/// (`name.redcompanion.json` in the exports folder itself).
+const LEGACY_FILE_EXT: &str = ".redcompanion.json";
+/// What the app wrote for encounters before files carried their type.
 const LEGACY_ENCOUNTERS_SUFFIX: &str = ".redencounters.json";
 
 /// What an export file holds. The type is part of the file name and of the folder it lives in,
@@ -103,7 +108,7 @@ pub enum ExportKind {
 impl ExportKind {
     pub const ALL: [ExportKind; 3] = [Self::Character, Self::Session, Self::Encounters];
 
-    /// The word before the extension: `ivan.character.redcompanion.json`.
+    /// The word before the extension: `ivan.character.favoterm.json`.
     pub fn infix(self) -> &'static str {
         match self {
             Self::Character => "character",
@@ -126,9 +131,14 @@ impl ExportKind {
         self.folder()
     }
 
-    /// The end of every file name of this type: `.character.redcompanion.json`.
+    /// The end of every file name of this type: `.character.favoterm.json`.
     pub fn suffix(self) -> String {
         format!(".{}{FILE_EXT}", self.infix())
+    }
+
+    /// The same for a file written under the old name: `.character.redcompanion.json`.
+    fn legacy_suffix(self) -> String {
+        format!(".{}{LEGACY_FILE_EXT}", self.infix())
     }
 }
 
@@ -161,8 +171,8 @@ fn is_bare(name: &str) -> bool {
 
 /// A name taken from the UI is only accepted as a bare file name of this type.
 pub fn is_typed_file_name(kind: ExportKind, name: &str) -> bool {
-    let suffix = kind.suffix();
-    is_bare(name) && name.len() > suffix.len() && name.ends_with(&suffix)
+    let ends_with_stem = |suffix: String| name.len() > suffix.len() && name.ends_with(&suffix);
+    is_bare(name) && (ends_with_stem(kind.suffix()) || ends_with_stem(kind.legacy_suffix()))
 }
 
 /// A file from before types: `name.redcompanion.json` (characters) or `name.redencounters.json`
@@ -174,7 +184,7 @@ pub fn is_legacy_file_name(kind: ExportKind, name: &str) -> bool {
     match kind {
         ExportKind::Encounters => name.ends_with(LEGACY_ENCOUNTERS_SUFFIX),
         ExportKind::Character => {
-            name.ends_with(FILE_EXT) && !ExportKind::ALL.iter().any(|k| is_typed_file_name(*k, name))
+            name.ends_with(LEGACY_FILE_EXT) && !ExportKind::ALL.iter().any(|k| is_typed_file_name(*k, name))
         }
         ExportKind::Session => false,
     }
@@ -189,7 +199,7 @@ pub fn parse_import(
     // Check the envelope on a loose value first: a file from a newer version
     // may have a different shape, and "unsupported version" is the useful error.
     let value: serde_json::Value = serde_json::from_str(json)?;
-    if value.get("format").and_then(|f| f.as_str()) != Some(FORMAT) {
+    if !matches!(value.get("format").and_then(|f| f.as_str()), Some(FORMAT | LEGACY_FORMAT)) {
         return Err(TransferError::WrongFormat);
     }
     if let Some(version) = value.get("schema_version").and_then(|v| v.as_u64()) {
@@ -229,6 +239,24 @@ pub fn parse_import(
 mod tests {
     use super::*;
     use crate::data_source::SeedDataSource;
+
+    #[test]
+    fn files_written_under_the_old_name_are_still_recognised_and_imported() {
+        // The format a file carries and the name it is saved under are the new ones...
+        let json = export(sample()).unwrap();
+        assert!(json.contains(r#""format": "favoterm/characters""#));
+        assert_eq!(typed_file_name(ExportKind::Character, "V"), "v.character.favoterm.json");
+
+        // ...but a file made by the app before it was renamed still lists and imports.
+        assert!(is_typed_file_name(ExportKind::Character, "v.character.redcompanion.json"));
+        assert!(is_typed_file_name(ExportKind::Session, "night.session.redcompanion.json"));
+        assert!(!is_typed_file_name(ExportKind::Character, "v.session.redcompanion.json"));
+        let old = json.replacen("favoterm/characters", "red-companion/characters", 1);
+        let items = parse_import(&old, &SeedDataSource::default()).unwrap();
+        assert_eq!(items.len(), sample().len());
+        let foreign = json.replacen("favoterm/characters", "other-app/characters", 1);
+        assert!(matches!(parse_import(&foreign, &SeedDataSource::default()), Err(TransferError::WrongFormat)));
+    }
 
     fn sample() -> Vec<ExportedCharacter> {
         let mut v = Character::quick("V");
@@ -335,35 +363,35 @@ mod tests {
     #[test]
     fn export_file_names_carry_a_slug_and_the_type() {
         use ExportKind::*;
-        assert_eq!(typed_file_name(Character, "Джонни Сильверхенд"), "dzhonni-sil-verkhend.character.redcompanion.json");
-        assert_eq!(typed_file_name(Session, "Сессия 1"), "sessiia-1.session.redcompanion.json");
-        assert_eq!(typed_file_name(Encounters, "Бандиты у склада!"), "bandity-u-sklada.encounters.redcompanion.json");
-        assert_eq!(typed_file_name(Character, "a/b:c*"), "a-b-c.character.redcompanion.json");
+        assert_eq!(typed_file_name(Character, "Джонни Сильверхенд"), "dzhonni-sil-verkhend.character.favoterm.json");
+        assert_eq!(typed_file_name(Session, "Сессия 1"), "sessiia-1.session.favoterm.json");
+        assert_eq!(typed_file_name(Encounters, "Бандиты у склада!"), "bandity-u-sklada.encounters.favoterm.json");
+        assert_eq!(typed_file_name(Character, "a/b:c*"), "a-b-c.character.favoterm.json");
         // Nothing left of the name: a fixed word, never an empty stem.
-        assert_eq!(typed_file_name(Character, "  .. "), "characters.character.redcompanion.json");
-        assert_eq!(typed_file_name(Session, ""), "sessions.session.redcompanion.json");
-        assert_eq!(typed_file_name(Encounters, "???"), "encounters.encounters.redcompanion.json");
+        assert_eq!(typed_file_name(Character, "  .. "), "characters.character.favoterm.json");
+        assert_eq!(typed_file_name(Session, ""), "sessions.session.favoterm.json");
+        assert_eq!(typed_file_name(Encounters, "???"), "encounters.encounters.favoterm.json");
         assert!(typed_file_name(Character, &"я".repeat(300)).len() < 100);
     }
 
     #[test]
     fn imports_accept_only_bare_names_of_their_own_type() {
         use ExportKind::*;
-        assert!(is_typed_file_name(Character, "ivan.character.redcompanion.json"));
-        assert!(is_typed_file_name(Character, "ivan-2.character.redcompanion.json"));
-        assert!(!is_typed_file_name(Character, "ivan.session.redcompanion.json"), "a session file is not a character");
-        assert!(!is_typed_file_name(Session, "ivan.character.redcompanion.json"));
-        assert!(!is_typed_file_name(Encounters, "ivan.character.redcompanion.json"));
-        assert!(!is_typed_file_name(Character, ".character.redcompanion.json"), "no stem");
+        assert!(is_typed_file_name(Character, "ivan.character.favoterm.json"));
+        assert!(is_typed_file_name(Character, "ivan-2.character.favoterm.json"));
+        assert!(!is_typed_file_name(Character, "ivan.session.favoterm.json"), "a session file is not a character");
+        assert!(!is_typed_file_name(Session, "ivan.character.favoterm.json"));
+        assert!(!is_typed_file_name(Encounters, "ivan.character.favoterm.json"));
+        assert!(!is_typed_file_name(Character, ".character.favoterm.json"), "no stem");
         for bad in [
             "",
             "x.json",
-            "../x.character.redcompanion.json",
-            "a/x.character.redcompanion.json",
-            "a\\x.character.redcompanion.json",
-            "C:x.character.redcompanion.json",
-            ".hidden.character.redcompanion.json",
-            "a..b.character.redcompanion.json",
+            "../x.character.favoterm.json",
+            "a/x.character.favoterm.json",
+            "a\\x.character.favoterm.json",
+            "C:x.character.favoterm.json",
+            ".hidden.character.favoterm.json",
+            "a..b.character.favoterm.json",
         ] {
             assert!(!is_typed_file_name(Character, bad), "{bad}");
             assert!(!is_legacy_file_name(Character, bad), "{bad}");

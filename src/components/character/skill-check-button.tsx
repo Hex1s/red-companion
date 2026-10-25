@@ -1,3 +1,4 @@
+import { useSkillText } from "@/components/character/skill-hint";
 import { useState } from "react";
 import { Dices } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -30,6 +31,7 @@ type SkillCheckButtonProps = {
 /** Quick check of a skill: STAT + level + d10, rolled in the app or typed in from a physical die. */
 export function SkillCheckButton({ characterId, skillKey, label, disabledReason = null }: SkillCheckButtonProps) {
   const { t } = useTranslation();
+  const { summary } = useSkillText(skillKey.split(":")[0]);
   const [open, setOpen] = useState(false);
   const [totalText, setTotalText] = useState("");
   const [result, setResult] = useState<SkillCheck | null>(null);
@@ -91,6 +93,7 @@ export function SkillCheckButton({ characterId, skillKey, label, disabledReason 
       </Hint>
       <PopoverContent align="end" className="w-72 space-y-3">
         <p className="text-sm">{label}</p>
+        {summary && <p className="text-xs text-muted-foreground">{summary}</p>}
         <div className="flex items-center gap-2">
           <Button type="button" disabled={busy} onClick={() => void run(null)}>
             <Dices />
@@ -117,7 +120,7 @@ export function SkillCheckButton({ characterId, skillKey, label, disabledReason 
         </div>
         {result && (
           <div className="space-y-1">
-            <p className="num text-2xl font-bold text-primary">{result.total}</p>
+            <p className="num text-2xl font-bold text-emphasis">{result.total}</p>
             <p className="num text-xs text-muted-foreground">
               {t(result.role_bonus !== 0 ? "skill_check.formula_role" : "skill_check.formula", {
                 stat: t(`stats.${STAT_ABBR[result.stat]}`),

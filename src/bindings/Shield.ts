@@ -9,4 +9,8 @@ export type Shield = { uuid: string, code: string, name: string,
  * `None` for a body used as a shield: its HP equal the BODY stat the
  * person had while alive.
  */
-hp: number | null, source: Source, };
+hp: number | null, 
+/**
+ * Content pack the entry belongs to: `core` (the main book) or `dlc:<code>`.
+ */
+pack: string, source: Source, };

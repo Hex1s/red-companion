@@ -232,7 +232,7 @@ function HealForm({ target, helpers, onDone, onClose }: HealFormProps) {
       </div>
 
       {failed && failed.roll && (
-        <p className="num text-sm text-state-mortal">
+        <p className="num text-sm text-state-mortal-text">
           {t("heal.result", {
             bonus: failed.bonus,
             die: failed.roll.total,

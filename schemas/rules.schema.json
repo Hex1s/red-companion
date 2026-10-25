@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Collection",
+  "description": "A versioned set of entries of one type, the unit of sync with the future API.",
+  "type": "object",
+  "properties": {
+    "entries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Article"
+      }
+    },
+    "name": {
+      "description": "Collection name, e.g. `critical_injuries`.",
+      "type": "string"
+    },
+    "version": {
+      "description": "Bumped by hand whenever the content changes.",
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "name",
+    "version",
+    "entries"
+  ],
+  "$defs": {
+    "Article": {
+      "description": "A rules summary (combat turn, cover, wound states, ...): a short line for hints and an optional\nlonger card for the reference. Core rules text lives in the locale files under\n`article.<id>.{name,summary,details}`; the keys are fixed by that convention, see\n[`validate_articles`].",
+      "type": "object",
+      "properties": {
+        "details_key": {
+          "description": "Full description in own words; `None` when the summary says it all.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "id": {
+          "description": "Stable id, never translated (e.g. `combat_turn`).",
+          "type": "string"
+        },
+        "name_key": {
+          "type": "string"
+        },
+        "pack": {
+          "description": "Pack the entry belongs to.",
+          "type": "string",
+          "default": "core"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "summary_key": {
+          "description": "One phrase: what it is, shown in hints.",
+          "type": "string"
+        },
+        "tags": {
+          "description": "Filters in the reference (`combat`, `medicine`, ...).",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name_key",
+        "summary_key",
+        "source"
+      ]
+    },
+    "Source": {
+      "description": "Where a value comes from in the rulebook.",
+      "type": "object",
+      "properties": {
+        "page": {
+          "description": "Printed page number (PDF page minus one).",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "page"
+      ]
+    }
+  }
+}

@@ -1,0 +1,169 @@
+{
+  "name": "martial_arts",
+  "version": 1,
+  "entries": [
+    {
+      "uuid": "6c740a8b-baba-5f2d-8bcf-be111f6c92b9",
+      "code": "general",
+      "name": "General techniques",
+      "kind": "general",
+      "summary": "Techniques open to every style.",
+      "techniques": [
+        {
+          "code": "return",
+          "name": "Return",
+          "condition": null,
+          "requires": null,
+          "dv": 13,
+          "effect": "When you take the Get Up action you may try to beat DV 13. On a success Get Up costs no action.",
+          "injuries": []
+        }
+      ],
+      "pack": "core",
+      "source": {
+        "page": 179
+      }
+    },
+    {
+      "uuid": "37284405-891a-57d3-8f26-6a55a4429fe7",
+      "code": "aikido",
+      "name": "Aikido",
+      "kind": "soft",
+      "summary": "A soft style: blocks and disarms, turning the opponent's force against them.",
+      "techniques": [
+        {
+          "code": "disarm",
+          "name": "Disarm",
+          "condition": "This turn you hit one target with Brawling and with Martial Arts.",
+          "requires": null,
+          "dv": 15,
+          "effect": "Once per turn. On a success the item in the target's hands ends up in yours or falls to the floor.",
+          "injuries": []
+        },
+        {
+          "code": "iron_grip",
+          "name": "Iron Grip",
+          "condition": "The target is successfully grabbed and not yet under Iron Grip.",
+          "requires": null,
+          "dv": 15,
+          "effect": "An action, once per turn. On a success the target has a harder time breaking free: −2 to every attempt. While grabbed the target cannot make ranged attacks.",
+          "injuries": []
+        }
+      ],
+      "pack": "core",
+      "source": {
+        "page": 179
+      }
+    },
+    {
+      "uuid": "ebb9ee29-c4d2-572d-8a92-4d0f51626823",
+      "code": "karate",
+      "name": "Karate",
+      "kind": "hard",
+      "summary": "A hard style: strikes that break bones and armor.",
+      "techniques": [
+        {
+          "code": "break_armor",
+          "name": "Break Armor",
+          "condition": "This turn you hit one target with a melee weapon and with Martial Arts.",
+          "requires": null,
+          "dv": 15,
+          "effect": "Once per turn. On a success all of the target's armor is lowered by a further 2 points.",
+          "injuries": []
+        },
+        {
+          "code": "bone_crusher",
+          "name": "Bone Crusher",
+          "condition": "WILL 8 or more.",
+          "requires": {
+            "stat": "will",
+            "min": 8
+          },
+          "dv": null,
+          "effect": "Instead of two Martial Arts attacks: one attack on a target. On a hit the target also gets the critical injury Broken Ribs, in addition to damage (not added if it already has it). With a −8 penalty to the check (declared before the roll) the blow goes to the head like an aimed shot: on a success the target gets Cracked Skull after damage is counted (not added if it already has it).",
+          "injuries": [
+            "broken_ribs",
+            "cracked_skull"
+          ]
+        }
+      ],
+      "pack": "core",
+      "source": {
+        "page": 179
+      }
+    },
+    {
+      "uuid": "b3ab1cd9-d39d-585a-af1a-f449a3d1d528",
+      "code": "judo",
+      "name": "Judo",
+      "kind": "soft",
+      "summary": "A soft style: grapples, throws and dodges.",
+      "techniques": [
+        {
+          "code": "counter_throw",
+          "name": "Counter Throw",
+          "condition": "You dodged every melee attack made against you since your last turn.",
+          "requires": null,
+          "dv": 15,
+          "effect": "An action, once per turn. On a success you use Throw on one of the targets whose melee attacks you dodged. It cannot be dodged and needs no grab.",
+          "injuries": []
+        },
+        {
+          "code": "escape_grab",
+          "name": "Escape Hold",
+          "condition": "This turn you made 2 melee attacks on the opponent who is grappling you.",
+          "requires": null,
+          "dv": 15,
+          "effect": "Once per turn. On a success you break free and the opponent gets the critical injury Broken Arm. If they had none, you choose the arm.",
+          "injuries": [
+            "broken_arm"
+          ]
+        }
+      ],
+      "pack": "core",
+      "source": {
+        "page": 179
+      }
+    },
+    {
+      "uuid": "d30a19be-cecc-5545-8cd0-d6eaaa299764",
+      "code": "taekwondo",
+      "name": "Taekwondo",
+      "kind": "hard",
+      "summary": "A hard style: high, precise kicks at pressure points.",
+      "techniques": [
+        {
+          "code": "pressure_point",
+          "name": "Pressure Point Strike",
+          "condition": "WILL 8 or more.",
+          "requires": {
+            "stat": "will",
+            "min": 8
+          },
+          "dv": null,
+          "effect": "Instead of two Martial Arts attacks: one attack on a target at close range. On a hit the target also gets the critical injury Spinal Injury, in addition to damage (not added if it already has it). With a −8 penalty to the check (declared before the roll) the blow goes to the head like an aimed shot: on a success the target gets Brain Injury (not added if it already has it).",
+          "injuries": [
+            "spinal_injury",
+            "brain_injury"
+          ]
+        },
+        {
+          "code": "flying_kick",
+          "name": "Flying Kick",
+          "condition": "MOVE 8 or more. This turn you moved at least 4 m.",
+          "requires": {
+            "stat": "movement",
+            "min": 8
+          },
+          "dv": null,
+          "effect": "Instead of two Martial Arts attacks: a rush in a straight line at a target up to 4 m away; no more movement this turn. On a hit damage is as for a Martial Arts attack, the target falls prone and is thrown off a motorcycle or any vehicle without a fully enclosed cabin.",
+          "injuries": []
+        }
+      ],
+      "pack": "core",
+      "source": {
+        "page": 180
+      }
+    }
+  ]
+}

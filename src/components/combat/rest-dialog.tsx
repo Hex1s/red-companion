@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { RestApplied } from "@/bindings/RestApplied";
+import type { RestGoal } from "@/bindings/RestGoal";
 import type { RestPlan } from "@/bindings/RestPlan";
 import { Button } from "@/components/ui/button";
 import { ErrorNotice } from "@/components/ui/error-notice";
@@ -11,8 +12,12 @@ import type { CharacterEntry } from "@/hooks/use-characters";
 import { errorMessage } from "@/lib/errors";
 import { api } from "@/lib/api";
 
-/** Pause after typing before Rust is asked how many days the rest takes. */
+/** Pause after typing before Rust is asked what the rest gives. */
 const PREVIEW_DELAY_MS = 150;
+/** Longest rest in days; the same limit the rules enforce. */
+const MAX_DAYS = 365;
+
+type RestMode = "hp" | "days";
 
 type RestDialogProps = {
   /** The character who rests; the window is open while it is set. */
@@ -21,7 +26,7 @@ type RestDialogProps = {
   onClose: () => void;
 };
 
-/** "Rest": the wanted HP in, days of rest and the resulting HP out (the rules count them). */
+/** "Rest": either the wanted HP or a number of days in, the other one and the resulting HP out (the rules count them). */
 export function RestDialog({ target, onDone, onClose }: RestDialogProps) {
   return (
     <Dialog open={target !== null} onOpenChange={(open) => !open && onClose()}>
@@ -38,21 +43,34 @@ function RestForm({ target, onDone, onClose }: RestFormProps) {
   const { t } = useTranslation();
   const { hp, name } = { hp: target.character.hp, name: target.character.name };
   const maxHp = target.derived.max_hp;
-  const [text, setText] = useState(String(maxHp));
+  // At full HP there is nothing to restore up to, so the rest starts as a number of days.
+  const [mode, setMode] = useState<RestMode>(hp < maxHp ? "hp" : "days");
+  const [hpText, setHpText] = useState(String(maxHp));
+  const [daysText, setDaysText] = useState("1");
   const [plan, setPlan] = useState<RestPlan | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const wanted = text.trim() === "" ? null : Number(text);
-  const rangeOk = wanted !== null && Number.isInteger(wanted) && wanted > hp && wanted <= maxHp;
+  const text = mode === "hp" ? hpText : daysText;
+  const value = text.trim() === "" ? null : Number(text);
+  const rangeOk =
+    value !== null &&
+    Number.isInteger(value) &&
+    (mode === "hp" ? value > hp && value <= maxHp : value >= 1 && value <= MAX_DAYS);
+  const goal: RestGoal | null = !rangeOk
+    ? null
+    : mode === "hp"
+      ? { kind: "hp", target: value }
+      : { kind: "days", days: value };
+  const goalKey = goal === null ? "" : `${goal.kind}:${goal.kind === "hp" ? goal.target : goal.days}`;
 
   useEffect(() => {
-    if (!rangeOk) {
+    if (goal === null) {
       setPlan(null);
       return;
     }
     const timer = setTimeout(() => {
-      api.restPreview(target.id, wanted).then(
+      api.restPreview(target.id, goal).then(
         (p) => {
           setPlan(p);
           setError(null);
@@ -64,13 +82,14 @@ function RestForm({ target, onDone, onClose }: RestFormProps) {
       );
     }, PREVIEW_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [rangeOk, wanted, target.id]);
+    // `goalKey` stands for `goal`: a new object with the same numbers must not restart the timer.
+  }, [goalKey, target.id]);
 
   const apply = async () => {
-    if (!rangeOk) return;
+    if (goal === null) return;
     setBusy(true);
     try {
-      onDone(await api.restCharacter(target.id, wanted));
+      onDone(await api.restCharacter(target.id, goal));
       onClose();
     } catch (e) {
       setError(errorMessage(e));
@@ -79,7 +98,8 @@ function RestForm({ target, onDone, onClose }: RestFormProps) {
     }
   };
 
-  const canApply = rangeOk && plan !== null && !busy;
+  const canApply = goal !== null && plan !== null && !busy;
+  const setText = mode === "hp" ? setHpText : setDaysText;
 
   return (
     <div className="space-y-4">
@@ -93,10 +113,34 @@ function RestForm({ target, onDone, onClose }: RestFormProps) {
         </DialogDescription>
       </div>
 
+      <div className="grid grid-cols-2 gap-2" role="group" aria-label={t("rest.title")}>
+        {(["hp", "days"] as const).map((m) => (
+          <Button
+            key={m}
+            type="button"
+            size="sm"
+            variant={mode === m ? "default" : "outline"}
+            aria-pressed={mode === m}
+            disabled={m === "hp" && hp >= maxHp}
+            onClick={() => setMode(m)}
+          >
+            {t(`rest.mode_${m}`)}
+          </Button>
+        ))}
+      </div>
+
       <label className="flex items-center gap-3 text-sm">
-        <span className="flex-1">{t("rest.target")}</span>
+        <span className="flex-1">{t(mode === "hp" ? "rest.target" : "rest.days_input")}</span>
         <FieldBadge
-          error={rangeOk || text.trim() === "" ? null : t("rest.target_range", { min: hp + 1, max: maxHp })}
+          key={mode}
+          error={
+            rangeOk || text.trim() === ""
+              ? null
+              : t(mode === "hp" ? "rest.target_range" : "rest.days_range", {
+                  min: hp + 1,
+                  max: mode === "hp" ? maxHp : MAX_DAYS,
+                })
+          }
           className="w-24"
         >
           {(invalid) => (
@@ -120,17 +164,19 @@ function RestForm({ target, onDone, onClose }: RestFormProps) {
           <p className="num text-muted-foreground">
             {t("rest.per_day", { hp: plan.hp_per_day })}
           </p>
-          <p className="flex justify-between">
-            <span>{t("rest.days")}</span>
-            <span className="num font-semibold">{plan.days}</span>
-          </p>
+          {mode === "hp" && (
+            <p className="flex justify-between">
+              <span>{t("rest.days")}</span>
+              <span className="num font-semibold">{plan.days}</span>
+            </p>
+          )}
           <p className="flex justify-between">
             <span>{t("rest.result")}</span>
             <span className="num font-semibold">
               {plan.final_hp} / {plan.max_hp}
             </span>
           </p>
-          {plan.final_hp > plan.target_hp && (
+          {mode === "hp" && plan.final_hp > plan.target_hp && (
             <p className="text-xs text-muted-foreground">{t("rest.overshoot")}</p>
           )}
         </div>

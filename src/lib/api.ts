@@ -4,6 +4,9 @@ import type { CharacterKind } from "@/bindings/CharacterKind";
 import type { CharacterRecord } from "@/bindings/CharacterRecord";
 import type { DeletedCharacter } from "@/bindings/DeletedCharacter";
 import type { Armor } from "@/bindings/Armor";
+import type { Article } from "@/bindings/Article";
+import type { RangeTable } from "@/bindings/RangeTable";
+import type { MartialArt } from "@/bindings/MartialArt";
 import type { Role } from "@/bindings/Role";
 import type { BodyArea } from "@/bindings/BodyArea";
 import type { CoverPreset } from "@/bindings/CoverPreset";
@@ -42,6 +45,7 @@ import type { TherapyApplied } from "@/bindings/TherapyApplied";
 import type { TherapyInfo } from "@/bindings/TherapyInfo";
 import type { TherapyKind } from "@/bindings/TherapyKind";
 import type { RestApplied } from "@/bindings/RestApplied";
+import type { RestGoal } from "@/bindings/RestGoal";
 import type { RestPlan } from "@/bindings/RestPlan";
 import type { TreatmentSkill } from "@/bindings/TreatmentSkill";
 import type { Weapon } from "@/bindings/Weapon";
@@ -62,6 +66,9 @@ export const api = {
   listArmor: (lang: string) => inLanguage(lang, () => invoke<Armor[]>("list_armor")),
   listWeapons: (lang: string) => inLanguage(lang, () => invoke<Weapon[]>("list_weapons")),
   listSkills: () => invoke<Skill[]>("list_skills"),
+  listArticles: () => invoke<Article[]>("list_articles"),
+  listRangeTables: () => invoke<RangeTable[]>("list_range_tables"),
+  listMartialArts: (lang: string) => inLanguage(lang, () => invoke<MartialArt[]>("list_martial_arts")),
   listRoles: (lang: string) => inLanguage(lang, () => invoke<Role[]>("list_roles")),
   listNpcTemplates: (lang: string) =>
     inLanguage(lang, () => invoke<NpcTemplate[]>("list_npc_templates")),
@@ -124,7 +131,7 @@ export const api = {
   openExportsFolder: (kind?: ExportKind) =>
     invoke<void>("open_exports_folder", { kind: kind ?? null }),
   /**
-   * Writes encounters and own NPC templates into a new `*.encounters.redcompanion.json` file; the own
+   * Writes encounters and own NPC templates into a new `*.encounters.favoterm.json` file; the own
    * templates an encounter uses go along with it.
    */
   exportEncounters: (encounterIds: number[], templateIds: number[]) =>
@@ -201,10 +208,9 @@ export const api = {
   /** The GM takes one instance of an injury off by hand. */
   removeInjury: (id: number, injuryId: string) =>
     invoke<CharacterRecord>("remove_injury", { id, injuryId }),
-  /** Days of rest needed to reach `targetHp`; changes nothing. */
-  restPreview: (id: number, targetHp: number) => invoke<RestPlan>("rest_preview", { id, targetHp }),
-  restCharacter: (id: number, targetHp: number) =>
-    invoke<RestApplied>("rest_character", { id, targetHp }),
+  /** What a rest toward the goal (HP to reach or days to pass) gives; changes nothing. */
+  restPreview: (id: number, goal: RestGoal) => invoke<RestPlan>("rest_preview", { id, goal }),
+  restCharacter: (id: number, goal: RestGoal) => invoke<RestApplied>("rest_character", { id, goal }),
   /** Takes humanity off; below zero is cyberpsychosis. */
   loseHumanity: (id: number, loss: number) =>
     invoke<HumanityLossApplied>("lose_humanity", { id, loss }),

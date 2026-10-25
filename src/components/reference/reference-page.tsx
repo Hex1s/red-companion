@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ReferenceDetail } from "@/components/reference/reference-detail";
+import { ReputationReference } from "@/components/reference/reputation-reference";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -57,7 +58,9 @@ export function ReferencePage() {
           ))}
         </TabsList>
       </Tabs>
-      {!hasBackend ? (
+      {referenceSection === "reputation" ? (
+        <ReputationReference currentId={referenceId} />
+      ) : !hasBackend ? (
         <p className="text-muted-foreground">{t("characters.no_backend")}</p>
       ) : (
         <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,18rem)_minmax(0,1fr)] gap-4">

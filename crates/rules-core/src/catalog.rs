@@ -15,6 +15,13 @@ use sha2::{Digest, Sha256};
 use thiserror::Error;
 use ts_rs::TS;
 
+/// Pack of the main rulebook; entries without an explicit `pack` belong to it.
+pub const CORE_PACK: &str = "core";
+
+fn default_pack() -> String {
+    CORE_PACK.to_string()
+}
+
 /// Where a value comes from in the rulebook.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
 #[ts(export)]
@@ -53,6 +60,9 @@ pub struct CriticalInjury {
     /// The injury raises the death-save penalty by 1 ("Штраф Спасброска
     /// увеличивается на 1").
     pub death_save_penalty: bool,
+    /// Content pack the entry belongs to: `core` (the main book) or `dlc:<code>`.
+    #[serde(default = "default_pack")]
+    pub pack: String,
     pub source: Source,
 }
 
@@ -96,6 +106,9 @@ pub struct CoverMaterial {
     pub name: String,
     pub thickness: CoverThickness,
     pub hp: u32,
+    /// Content pack the entry belongs to: `core` (the main book) or `dlc:<code>`.
+    #[serde(default = "default_pack")]
+    pub pack: String,
     pub source: Source,
 }
 
@@ -111,6 +124,9 @@ pub struct Armor {
     /// Penalty to REF, DEX and MOVE (0, 2 or 4); applied once, the highest
     /// of the worn armor.
     pub penalty: u8,
+    /// Content pack the entry belongs to: `core` (the main book) or `dlc:<code>`.
+    #[serde(default = "default_pack")]
+    pub pack: String,
     pub source: Source,
 }
 
@@ -124,6 +140,9 @@ pub struct Shield {
     /// `None` for a body used as a shield: its HP equal the BODY stat the
     /// person had while alive.
     pub hp: Option<u32>,
+    /// Content pack the entry belongs to: `core` (the main book) or `dlc:<code>`.
+    #[serde(default = "default_pack")]
+    pub pack: String,
     pub source: Source,
 }
 
@@ -171,6 +190,9 @@ pub struct Weapon {
     pub description: Option<String>,
     /// Price in eurobucks.
     pub price: u32,
+    /// Content pack the entry belongs to: `core` (the main book) or `dlc:<code>`.
+    #[serde(default = "default_pack")]
+    pub pack: String,
     pub source: Source,
 }
 
@@ -221,6 +243,9 @@ pub struct Skill {
     /// `id:specialty` key, see `character::skill_base_id`.
     #[serde(default)]
     pub specialty: bool,
+    /// Content pack the entry belongs to: `core` (the main book) or `dlc:<code>`.
+    #[serde(default = "default_pack")]
+    pub pack: String,
     pub source: Source,
 }
 
@@ -277,6 +302,9 @@ pub struct NpcTemplate {
     /// Printed details the sheet has no field for (role abilities, bracketed
     /// alternative values, cyberdeck programs).
     pub notes: Option<String>,
+    /// Content pack the entry belongs to: `core` (the main book) or `dlc:<code>`.
+    #[serde(default = "default_pack")]
+    pub pack: String,
     pub source: Source,
 }
 
@@ -303,6 +331,9 @@ pub struct Role {
     pub points_per_rank: u8,
     /// Parts of the ability that rank points are spent on; empty when the role has no point pool.
     pub subabilities: Vec<SubAbility>,
+    /// Content pack the entry belongs to: `core` (the main book) or `dlc:<code>`.
+    #[serde(default = "default_pack")]
+    pub pack: String,
     pub source: Source,
 }
 
@@ -347,6 +378,134 @@ pub struct AbilityLevel {
     /// Points in the sub-ability at which the benefit is gained.
     pub points: u8,
     pub summary: String,
+}
+
+/// How a martial art plays: the general techniques every style may use, or a soft or hard style.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+#[serde(rename_all = "snake_case")]
+pub enum MartialArtKind {
+    /// Techniques open to every style; not a style to pick on the sheet.
+    General,
+    Soft,
+    Hard,
+}
+
+/// A stat the technique asks for ("ВОЛЯ 8 или больше").
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+pub struct StatRequirement {
+    pub stat: StatKey,
+    pub min: u8,
+}
+
+/// A special move of a martial art (p. 179-180). The app only shows it: the GM decides when the
+/// condition is met and rolls the check.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+pub struct Technique {
+    /// Stable id inside the style (e.g. `disarm`).
+    pub code: String,
+    pub name: String,
+    /// What has to be true first, as printed, in the content language; `None` when there is none.
+    pub condition: Option<String>,
+    /// Stat threshold of the condition, when it has one.
+    pub requires: Option<StatRequirement>,
+    /// DV of the check the move asks for, when it has one.
+    pub dv: Option<u8>,
+    /// What the move does, in the content language.
+    pub effect: String,
+    /// Critical injuries the move inflicts: ids from the critical injury table.
+    #[serde(default)]
+    pub injuries: Vec<String>,
+}
+
+/// A martial art with its techniques; `kind: general` holds the techniques of every style.
+/// Server content: texts are in the language of the server the data came from.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+pub struct MartialArt {
+    pub uuid: String,
+    pub code: String,
+    pub name: String,
+    pub kind: MartialArtKind,
+    /// One phrase: what the style is about, shown in hints.
+    pub summary: String,
+    pub techniques: Vec<Technique>,
+    /// Content pack the entry belongs to: `core` (the main book) or `dlc:<code>`.
+    #[serde(default = "default_pack")]
+    pub pack: String,
+    pub source: Source,
+}
+
+/// A rules summary (combat turn, cover, wound states, ...): a short line for hints and an optional
+/// longer card for the reference. Core rules text lives in the locale files under
+/// `article.<id>.{name,summary,details}`; the keys are fixed by that convention, see
+/// [`validate_articles`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+pub struct Article {
+    /// Stable id, never translated (e.g. `combat_turn`).
+    pub id: String,
+    pub name_key: String,
+    /// One phrase: what it is, shown in hints.
+    pub summary_key: String,
+    /// Full description in own words; `None` when the summary says it all.
+    #[serde(default)]
+    pub details_key: Option<String>,
+    /// Filters in the reference (`combat`, `medicine`, ...).
+    #[serde(default)]
+    pub tags: Vec<String>,
+    /// Pack the entry belongs to.
+    #[serde(default = "default_pack")]
+    pub pack: String,
+    pub source: Source,
+}
+
+/// What a range table describes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+#[serde(rename_all = "snake_case")]
+pub enum RangeTableKind {
+    /// One aimed shot (p. 173).
+    Single,
+    /// Autofire (p. 173).
+    Autofire,
+}
+
+/// A distance band in metres, inclusive.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+pub struct RangeBand {
+    pub from: u32,
+    pub to: u32,
+}
+
+/// One weapon class of a range table; `dv` has one cell per band, `None` = the shot is impossible.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+pub struct RangeRow {
+    pub id: String,
+    /// `range_row.<id>`.
+    pub name_key: String,
+    /// Weapon `code`s of the catalog this row applies to.
+    pub weapon_codes: Vec<String>,
+    pub dv: Vec<Option<u8>>,
+}
+
+/// DV by distance for weapon classes. Reference only: the app never rolls to hit (see ROADMAP, 0).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+pub struct RangeTable {
+    pub id: String,
+    /// `range_table.<id>`.
+    pub name_key: String,
+    pub kind: RangeTableKind,
+    pub bands: Vec<RangeBand>,
+    pub rows: Vec<RangeRow>,
+    #[serde(default = "default_pack")]
+    pub pack: String,
+    pub source: Source,
 }
 
 /// A versioned set of entries of one type, the unit of sync with the future API.
@@ -466,6 +625,69 @@ pub fn validate_shields(c: &Collection<Shield>) -> Result<(), CatalogError> {
         Some(e) => Err(CatalogError::OutOfRange(e.code.clone())),
         None => Ok(()),
     }
+}
+
+/// Martial arts: unique codes, techniques with a name and an effect, injuries that exist.
+pub fn validate_martial_arts(c: &Collection<MartialArt>, injuries: &Collection<CriticalInjury>) -> Result<(), CatalogError> {
+    check_ids(c.entries.iter().map(|e| (e.code.as_str(), e.name.as_str(), e.source.page)))?;
+    for art in &c.entries {
+        if art.summary.is_empty() || art.techniques.is_empty() || art.pack.is_empty() {
+            return Err(CatalogError::MissingField(art.code.clone()));
+        }
+        check_ids(art.techniques.iter().map(|t| (t.code.as_str(), t.name.as_str(), 1)))?;
+        for t in &art.techniques {
+            let bad_dv = t.dv.is_some_and(|dv| !(1..=30).contains(&dv));
+            let bad_req = t.requires.as_ref().is_some_and(|r| !(1..=10).contains(&r.min));
+            let unknown_injury = t.injuries.iter().any(|id| !injuries.entries.iter().any(|i| &i.id == id));
+            if t.effect.is_empty() || bad_dv || bad_req || unknown_injury {
+                return Err(CatalogError::OutOfRange(format!("{}/{}", art.code, t.code)));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Articles: unique ids, locale keys follow `article.<id>.*`, a page of the book for each.
+pub fn validate_articles(c: &Collection<Article>) -> Result<(), CatalogError> {
+    check_ids(c.entries.iter().map(|e| (e.id.as_str(), e.name_key.as_str(), e.source.page)))?;
+    for e in &c.entries {
+        let bad_keys = e.name_key != format!("article.{}.name", e.id)
+            || e.summary_key != format!("article.{}.summary", e.id)
+            || e.details_key.as_deref().is_some_and(|k| k != format!("article.{}.details", e.id));
+        if bad_keys || e.pack.is_empty() {
+            return Err(CatalogError::MissingField(e.id.clone()));
+        }
+    }
+    Ok(())
+}
+
+/// Range tables: bands are ordered and do not overlap, every row has one DV (1..=40) or `None` per band,
+/// weapon codes exist in the catalog and belong to one row per table.
+pub fn validate_range_tables(c: &Collection<RangeTable>, weapons: &Collection<Weapon>) -> Result<(), CatalogError> {
+    check_ids(c.entries.iter().map(|e| (e.id.as_str(), e.name_key.as_str(), e.source.page)))?;
+    for t in &c.entries {
+        let bad = t.name_key != format!("range_table.{}", t.id)
+            || t.bands.is_empty()
+            || t.rows.is_empty()
+            || t.bands.iter().any(|b| b.from > b.to)
+            || t.bands.windows(2).any(|w| w[0].to >= w[1].from);
+        if bad {
+            return Err(CatalogError::OutOfRange(t.id.clone()));
+        }
+        check_ids(t.rows.iter().map(|r| (r.id.as_str(), r.name_key.as_str(), t.source.page)))?;
+        let mut used = std::collections::HashSet::new();
+        for r in &t.rows {
+            let bad = r.name_key != format!("range_row.{}", r.id)
+                || r.dv.len() != t.bands.len()
+                || r.dv.iter().flatten().any(|d| !(1..=40).contains(d))
+                || r.weapon_codes.is_empty()
+                || r.weapon_codes.iter().any(|w| !weapons.entries.iter().any(|x| &x.code == w) || !used.insert(w.as_str()));
+            if bad {
+                return Err(CatalogError::OutOfRange(format!("{}/{}", t.id, r.id)));
+            }
+        }
+    }
+    Ok(())
 }
 
 pub fn validate_roles(c: &Collection<Role>) -> Result<(), CatalogError> {
@@ -662,6 +884,9 @@ pub fn json_schemas() -> Vec<(&'static str, schemars::Schema)> {
         ("skills", schema_for!(Collection<Skill>)),
         ("npc_templates", schema_for!(Collection<NpcTemplate>)),
         ("roles", schema_for!(Collection<Role>)),
+        ("rules", schema_for!(Collection<Article>)),
+        ("martial_arts", schema_for!(Collection<MartialArt>)),
+        ("range_tables", schema_for!(Collection<RangeTable>)),
         ("collection_version", schema_for!(CollectionVersion)),
     ]
 }
@@ -681,6 +906,7 @@ mod tests {
             treatment: vec![TreatmentOption { skill: TreatmentSkill::Surgery, dv: 15 }],
             quick_fix_removes_effect: false,
             death_save_penalty: false,
+            pack: default_pack(),
             source: Source { page: 187 },
         }
     }
@@ -751,6 +977,7 @@ mod tests {
                 name: "Concrete".into(),
                 thickness: CoverThickness::Thick,
                 hp: 0,
+                pack: default_pack(),
                 source: src.clone(),
             }],
         };
@@ -765,10 +992,39 @@ mod tests {
                 name: "Kevlar".into(),
                 sp: 7,
                 penalty: 0,
+                pack: default_pack(),
                 source: src,
             }],
         };
         assert_eq!(validate_armor(&armor), Ok(()));
+    }
+
+    fn article(id: &str) -> Article {
+        Article {
+            id: id.into(),
+            name_key: format!("article.{id}.name"),
+            summary_key: format!("article.{id}.summary"),
+            details_key: None,
+            tags: vec![],
+            pack: default_pack(),
+            source: Source { page: 168 },
+        }
+    }
+
+    #[test]
+    fn article_keys_follow_the_convention() {
+        let wrap = |entries| Collection { name: "rules".into(), version: 1, entries };
+        assert_eq!(validate_articles(&wrap(vec![article("a"), article("b")])), Ok(()));
+        assert_eq!(
+            validate_articles(&wrap(vec![article("a"), article("a")])),
+            Err(CatalogError::DuplicateId("a".into()))
+        );
+        let mut wrong = article("a");
+        wrong.summary_key = "article.b.summary".into();
+        assert_eq!(validate_articles(&wrap(vec![wrong])), Err(CatalogError::MissingField("a".into())));
+        let mut details = article("a");
+        details.details_key = Some("article.a.details".into());
+        assert_eq!(validate_articles(&wrap(vec![details])), Ok(()));
     }
 
     /// Writes JSON Schemas to `<workspace>/schemas/` so they can be reviewed in git.

@@ -44,6 +44,11 @@
           "description": "Material name in the content language.",
           "type": "string"
         },
+        "pack": {
+          "description": "Content pack the entry belongs to: `core` (the main book) or `dlc:<code>`.",
+          "type": "string",
+          "default": "core"
+        },
         "source": {
           "$ref": "#/$defs/Source"
         },

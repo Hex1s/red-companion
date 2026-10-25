@@ -3,7 +3,7 @@ import { create } from "zustand";
 export type AppTab = "characters" | "encounters" | "notes" | "rules";
 /** Tabs of a character sheet; the choice is kept while switching between characters. */
 export type SheetTab = "general" | "state" | "skills" | "roles" | "gear";
-export type ReferenceSection = "injuries" | "cover" | "armor" | "weapons" | "skills" | "npc" | "roles" | "reputation";
+export type ReferenceSection = "articles" | "injuries" | "cover" | "armor" | "weapons" | "skills" | "martial_arts" | "roles" | "reputation";
 
 const EXPLORER_KEY = "rc.explorer";
 
@@ -40,6 +40,9 @@ type UiState = {
   selectTemplate: (key: string | null) => void;
   /** Character the "damage taken" window is open for. */
   damageTargetId: number | null;
+  /** The quick attack reference popover (hotkey A). */
+  attackRefOpen: boolean;
+  setAttackRefOpen: (open: boolean) => void;
   sheetTab: SheetTab;
   setSheetTab: (tab: SheetTab) => void;
   referenceSection: ReferenceSection;
@@ -70,6 +73,8 @@ export const useUiStore = create<UiState>((set, get) => ({
   selectedTemplateKey: null,
   selectTemplate: (selectedTemplateKey) => set({ selectedTemplateKey, tab: "characters" }),
   damageTargetId: null,
+  attackRefOpen: false,
+  setAttackRefOpen: (attackRefOpen) => set({ attackRefOpen }),
   sheetTab: "general",
   setSheetTab: (sheetTab) => set({ sheetTab }),
   referenceSection: "injuries",

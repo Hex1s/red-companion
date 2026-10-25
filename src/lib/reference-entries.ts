@@ -1,21 +1,24 @@
 import type { TFunction } from "i18next";
 import type { Armor } from "@/bindings/Armor";
+import type { Article } from "@/bindings/Article";
+import type { MartialArt } from "@/bindings/MartialArt";
 import type { CoverPreset } from "@/bindings/CoverPreset";
 import type { CriticalInjury } from "@/bindings/CriticalInjury";
-import type { NpcTemplate } from "@/bindings/NpcTemplate";
 import type { Role } from "@/bindings/Role";
 import type { Skill } from "@/bindings/Skill";
 import type { Weapon } from "@/bindings/Weapon";
 import type { ReferenceData } from "@/hooks/use-reference-data";
+import { STAT_ABBR } from "@/lib/stat-abbr";
 import type { ReferenceSection } from "@/store/ui-store";
 
 export const REFERENCE_SECTIONS: ReferenceSection[] = [
+  "articles",
   "injuries",
   "cover",
   "armor",
   "weapons",
   "skills",
-  "npc",
+  "martial_arts",
   "roles",
   "reputation",
 ];
@@ -37,12 +40,13 @@ type Base = {
 
 /** A reference record with its typed data; the detail card is drawn per `section`. */
 export type RefEntry =
+  | (Base & { section: "articles"; item: Article })
   | (Base & { section: "injuries"; item: CriticalInjury })
   | (Base & { section: "cover"; item: CoverPreset })
   | (Base & { section: "armor"; item: Armor })
   | (Base & { section: "weapons"; item: Weapon })
   | (Base & { section: "skills"; item: Skill })
-  | (Base & { section: "npc"; item: NpcTemplate })
+  | (Base & { section: "martial_arts"; item: MartialArt })
   | (Base & { section: "roles"; item: Role })
   | (Base & { section: "reputation"; item: ReputationItem });
 
@@ -76,6 +80,20 @@ function roleSearch(r: Role): string {
 export function entriesOf(section: ReferenceSection, data: ReferenceData, t: TFunction): RefEntry[] {
   const make = (e: Omit<RefEntry, "search"> & { search: string }): RefEntry => ({ ...e, search: fold(e.search) }) as RefEntry;
   switch (section) {
+    case "articles":
+      return data.articles.map((item) => {
+        const name = t(item.name_key);
+        const summary = t(item.summary_key);
+        return make({
+          section,
+          item,
+          id: item.id,
+          name,
+          subtitle: summary,
+          value: "",
+          search: join([name, summary, item.details_key && t(item.details_key)], "\n"),
+        });
+      });
     case "injuries":
       return data.injuries.map((item) => {
         const name = t(item.name_key);
@@ -131,7 +149,7 @@ export function entriesOf(section: ReferenceSection, data: ReferenceData, t: TFu
     case "skills":
       return data.skills.map((item) => {
         const name = t(item.name_key);
-        const stat = t(`stats.${item.stat}`);
+        const stat = t(`stats.${STAT_ABBR[item.stat]}`);
         const category = t(`skill.category.${item.category}`);
         return make({
           section,
@@ -140,20 +158,20 @@ export function entriesOf(section: ReferenceSection, data: ReferenceData, t: TFu
           name,
           subtitle: `${stat} · ${category}`,
           value: item.double_cost ? "×2" : "",
-          search: join([name, stat, category]),
+          search: join([name, stat, category, t(`skill.summary.${item.id}`, { defaultValue: "" })], "\n"),
         });
       });
-    case "npc":
-      return data.npc.map((item) => {
-        const tier = t(`npc.tier.${item.tier}`);
+    case "martial_arts":
+      return data.martialArts.map((item) => {
+        const kind = t(`reference.martial_kind.${item.kind}`);
         return make({
           section,
           item,
           id: item.code,
           name: item.name,
-          subtitle: tier,
-          value: `${item.armor_head_sp}/${item.armor_body_sp}`,
-          search: join([item.name, tier, item.gear, item.armor_name, ...item.weapons.map((w) => w.name)], "\n"),
+          subtitle: kind,
+          value: item.kind === "general" ? "" : String(item.techniques.length),
+          search: join([item.name, kind, item.summary, ...item.techniques.map((x) => `${x.name} ${x.condition ?? ""} ${x.effect}`)], "\n"),
         });
       });
     case "roles":

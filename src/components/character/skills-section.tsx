@@ -1,17 +1,22 @@
+import { SkillHint } from "@/components/character/skill-hint";
 import { useMemo, useState } from "react";
 import { ChevronDown, Search } from "lucide-react";
 import type { Path, UseFormReturn } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import type { Character } from "@/bindings/Character";
+import type { MartialArt } from "@/bindings/MartialArt";
 import type { Skill } from "@/bindings/Skill";
 import { SkillCheckButton } from "@/components/character/skill-check-button";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { FieldBadge } from "@/components/ui/field-badge";
+import { Hint } from "@/components/ui/hint";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { NumberInput } from "@/components/ui/number-input";
 import { Label } from "@/components/ui/label";
+import { useMartialArts } from "@/hooks/use-martial-arts";
 import { SKILL_MAX } from "@/lib/character-schema";
 import { STAT_ABBR } from "@/lib/stat-abbr";
 import { cn } from "@/lib/utils";
@@ -39,6 +44,8 @@ export function SkillsSection({ characterId, form, skills, onChange }: SkillsSec
     formState: { errors },
   } = form;
   const values = (watch("skills") ?? {}) as Record<string, number>;
+  const martialArts = useMartialArts();
+  const styles = martialArts.filter((a) => a.kind !== "general");
 
   const [query, setQuery] = useState("");
   const [onlyTrained, setOnlyTrained] = useState(false);
@@ -46,8 +53,18 @@ export function SkillsSection({ characterId, form, skills, onChange }: SkillsSec
   const [specialtyDraft, setSpecialtyDraft] = useState<Record<string, string>>({});
 
   const specialtyName = (key: string) => key.slice(key.indexOf(":") + 1);
-  const specialtyLabel = (key: string) =>
-    t(`skill.specialties.${specialtyName(key)}`, { defaultValue: specialtyName(key) });
+  const styleOf = (key: string) =>
+    key.startsWith("martial_arts:") ? styles.find((a) => a.code === specialtyName(key)) : undefined;
+  const specialtyLabel = (key: string) => {
+    const name = specialtyName(key);
+    if (key.startsWith("martial_arts:")) {
+      const style = styleOf(key);
+      if (style) return style.name;
+      // A style that is gone from the data (pack off, content updated) stays on the sheet, marked.
+      return styles.length > 0 ? `${name} (${t("characters.skill_style_missing")})` : name;
+    }
+    return t(`skill.specialties.${name}`, { defaultValue: name });
+  };
   const rowsOf = (skill: Skill) =>
     Object.keys(values)
       .filter((key) => key.startsWith(`${skill.id}:`))
@@ -95,6 +112,22 @@ export function SkillsSection({ characterId, form, skills, onChange }: SkillsSec
     setValue(`skills.${skillId}:${name}` as Path<Character>, 1, { shouldDirty: true });
   };
 
+  const styleHint = (style: MartialArt) => (
+    <span className="block max-w-72 space-y-1">
+      <span className="block">{style.summary}</span>
+      {style.techniques.map((x) => (
+        <span key={x.code} className="block text-muted-foreground">
+          {x.name}
+        </span>
+      ))}
+    </span>
+  );
+
+  const addStyle = (code: string) => {
+    if (`martial_arts:${code}` in values) return;
+    setValue(`skills.martial_arts:${code}` as Path<Character>, 1, { shouldDirty: true });
+  };
+
   const field = (key: string) => register(`skills.${key}` as Path<Character>, { valueAsNumber: true });
 
   const levelInput = (key: string) => {
@@ -136,7 +169,9 @@ export function SkillsSection({ characterId, form, skills, onChange }: SkillsSec
     const stat = <span className="text-xs text-muted-foreground">{t(`stats.${STAT_ABBR[skill.stat]}`)}</span>;
     const title = (
       <>
-        {t(skill.name_key)}
+        <SkillHint id={skill.id}>
+          <span>{t(skill.name_key)}</span>
+        </SkillHint>
         {skill.double_cost && <span className="num text-muted-foreground"> ×2</span>}
       </>
     );
@@ -158,29 +193,54 @@ export function SkillsSection({ characterId, form, skills, onChange }: SkillsSec
         <div className="flex items-center gap-2">
           <span className="flex-1">{title}</span>
           {stat}
-          <Input
-            aria-label={t("characters.skill_specialty")}
-            placeholder={t("characters.skill_specialty")}
-            className="h-7 w-40"
-            value={specialtyDraft[skill.id] ?? ""}
-            onChange={(e) => setSpecialtyDraft((d) => ({ ...d, [skill.id]: e.target.value }))}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                addSpecialty(skill.id);
-              }
-            }}
-          />
-          <Button type="button" size="xs" variant="outline" onClick={() => addSpecialty(skill.id)}>
-            {t("characters.skill_specialty_add")}
-          </Button>
+          {skill.id === "martial_arts" && styles.length > 0 ? (
+            <Select value="" onValueChange={addStyle}>
+              <SelectTrigger size="sm" className="w-44" aria-label={t("characters.skill_style_pick")}>
+                <SelectValue placeholder={t("characters.skill_style_pick")} />
+              </SelectTrigger>
+              <SelectContent>
+                {styles
+                  .filter((a) => !(`martial_arts:${a.code}` in values))
+                  .map((a) => (
+                    <SelectItem key={a.code} value={a.code}>
+                      {a.name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <>
+              <Input
+                aria-label={t("characters.skill_specialty")}
+                placeholder={t("characters.skill_specialty")}
+                className="h-7 w-40"
+                value={specialtyDraft[skill.id] ?? ""}
+                onChange={(e) => setSpecialtyDraft((d) => ({ ...d, [skill.id]: e.target.value }))}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addSpecialty(skill.id);
+                  }
+                }}
+              />
+              <Button type="button" size="xs" variant="outline" onClick={() => addSpecialty(skill.id)}>
+                {t("characters.skill_specialty_add")}
+              </Button>
+            </>
+          )}
         </div>
         {rowsOf(skill)
           .filter((key) => rowVisible(key, nameMatches))
           .map((key) => (
             <div key={key} className="flex items-center gap-2 pl-4">
               <Label htmlFor={`skills.${key}`} className="flex-1 font-normal">
-                {specialtyLabel(key)}
+                {styleOf(key) ? (
+                  <Hint label={styleHint(styleOf(key)!)}>
+                    <span>{specialtyLabel(key)}</span>
+                  </Hint>
+                ) : (
+                  specialtyLabel(key)
+                )}
               </Label>
               {levelInput(key)}
               {checkButton(key, `${t(skill.name_key)}: ${specialtyLabel(key)}`)}
@@ -255,7 +315,7 @@ export function SkillsSection({ characterId, form, skills, onChange }: SkillsSec
                 className="flex w-full items-center gap-2 p-3 text-left transition-colors hover:bg-accent/40"
               >
                 <span className="flex-1 text-xs text-muted-foreground">{t(`skill.category.${category}`)}</span>
-                {trained > 0 && <span className="num text-xs text-primary">{trained}</span>}
+                {trained > 0 && <span className="num text-xs text-emphasis">{trained}</span>}
                 <ChevronDown className={cn("size-4 text-muted-foreground transition-transform", open && "rotate-180")} />
               </button>
             </CollapsibleTrigger>

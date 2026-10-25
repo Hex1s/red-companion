@@ -33,4 +33,8 @@ quick_fix_removes_effect: boolean,
  * The injury raises the death-save penalty by 1 ("Штраф Спасброска
  * увеличивается на 1").
  */
-death_save_penalty: boolean, source: Source, };
+death_save_penalty: boolean, 
+/**
+ * Content pack the entry belongs to: `core` (the main book) or `dlc:<code>`.
+ */
+pack: string, source: Source, };

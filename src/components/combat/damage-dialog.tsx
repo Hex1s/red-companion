@@ -337,7 +337,7 @@ function DamageForm({ target, cover, injuries, onApplied, onClose }: DamageFormP
       {critical && (
         <section className="space-y-2">
           <div className="flex items-center gap-3">
-            <h4 className="text-sm font-semibold text-primary">{t("glossary.critical_injury")}</h4>
+            <h4 className="text-sm font-semibold text-emphasis">{t("glossary.critical_injury")}</h4>
             <DiceButton
               notation="2d6"
               disabled={busy || freeInjuries.length === 0}
@@ -430,7 +430,7 @@ function DiceResult({ roll }: { roll: RollResult }) {
             "cut flex h-7 w-7 items-center justify-center [--cut:4px]",
             face === roll.notation.sides &&
               roll.notation.sides === 6 &&
-              "[--cut-border:var(--primary)] text-primary",
+              "[--cut-border:var(--primary)] text-emphasis",
           )}
         >
           {face}

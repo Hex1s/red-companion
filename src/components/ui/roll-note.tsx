@@ -21,7 +21,7 @@ export function RollNote({ roll, className }: RollNoteProps) {
     <p
       className={cn(
         "num flex items-start gap-1 text-xs",
-        boom.direction === "up" ? "text-primary" : "text-state-serious",
+        boom.direction === "up" ? "text-emphasis" : "text-state-serious",
         className,
       )}
     >

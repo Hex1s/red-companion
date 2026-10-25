@@ -16,4 +16,8 @@ double_cost: boolean,
  * a martial art, an instrument): the sheet keeps one level per
  * `id:specialty` key, see `character::skill_base_id`.
  */
-specialty: boolean, source: Source, };
+specialty: boolean, 
+/**
+ * Content pack the entry belongs to: `core` (the main book) or `dlc:<code>`.
+ */
+pack: string, source: Source, };

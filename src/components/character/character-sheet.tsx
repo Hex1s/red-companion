@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { BrainCircuit, Plus, X } from "lucide-react";
+import { BrainCircuit, Plus, Stethoscope, X } from "lucide-react";
 import { useForm, type Path } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import type { Character } from "@/bindings/Character";
@@ -66,6 +66,8 @@ type CharacterSheetProps = {
   onRemoveInjury: (injuryId: string) => void;
   /** Opens the humanity loss window. */
   onLoseHumanity: () => void;
+  /** Opens the therapy window (a week with a Medtech, humanity back). */
+  onTherapy: () => void;
   /** Opens the dose window: this character (a Medtech) gives a drug they picked. */
   onAdminister: (drug: string) => void;
 };
@@ -112,6 +114,7 @@ export function CharacterSheet({
   onAddInjury,
   onRemoveInjury,
   onLoseHumanity,
+  onTherapy,
   onAdminister,
 }: CharacterSheetProps) {
   const { t } = useTranslation();
@@ -357,7 +360,7 @@ export function CharacterSheet({
             {SHEET_TABS.map(({ value, label }) => (
               <TabsTrigger key={value} value={value} className="flex-none px-3">
                 {t(label)}
-                {tabHasError(value) && <span className="ml-1 text-destructive">!</span>}
+                {tabHasError(value) && <span className="ml-1 text-destructive-text">!</span>}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -368,9 +371,18 @@ export function CharacterSheet({
           <div className="grid grid-cols-5 gap-2">
             {STAT_KEYS.map(({ key, label }) => (
               <div key={key} className="cut [--cut:6px] space-y-1 p-3">
-                <Label htmlFor={`stats.${key}`} className="text-xs text-muted-foreground">
-                  {t(`stats.${label}`)}
-                </Label>
+                <Hint
+                  label={
+                    <span className="block max-w-64 space-y-1">
+                      <span className="block font-semibold">{t(`stat_info.${label}.name`)}</span>
+                      <span className="block">{t(`stat_info.${label}.summary`)}</span>
+                    </span>
+                  }
+                >
+                  <Label htmlFor={`stats.${key}`} className="inline-block text-xs text-muted-foreground">
+                    {t(`stats.${label}`)}
+                  </Label>
+                </Hint>
                 <FieldBadge
                   error={errorText(errors.stats?.[key], {
                     min: key === "emp" || key === "luck" ? 0 : STAT_MIN,
@@ -424,10 +436,22 @@ export function CharacterSheet({
                 {t("humanity.loss_button")}
               </Button>
             </Hint>
+            <Hint label={t("humanity.therapy_hint")}>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={alive.dead || derived.humanity >= derived.max_humanity}
+                onClick={onTherapy}
+              >
+                <Stethoscope />
+                {t("humanity.therapy_button")}
+              </Button>
+            </Hint>
           </div>
           {derived.cyberpsychosis && (
             <Hint label={t("humanity.cyberpsychosis_hint")}>
-              <p className="font-display text-sm font-semibold text-state-mortal uppercase">
+              <p className="font-display text-sm font-semibold text-state-mortal-text uppercase">
                 {t("humanity.cyberpsychosis")}
               </p>
             </Hint>
@@ -449,7 +473,7 @@ export function CharacterSheet({
                 const canTreat = injury && !alive.dead && injury.treatment.length > 0;
                 return (
                   <li key={`${id}:${index}`} className="cut flex items-center gap-2 px-3 py-1.5 [--cut:4px]">
-                    <InjuryIcon id={id} className="size-5 text-primary" />
+                    <InjuryIcon id={id} className="size-5 text-emphasis" />
                     <span className="flex-1">
                       {t(`injury.${id}.name`, { defaultValue: id })}
                       {aided && (
@@ -503,7 +527,15 @@ export function CharacterSheet({
                 {t("characters.injury_add")}
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="w-80 space-y-2">
+            <PopoverContent
+              align="start"
+              className="w-80 space-y-2"
+              // Focus would land on the first icon and open its tooltip at once; keep it on the panel.
+              onOpenAutoFocus={(e) => {
+                e.preventDefault();
+                if (e.target instanceof HTMLElement) e.target.focus();
+              }}
+            >
               <p className="text-xs text-muted-foreground">{t("characters.injury_add_hint")}</p>
               {(["body", "head"] as const).map((area) => (
                 <div key={area} className="space-y-1">

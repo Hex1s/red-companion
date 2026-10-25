@@ -18,7 +18,7 @@ const buttonVariants = cva(
           "text-secondary-foreground [--cut-fill:var(--secondary)] hover:[--cut-border:var(--muted-foreground)]",
         ghost:
           "[--cut-border:transparent] [--cut-fill:transparent] hover:[--cut-fill:var(--accent)]",
-        link: "text-primary normal-case underline-offset-4 [--cut-border:transparent] [--cut-fill:transparent] hover:underline",
+        link: "text-emphasis normal-case underline-offset-4 [--cut-border:transparent] [--cut-fill:transparent] hover:underline",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",

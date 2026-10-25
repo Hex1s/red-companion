@@ -44,6 +44,7 @@ import type { UserTemplateRecord } from "@/bindings/UserTemplateRecord";
 import { SUPPORTED_LANGUAGES } from "@/i18n";
 import { status } from "@/store/status-store";
 import { useUiStore } from "@/store/ui-store";
+import { AppPath } from "@/components/layout/app-path";
 
 /** How long the "deleted — undo" message stays. */
 const UNDO_DELETE_MS = 8000;
@@ -151,6 +152,21 @@ export default function App() {
       if (ctrlK || slash) {
         e.preventDefault();
         setSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // "A" (outside a text field) toggles the quick attack reference; the physical key, so it works in any layout.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const typing = target?.closest("input, textarea, select, [contenteditable=true]") != null;
+      if (e.code === "KeyA" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && !typing) {
+        e.preventDefault();
+        const { attackRefOpen, setAttackRefOpen } = useUiStore.getState();
+        setAttackRefOpen(!attackRefOpen);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -652,7 +668,16 @@ export default function App() {
             >
               <PanelLeft className="size-4" />
             </Button>
-            <h1 className="mr-auto text-lg font-bold text-primary">{t("app.title")}</h1>
+            <AppPath
+              segments={[
+                tab,
+                tab === "characters"
+                  ? openedTemplate || openedBook
+                    ? (openedTemplate?.character.name ?? openedBook?.name ?? "")
+                    : (selected?.character.name ?? "")
+                  : "",
+              ]}
+            />
             <Button size="xs" variant="outline" onClick={() => setSearchOpen(true)}>
               <Search className="size-4" />
               {t("reference.global_button")}
@@ -704,6 +729,7 @@ export default function App() {
                   onRemoveInjury={(injuryId) => void changeInjury(shown.id, "remove", injuryId)}
                   onAdminister={(drug) => setDrugRequest({ helperId: shown.id, drug })}
                   onLoseHumanity={() => setHumanityLossTargetId(shown.id)}
+                  onTherapy={() => setTherapyTargetId(shown.id)}
                 />
                 </div>
               ) : (

@@ -52,4 +52,8 @@ description: string | null,
 /**
  * Price in eurobucks.
  */
-price: number, source: Source, };
+price: number, 
+/**
+ * Content pack the entry belongs to: `core` (the main book) or `dlc:<code>`.
+ */
+pack: string, source: Source, };

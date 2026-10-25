@@ -71,6 +71,11 @@
             "null"
           ]
         },
+        "pack": {
+          "description": "Content pack the entry belongs to: `core` (the main book) or `dlc:<code>`.",
+          "type": "string",
+          "default": "core"
+        },
         "skill_totals": {
           "description": "Skill sums as printed in the book (p. 412): linked STAT + skill level +\nmodifiers of gear and cyberware, by sheet skill key (`id` or\n`id:specialty`). The sheet's level is the sum minus the stat, see\n`NpcTemplate::to_character`.",
           "type": "object",

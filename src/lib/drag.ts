@@ -1,5 +1,5 @@
 /** Drag payload type: the id of a character dragged from the explorer onto a session, a folder or the fight. */
-export const CHARACTER_DRAG_TYPE = "application/x-red-companion-character";
+export const CHARACTER_DRAG_TYPE = "application/x-favoterm-character";
 
 /** The character id carried by a drag event, or null when it carries something else. */
 export function draggedCharacter(e: { dataTransfer: DataTransfer }): number | null {
@@ -9,7 +9,7 @@ export function draggedCharacter(e: { dataTransfer: DataTransfer }): number | nu
 }
 
 /** Drag payload type: the id of a folder dragged onto another folder or onto the library. */
-export const FOLDER_DRAG_TYPE = "application/x-red-companion-folder";
+export const FOLDER_DRAG_TYPE = "application/x-favoterm-folder";
 
 /** The folder id carried by a drag event, or null when it carries something else. */
 export function draggedFolder(e: { dataTransfer: DataTransfer }): number | null {
@@ -19,7 +19,7 @@ export function draggedFolder(e: { dataTransfer: DataTransfer }): number | null 
 }
 
 /** Drag payload type: the key of an NPC template (`book:<code>` or `custom:<id>`) dragged onto a session or the fight. */
-export const TEMPLATE_DRAG_TYPE = "application/x-red-companion-template";
+export const TEMPLATE_DRAG_TYPE = "application/x-favoterm-template";
 
 /** The template key carried by a drag event, or null when it carries something else. */
 export function draggedTemplate(e: { dataTransfer: DataTransfer }): string | null {

@@ -58,7 +58,7 @@ export function ImportDialog({ files, onImport, onOpenFolder, onClose }: ImportD
                 disabled={busy !== null}
                 onClick={() => void pick(file.name)}
               >
-                <span className="truncate">{file.name.replace(/(\.(character|session|encounters))?\.redcompanion\.json$|\.redencounters\.json$/, "")}</span>
+                <span className="truncate">{file.name.replace(/(\.(character|session|encounters))?\.(favoterm|redcompanion)\.json$|\.redencounters\.json$/, "")}</span>
                 <span className="num text-xs text-muted-foreground">
                   {new Date(file.modified_ms).toLocaleString()}
                 </span>

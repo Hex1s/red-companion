@@ -62,6 +62,7 @@ export function TemplateEditor({ record, book, notes, injuries, onUpdate, onFork
       onAddInjury={nothing}
       onRemoveInjury={nothing}
       onLoseHumanity={nothing}
+      onTherapy={nothing}
       onAdminister={nothing}
     />
   );

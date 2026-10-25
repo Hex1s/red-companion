@@ -105,6 +105,11 @@
         "name": {
           "type": "string"
         },
+        "pack": {
+          "description": "Content pack the entry belongs to: `core` (the main book) or `dlc:<code>`.",
+          "type": "string",
+          "default": "core"
+        },
         "points_per_rank": {
           "description": "Rank points the pool gains per rank (Tech takes two specialty ranks per rank, p. 147).",
           "type": "integer",

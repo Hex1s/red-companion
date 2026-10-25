@@ -6,7 +6,8 @@ use thiserror::Error;
 use ts_rs::TS;
 
 use crate::catalog::{
-    Armor, Collection, CollectionVersion, CoverMaterial, CriticalInjury, NpcTemplate, Role, Shield, Skill, Weapon,
+    Armor, Article, Collection, CollectionVersion, CoverMaterial, CriticalInjury, MartialArt, NpcTemplate, RangeTable, Role, Shield,
+    Skill, Weapon,
 };
 
 #[derive(Debug, Error)]
@@ -26,6 +27,11 @@ pub trait DataSource {
     fn skills(&self) -> DataResult<Collection<Skill>>;
     fn npc_templates(&self) -> DataResult<Collection<NpcTemplate>>;
     fn roles(&self) -> DataResult<Collection<Role>>;
+    fn martial_arts(&self) -> DataResult<Collection<MartialArt>>;
+    /// Rules summaries (collection `rules`).
+    fn articles(&self) -> DataResult<Collection<Article>>;
+    /// DV by distance and weapon class (collection `range_tables`, core).
+    fn range_tables(&self) -> DataResult<Collection<RangeTable>>;
 
     /// Versions of every collection, the "manifest" compared during sync.
     fn versions(&self) -> DataResult<Vec<CollectionVersion>> {
@@ -38,6 +44,9 @@ pub trait DataSource {
             self.skills()?.version_info(),
             self.npc_templates()?.version_info(),
             self.roles()?.version_info(),
+            self.martial_arts()?.version_info(),
+            self.articles()?.version_info(),
+            self.range_tables()?.version_info(),
         ])
     }
 }
@@ -119,6 +128,15 @@ impl DataSource for SeedDataSource {
     fn roles(&self) -> DataResult<Collection<Role>> {
         content!(self.lang, "roles")
     }
+    fn martial_arts(&self) -> DataResult<Collection<MartialArt>> {
+        content!(self.lang, "martial_arts")
+    }
+    fn articles(&self) -> DataResult<Collection<Article>> {
+        parse("rules", include_str!("../data/seed/rules.json"))
+    }
+    fn range_tables(&self) -> DataResult<Collection<RangeTable>> {
+        parse("range_tables", include_str!("../data/seed/range_tables.json"))
+    }
 }
 
 #[cfg(test)]
@@ -137,10 +155,34 @@ mod tests {
         assert_eq!(ds.npc_templates().unwrap().name, "npc_templates");
     }
 
+    /// Range tables (p. 173): invariants and the book's worked examples (p. 170 and p. 173).
+    #[test]
+    fn range_tables_match_the_book() {
+        use crate::catalog::validate_range_tables;
+        let ds = SeedDataSource::default();
+        let tables = ds.range_tables().unwrap();
+        assert_eq!(validate_range_tables(&tables, &ds.weapons().unwrap()), Ok(()));
+        let dv = |table: &str, row: &str, meters: u32| {
+            let t = tables.entries.iter().find(|t| t.id == table).unwrap();
+            let band = t.bands.iter().position(|b| (b.from..=b.to).contains(&meters)).unwrap();
+            t.rows.iter().find(|r| r.id == row).unwrap().dv[band]
+        };
+        // p. 170: assault rifle at 24 m, DV 15.
+        assert_eq!(dv("single", "assault_rifle", 24), Some(15));
+        // p. 173: assault rifle on autofire at 14 m, DV 17.
+        assert_eq!(dv("autofire", "assault_rifle", 14), Some(17));
+        // Dark "НЕТ" cells.
+        assert_eq!(dv("single", "pistol", 300), None);
+        assert_eq!(dv("single", "bow_crossbow", 300), None);
+        // Whole-table checksum guards against a mistyped cell (sum of all printed DVs).
+        let sum: u32 = tables.entries.iter().flat_map(|t| &t.rows).flat_map(|r| &r.dv).flatten().map(|&d| d as u32).sum();
+        assert_eq!(sum, 1339, "DV checksum");
+    }
+
     #[test]
     fn manifest_lists_all_collections() {
         let names: Vec<_> = SeedDataSource::default().versions().unwrap().into_iter().map(|v| v.name).collect();
-        assert_eq!(names, ["critical_injuries", "cover_materials", "armor", "shields", "weapons", "skills", "npc_templates", "roles"]);
+        assert_eq!(names, ["critical_injuries", "cover_materials", "armor", "shields", "weapons", "skills", "npc_templates", "roles", "martial_arts", "rules", "range_tables"]);
     }
 
     #[test]
@@ -164,7 +206,25 @@ mod tests {
             keys.push(e.name_key);
             keys.push(e.effect_key);
         }
-        keys.extend(ds.skills().unwrap().entries.into_iter().map(|e| e.name_key));
+        for e in ds.skills().unwrap().entries {
+            // Hint texts follow the id: `skill.summary.<id>` is required, `skill.details.<id>` is optional.
+            keys.push(format!("skill.summary.{}", e.id));
+            keys.push(e.name_key);
+        }
+        for abbr in ["INT", "REF", "DEX", "TECH", "COOL", "WILL", "LUCK", "MOVE", "BODY", "EMP"] {
+            keys.push(format!("stat_info.{abbr}.name"));
+            keys.push(format!("stat_info.{abbr}.summary"));
+        }
+        for e in ds.articles().unwrap().entries {
+            keys.push(e.name_key);
+            keys.push(e.summary_key);
+            keys.extend(e.details_key);
+        }
+
+        for t in ds.range_tables().unwrap().entries {
+            keys.push(t.name_key);
+            keys.extend(t.rows.into_iter().map(|r| r.name_key));
+        }
 
         for lang in ["ru", "en"] {
             let path = format!("{}/../../src/i18n/locales/{lang}.json", env!("CARGO_MANIFEST_DIR"));
@@ -230,6 +290,7 @@ mod tests {
         ids.extend(ds.weapons().unwrap().entries.into_iter().map(|e| e.uuid));
         ids.extend(ds.npc_templates().unwrap().entries.into_iter().map(|e| e.uuid));
         ids.extend(ds.roles().unwrap().entries.into_iter().map(|e| e.uuid));
+        ids.extend(ds.martial_arts().unwrap().entries.into_iter().map(|e| e.uuid));
         let n = ids.len();
         ids.sort();
         ids.dedup();
@@ -247,9 +308,58 @@ mod tests {
         assert_eq!(validate_weapons(&ds.weapons().unwrap(), &ds.skills().unwrap()), Ok(()));
         assert_eq!(validate_skills(&ds.skills().unwrap()), Ok(()));
         assert_eq!(validate_roles(&ds.roles().unwrap()), Ok(()));
+        assert_eq!(validate_articles(&ds.articles().unwrap()), Ok(()));
+        assert_eq!(validate_martial_arts(&ds.martial_arts().unwrap(), &ds.critical_injuries().unwrap()), Ok(()));
         assert_eq!(
             validate_npc_templates(&ds.npc_templates().unwrap(), &ds.skills().unwrap()),
             Ok(())
+        );
+    }
+
+    /// Martial arts as printed on p. 178-180: four styles with two own moves each, plus the general
+    /// move; both languages carry the same numbers.
+    #[test]
+    fn martial_arts_match_the_book() {
+        use crate::catalog::MartialArtKind;
+        let shape = |lang| {
+            SeedDataSource::new(lang)
+                .martial_arts()
+                .unwrap()
+                .entries
+                .into_iter()
+                .map(|a| {
+                    let moves: Vec<_> = a
+                        .techniques
+                        .iter()
+                        .map(|t| (t.code.clone(), t.dv, t.requires.as_ref().map(|r| (r.stat, r.min)), t.injuries.clone()))
+                        .collect();
+                    (a.code, a.kind, a.source.page, moves)
+                })
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(shape(Lang::Ru), shape(Lang::En));
+        let arts = SeedDataSource::default().martial_arts().unwrap().entries;
+        let codes: Vec<_> = arts.iter().map(|a| a.code.as_str()).collect();
+        assert_eq!(codes, ["general", "aikido", "karate", "judo", "taekwondo"]);
+        assert_eq!(arts.iter().filter(|a| a.kind == MartialArtKind::General).count(), 1);
+        assert_eq!(arts[0].techniques[0].dv, Some(13), "Return is DV 13");
+        for style in &arts[1..] {
+            assert_eq!(style.techniques.len(), 2, "{}: two own moves", style.code);
+        }
+        // Every printed DV is 15 except Return; the four stat-gated moves have none.
+        let dvs: Vec<_> = arts[1..].iter().flat_map(|a| a.techniques.iter().map(|t| (t.code.as_str(), t.dv))).collect();
+        assert_eq!(
+            dvs,
+            [
+                ("disarm", Some(15)),
+                ("iron_grip", Some(15)),
+                ("break_armor", Some(15)),
+                ("bone_crusher", None),
+                ("counter_throw", Some(15)),
+                ("escape_grab", Some(15)),
+                ("pressure_point", None),
+                ("flying_kick", None),
+            ]
         );
     }
 

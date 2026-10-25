@@ -1,6 +1,6 @@
 //! Export and import of the GM's own NPC templates and encounters as a versioned JSON file.
 //!
-//! The file has its own format and type in its name (`name.encounters.redcompanion.json`), apart
+//! The file has its own format and type in its name (`name.encounters.favoterm.json`), apart
 //! from the characters files. An encounter that uses one of the GM's own templates travels together with it: the
 //! template is stored in the same file under a file-local `key`, and the encounter line points
 //! at that key. Book templates are referenced by catalog `code` (every install has them).
@@ -18,7 +18,9 @@ use crate::data_source::{DataError, DataSource};
 use crate::encounter::{Encounter, EncounterError, EncounterRecord, TemplateSource, UserTemplateRecord};
 
 /// Value of the `format` field.
-pub const FORMAT: &str = "red-companion/encounters";
+pub const FORMAT: &str = "favoterm/encounters";
+/// The `format` value of files written before the app was renamed (Red Companion); still accepted.
+const LEGACY_FORMAT: &str = "red-companion/encounters";
 /// Current version of the file.
 pub const FILE_VERSION: u32 = 1;
 /// Most templates and encounters one file may hold (a sanity limit against runaway files).
@@ -46,7 +48,7 @@ pub struct EncountersFile {
 pub enum EncounterTransferError {
     #[error("not a valid JSON file: {0}")]
     Json(#[from] serde_json::Error),
-    #[error("this is not a Red Companion encounters file")]
+    #[error("this is not a Favoterm encounters file")]
     WrongFormat,
     #[error("unsupported file version {0}")]
     UnsupportedVersion(u32),
@@ -134,7 +136,7 @@ pub fn parse_import(
 ) -> Result<EncountersFile, EncounterTransferError> {
     // Loose check first: a file from a newer version may have another shape.
     let value: serde_json::Value = serde_json::from_str(json)?;
-    if value.get("format").and_then(|f| f.as_str()) != Some(FORMAT) {
+    if !matches!(value.get("format").and_then(|f| f.as_str()), Some(FORMAT | LEGACY_FORMAT)) {
         return Err(EncounterTransferError::WrongFormat);
     }
     if let Some(version) = value.get("schema_version").and_then(|v| v.as_u64()) {
@@ -236,6 +238,15 @@ mod tests {
         SeedDataSource::default().npc_templates().unwrap().entries[0].code.clone()
     }
 
+    #[test]
+    fn an_encounters_file_written_under_the_old_name_is_still_imported() {
+        let (t, e) = sample();
+        let json = export(t, e).unwrap();
+        assert!(json.contains(r#""format": "favoterm/encounters""#));
+        let old = json.replacen("favoterm/encounters", "red-companion/encounters", 1);
+        assert!(parse_import(&old, &SeedDataSource::default()).is_ok());
+    }
+
     fn sample() -> (Vec<(i64, NpcTier, Character)>, Vec<Encounter>) {
         let mut thug = Character::quick("Thug");
         thug.skills.insert("handgun".into(), 4);
@@ -284,7 +295,7 @@ mod tests {
         assert!(matches!(parse_import("nope", d), Err(EncounterTransferError::Json(_))));
         assert!(matches!(parse_import("{}", d), Err(EncounterTransferError::WrongFormat)));
         // A characters file is not an encounters file.
-        let characters = r#"{"format":"red-companion/characters","schema_version":1,"characters":[]}"#;
+        let characters = r#"{"format":"favoterm/characters","schema_version":1,"characters":[]}"#;
         assert!(matches!(parse_import(characters, d), Err(EncounterTransferError::WrongFormat)));
 
         let empty = export(vec![], vec![]).unwrap();

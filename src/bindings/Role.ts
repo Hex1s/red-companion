@@ -27,4 +27,8 @@ points_per_rank: number,
 /**
  * Parts of the ability that rank points are spent on; empty when the role has no point pool.
  */
-subabilities: Array<SubAbility>, source: Source, };
+subabilities: Array<SubAbility>, 
+/**
+ * Content pack the entry belongs to: `core` (the main book) or `dlc:<code>`.
+ */
+pack: string, source: Source, };

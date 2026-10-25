@@ -34,4 +34,8 @@ gear: string,
  * Printed details the sheet has no field for (role abilities, bracketed
  * alternative values, cyberdeck programs).
  */
-notes: string | null, source: Source, };
+notes: string | null, 
+/**
+ * Content pack the entry belongs to: `core` (the main book) or `dlc:<code>`.
+ */
+pack: string, source: Source, };

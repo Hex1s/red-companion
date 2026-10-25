@@ -49,7 +49,7 @@ const VERDICT_STYLE = {
   weak: "text-muted-foreground",
   fair: "text-state-ok",
   strong: "text-state-serious",
-  very_strong: "text-state-mortal",
+  very_strong: "text-state-mortal-text",
 } as const;
 
 type PendingDelete = { kind: "encounter" | "template"; id: number; name: string };

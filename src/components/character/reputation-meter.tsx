@@ -72,7 +72,7 @@ export function ReputationMeter({ value, onChange }: ReputationMeterProps) {
             className={cn(
               "num w-10 shrink-0 text-center text-2xl font-bold",
               level > 0 && "text-state-ok",
-              level < 0 && "text-destructive",
+              level < 0 && "text-destructive-text",
             )}
           >
             {level}

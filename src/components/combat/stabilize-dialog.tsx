@@ -180,7 +180,7 @@ function StabilizeForm({ target, helpers, onDone, onClose }: StabilizeFormProps)
       </div>
 
       {failed && (
-        <p className="num text-sm text-state-mortal">
+        <p className="num text-sm text-state-mortal-text">
           {failed.total} / {t("stabilize_dialog.dv")} {failed.dv} — {t("stabilize_dialog.failed")}
         </p>
       )}

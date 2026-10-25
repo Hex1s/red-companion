@@ -2,6 +2,7 @@ import { Play, Square, SkipForward, Undo2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Combat } from "@/bindings/Combat";
 import type { DamageEvent } from "@/bindings/DamageEvent";
+import { AttackReference } from "@/components/combat/attack-reference";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@/components/ui/hint";
 
@@ -36,7 +37,7 @@ export function CombatBar({
         <span className="mr-auto text-xs text-muted-foreground uppercase">
           {started ? (
             <>
-              {t("initiative.round")} <span className="num text-sm text-primary">{combat.round}</span>
+              {t("initiative.round")} <span className="num text-sm text-emphasis">{combat.round}</span>
             </>
           ) : (
             t("initiative.title")
@@ -89,6 +90,7 @@ export function CombatBar({
             )}
           </>
         )}
+        <AttackReference />
       </div>
 
       {lastDamage && <LastHit event={lastDamage} onUndo={onUndo} />}
@@ -107,7 +109,7 @@ function LastHit({ event, onUndo }: LastHitProps) {
       <div className="min-w-0 flex-1">
         <div className="truncate font-display text-xs font-semibold uppercase">{event.character_name}</div>
         <div className="num flex flex-wrap gap-x-3 text-xs">
-          <span className="text-primary">
+          <span className="text-emphasis">
             −{outcome.hp_lost} {t("scene.hp")}
           </span>
           {outcome.sp_after !== event.sp_before && (

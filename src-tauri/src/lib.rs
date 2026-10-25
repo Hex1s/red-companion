@@ -5,7 +5,7 @@ mod error;
 
 use error::CmdError;
 use rules_core::RulesInfo;
-use rules_core::catalog::{Armor, BodyArea, CriticalInjury, NpcTemplate, NpcTier, Role, Skill, Weapon};
+use rules_core::catalog::{Armor, Article, BodyArea, CriticalInjury, MartialArt, NpcTemplate, NpcTier, RangeTable, Role, Skill, Weapon};
 use rules_core::character::{Character, CharacterKind, CharacterRecord, Derived};
 use rules_core::damage::DamageOutcome;
 use rules_core::damage::WoundState;
@@ -22,7 +22,7 @@ use rules_core::scene::{
 };
 use rules_core::encounter_transfer::{self, EncountersImported, EncountersSaved};
 use rules_core::transfer::{self, ExportFile, ExportKind, ExportSaved, ExportedCharacter};
-use rules_core::healing::{self, HealApplied, HealKind, RestApplied, RestPlan};
+use rules_core::healing::{self, HealApplied, HealKind, RestApplied, RestGoal, RestPlan};
 use rules_core::humanity::{self, HumanityLossApplied, TherapyApplied, TherapyInfo, TherapyKind};
 use rules_core::catalog::TreatmentSkill;
 use rules_core::vitals::{self, DeathSaveApplied, STABILIZE_SKILLS, StabilizeApplied};
@@ -66,6 +66,21 @@ fn rules_info() -> RulesInfo {
 #[tauri::command]
 fn list_skills() -> Result<Vec<Skill>, CmdError> {
     SeedDataSource::default().skills().map(|c| c.entries).map_err(CmdError::from)
+}
+
+#[tauri::command]
+fn list_articles() -> Result<Vec<Article>, CmdError> {
+    SeedDataSource::default().articles().map(|c| c.entries).map_err(CmdError::from)
+}
+
+#[tauri::command]
+fn list_range_tables() -> Result<Vec<RangeTable>, CmdError> {
+    SeedDataSource::default().range_tables().map(|c| c.entries).map_err(CmdError::from)
+}
+
+#[tauri::command]
+fn list_martial_arts(lang: State<'_, ContentLang>) -> Result<Vec<MartialArt>, CmdError> {
+    content(&lang)?.martial_arts().map(|c| c.entries).map_err(CmdError::from)
 }
 
 #[tauri::command]
@@ -521,7 +536,7 @@ fn resolve_export(root: &std::path::Path, kind: ExportKind, name: &str) -> Optio
     }
 }
 
-/// `name.character.redcompanion.json`, or `name-2.character.redcompanion.json` and so on when it
+/// `name.character.favoterm.json`, or `name-2.character.favoterm.json` and so on when it
 /// already exists in `dir`.
 fn free_export_name(dir: &std::path::Path, name: String, suffix: &str) -> String {
     if !dir.join(&name).exists() {
@@ -1597,27 +1612,27 @@ fn administer_drug(
     Ok(rules_core::roles::DrugApplied { character: CharacterRecord::new(target_id, target), result })
 }
 
-/// Days of rest needed to reach `target_hp` (computed by the rules, nothing is changed).
+/// What a rest toward `goal` (HP to reach or days to pass) gives (computed by the rules, nothing is changed).
 #[tauri::command]
 fn rest_preview(
     state: State<'_, AppStorage>,
     id: i64,
-    target_hp: u32,
+    goal: RestGoal,
 ) -> Result<RestPlan, CmdError> {
     let character = require_character(&*lock(&state)?, id)?;
-    healing::rest_plan(&character, target_hp).map_err(CmdError::from)
+    healing::rest_plan_for(&character, goal).map_err(CmdError::from)
 }
 
-/// Rests until `target_hp` is reached; first aid wears off with the day.
+/// Rests toward `goal`; first aid wears off with the day.
 #[tauri::command]
 fn rest_character(
     state: State<'_, AppStorage>,
     id: i64,
-    target_hp: u32,
+    goal: RestGoal,
 ) -> Result<RestApplied, CmdError> {
     let storage = lock(&state)?;
     let mut character = require_character(&storage, id)?;
-    let plan = healing::rest(&mut character, target_hp)?;
+    let plan = healing::rest_for(&mut character, goal)?;
     store_character(&storage, id, &character)?;
     Ok(RestApplied { character: CharacterRecord::new(id, character), plan })
 }
@@ -1818,6 +1833,55 @@ fn undo_damage(state: State<'_, AppStorage>) -> Result<DamageApplied, CmdError> 
     Ok(DamageApplied { character, scene: SceneRecord { id: scene_id, scene } })
 }
 
+/// The database file of the app.
+const DB_FILE: &str = "favoterm.db";
+/// The data folder and database name of the app before it was renamed to Favoterm (it was Red
+/// Companion; the folder is named after the app identifier).
+const LEGACY_APP_DIR: &str = "com.user.red-companion";
+const LEGACY_DB_FILE: &str = "red-companion.db";
+
+/// Copies the data of the app under its old name (database and exports) into the new data folder,
+/// once: nothing is done when the new database already exists or there is no old one. The old
+/// folder stays untouched. The database goes last, under a temporary name, so that an interrupted
+/// copy is simply done again on the next start. True when something was copied.
+fn migrate_legacy_data(dir: &std::path::Path, legacy_dir: &std::path::Path) -> std::io::Result<bool> {
+    let target = dir.join(DB_FILE);
+    let source = legacy_dir.join(LEGACY_DB_FILE);
+    if target.exists() || !source.is_file() {
+        return Ok(false);
+    }
+    let legacy_exports = legacy_dir.join("exports");
+    if legacy_exports.is_dir() && !dir.join("exports").exists() {
+        copy_dir(&legacy_exports, &dir.join("exports"))?;
+    }
+    // A journal left by an interrupted run belongs to the database: it goes along, renamed.
+    for extra in ["-journal", "-wal", "-shm"] {
+        let from = legacy_dir.join(format!("{LEGACY_DB_FILE}{extra}"));
+        if from.is_file() {
+            std::fs::copy(&from, dir.join(format!("{DB_FILE}{extra}")))?;
+        }
+    }
+    let temporary = dir.join(format!("{DB_FILE}.migrating"));
+    std::fs::copy(&source, &temporary)?;
+    std::fs::rename(&temporary, &target)?;
+    Ok(true)
+}
+
+fn copy_dir(from: &std::path::Path, to: &std::path::Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(to)?;
+    for entry in std::fs::read_dir(from)? {
+        let entry = entry?;
+        let path = entry.path();
+        let destination = to.join(entry.file_name());
+        if entry.file_type()?.is_dir() {
+            copy_dir(&path, &destination)?;
+        } else {
+            std::fs::copy(&path, &destination)?;
+        }
+    }
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -1825,7 +1889,10 @@ pub fn run() {
         .setup(|app| {
             let dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&dir)?;
-            let storage = Storage::open(&dir.join("red-companion.db"))?;
+            if let Some(legacy) = dir.parent().map(|parent| parent.join(LEGACY_APP_DIR)) {
+                migrate_legacy_data(&dir, &legacy)?;
+            }
+            let storage = Storage::open(&dir.join(DB_FILE))?;
             let exports = dir.join("exports");
             std::fs::create_dir_all(&exports)?;
             app.manage(ExportsDir(exports));
@@ -1837,6 +1904,9 @@ pub fn run() {
             rules_info,
             set_content_lang,
             list_skills,
+            list_articles,
+            list_range_tables,
+            list_martial_arts,
             list_roles,
             administer_drug,
             skill_check,
@@ -1923,6 +1993,47 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A fresh folder under the system temp dir, removed by the test at the end.
+    fn temp_dir(tag: &str) -> std::path::PathBuf {
+        let nanos = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
+        let dir = std::env::temp_dir().join(format!("favoterm-test-{tag}-{}-{nanos}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn the_data_of_the_old_app_name_is_copied_once_and_left_in_place() {
+        let root = temp_dir("migrate");
+        let (old, new) = (root.join(LEGACY_APP_DIR), root.join("app.favoterm"));
+        std::fs::create_dir_all(old.join("exports").join("characters")).unwrap();
+        std::fs::create_dir_all(&new).unwrap();
+        std::fs::write(old.join(LEGACY_DB_FILE), b"old database").unwrap();
+        std::fs::write(old.join("exports").join("characters").join("v.character.redcompanion.json"), b"{}").unwrap();
+
+        assert!(migrate_legacy_data(&new, &old).unwrap());
+        assert_eq!(std::fs::read(new.join(DB_FILE)).unwrap(), b"old database");
+        assert!(new.join("exports").join("characters").join("v.character.redcompanion.json").is_file());
+        assert!(!new.join(format!("{DB_FILE}.migrating")).exists());
+        // The old folder is untouched.
+        assert!(old.join(LEGACY_DB_FILE).is_file());
+
+        // A second start changes nothing, even when the old data changed since.
+        std::fs::write(old.join(LEGACY_DB_FILE), b"changed").unwrap();
+        assert!(!migrate_legacy_data(&new, &old).unwrap());
+        assert_eq!(std::fs::read(new.join(DB_FILE)).unwrap(), b"old database");
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn nothing_is_migrated_without_an_old_database() {
+        let root = temp_dir("fresh");
+        let (old, new) = (root.join(LEGACY_APP_DIR), root.join("app.favoterm"));
+        std::fs::create_dir_all(&new).unwrap();
+        assert!(!migrate_legacy_data(&new, &old).unwrap());
+        assert!(!new.join(DB_FILE).exists());
+        std::fs::remove_dir_all(&root).unwrap();
+    }
 
     fn storage() -> Storage {
         Storage::open_in_memory().unwrap()

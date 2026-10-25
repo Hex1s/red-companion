@@ -1,4 +1,4 @@
-import { ChevronRight, Plus } from "lucide-react";
+import { ChevronRight, ChevronsDownUp, Plus } from "lucide-react";
 import { useState, type DragEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { CharacterKind } from "@/bindings/CharacterKind";
@@ -440,8 +440,77 @@ export function Explorer({
   const allOpen = isOpen("all", false);
   const libraryEntries = entries.filter((e) => !instanceIds.has(e.id));
 
+  // Open nodes that are on screen right now, with their nesting level (sections are level 0 and stay).
+  const visibleOpen = (): { key: string; depth: number }[] => {
+    const found: { key: string; depth: number }[] = [];
+    const walkFolder = (node: ExplorerNode, depth: number) => {
+      const key = `folder:${node.id}`;
+      if (!isOpen(key, false)) return;
+      found.push({ key, depth });
+      nodes.filter((child) => child.parent_id === node.id).forEach((child) => walkFolder(child, depth + 1));
+    };
+    if (isOpen("sessions", true)) {
+      for (const session of sessions) {
+        const key = `session:${session.id}`;
+        if (!isOpen(key, session.active)) continue;
+        found.push({ key, depth: 1 });
+        nodes.filter((child) => child.parent_id === session.id).forEach((child) => walkFolder(child, 2));
+      }
+    }
+    if (isOpen("library", true)) {
+      rootFolders.forEach((folder) => walkFolder(folder, 1));
+      if (allOpen) found.push({ key: "all", depth: 1 });
+    }
+    if (isOpen("templates", true)) {
+      if (isOpen("templates:own", true)) found.push({ key: "templates:own", depth: 1 });
+      for (const tier of TIERS) {
+        const key = `templates:${tier}`;
+        if (bookTemplates.some((x) => x.tier === tier) && isOpen(key, false)) found.push({ key, depth: 1 });
+      }
+    }
+    return found;
+  };
+  const openNodes = visibleOpen();
+  const collapseDeepest = () => {
+    const deepest = Math.max(...openNodes.map((n) => n.depth));
+    openNodes.filter((n) => n.depth === deepest).forEach((n) => setExpanded(n.key, false));
+  };
+
   return (
     <nav aria-label={t("explorer.title")} className="space-y-3">
+      <Section
+        label={t("explorer.tools")}
+        open
+        onToggle={() => {}}
+        add={[]}
+        plain
+        action={
+          <Button
+            size="icon-xs"
+            variant="ghost"
+            aria-label={t("explorer.collapse_level")}
+            title={t("explorer.collapse_level")}
+            disabled={openNodes.length === 0}
+            onClick={collapseDeepest}
+          >
+            <ChevronsDownUp className="size-4" />
+          </Button>
+        }
+      >
+        <TreeRow
+          depth={1}
+          label={t("nav.encounters")}
+          selected={tab === "encounters"}
+          onClick={actions.openEncounters}
+        />
+        <TreeRow
+          depth={1}
+          label={t("nav.rules")}
+          selected={tab === "rules"}
+          onClick={actions.openReference}
+        />
+      </Section>
+
       <Section
         label={t("explorer.sessions")}
         open={isOpen("sessions", true)}
@@ -478,21 +547,6 @@ export function Explorer({
       >
         {ownGroup()}
         {TIERS.map(tierGroup)}
-      </Section>
-
-      <Section label={t("explorer.tools")} open onToggle={() => {}} add={[]} plain>
-        <TreeRow
-          depth={1}
-          label={t("nav.encounters")}
-          selected={tab === "encounters"}
-          onClick={actions.openEncounters}
-        />
-        <TreeRow
-          depth={1}
-          label={t("nav.rules")}
-          selected={tab === "rules"}
-          onClick={actions.openReference}
-        />
       </Section>
 
       <NameDialogView
@@ -575,12 +629,14 @@ type SectionProps = {
   add: MenuEntry[];
   /** A heading without a collapse arrow. */
   plain?: boolean;
+  /** Extra control at the right end of the heading. */
+  action?: ReactNode;
   /** A folder dropped on the heading goes back to the root of the library. */
   onDropFolder?: (id: number) => void;
   children: ReactNode;
 };
 
-function Section({ label, open, onToggle, add, plain, onDropFolder, children }: SectionProps) {
+function Section({ label, open, onToggle, add, plain, action, onDropFolder, children }: SectionProps) {
   return (
     <section
       onDragOver={(e) => {
@@ -604,6 +660,7 @@ function Section({ label, open, onToggle, add, plain, onDropFolder, children }: 
           {!plain && <ChevronRight className={cn("size-3.5 transition-transform duration-150", open && "rotate-90")} />}
           <span className="truncate">{label}</span>
         </button>
+        {action}
         <MoreMenu entries={add} alwaysVisible icon={<Plus className="size-4" />} />
       </div>
       {open && <div className="animate-in fade-in-0 slide-in-from-top-1 duration-150">{children}</div>}

@@ -10,4 +10,8 @@ export type Armor = { uuid: string, code: string, name: string, sp: number,
  * Penalty to REF, DEX and MOVE (0, 2 or 4); applied once, the highest
  * of the worn armor.
  */
-penalty: number, source: Source, };
+penalty: number, 
+/**
+ * Content pack the entry belongs to: `core` (the main book) or `dlc:<code>`.
+ */
+pack: string, source: Source, };

@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Collection",
+  "description": "A versioned set of entries of one type, the unit of sync with the future API.",
+  "type": "object",
+  "properties": {
+    "entries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/MartialArt"
+      }
+    },
+    "name": {
+      "description": "Collection name, e.g. `critical_injuries`.",
+      "type": "string"
+    },
+    "version": {
+      "description": "Bumped by hand whenever the content changes.",
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "name",
+    "version",
+    "entries"
+  ],
+  "$defs": {
+    "MartialArt": {
+      "description": "A martial art with its techniques; `kind: general` holds the techniques of every style.\nServer content: texts are in the language of the server the data came from.",
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/MartialArtKind"
+        },
+        "name": {
+          "type": "string"
+        },
+        "pack": {
+          "description": "Content pack the entry belongs to: `core` (the main book) or `dlc:<code>`.",
+          "type": "string",
+          "default": "core"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "summary": {
+          "description": "One phrase: what the style is about, shown in hints.",
+          "type": "string"
+        },
+        "techniques": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Technique"
+          }
+        },
+        "uuid": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "uuid",
+        "code",
+        "name",
+        "kind",
+        "summary",
+        "techniques",
+        "source"
+      ]
+    },
+    "MartialArtKind": {
+      "description": "How a martial art plays: the general techniques every style may use, or a soft or hard style.",
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "soft",
+            "hard"
+          ]
+        },
+        {
+          "description": "Techniques open to every style; not a style to pick on the sheet.",
+          "type": "string",
+          "const": "general"
+        }
+      ]
+    },
+    "Source": {
+      "description": "Where a value comes from in the rulebook.",
+      "type": "object",
+      "properties": {
+        "page": {
+          "description": "Printed page number (PDF page minus one).",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "page"
+      ]
+    },
+    "StatKey": {
+      "description": "Stat a skill is linked to (same names as the fields of `character::Stats`).",
+      "type": "string",
+      "enum": [
+        "int",
+        "reflex",
+        "dex",
+        "tech",
+        "cool",
+        "will",
+        "luck",
+        "movement",
+        "body",
+        "emp"
+      ]
+    },
+    "StatRequirement": {
+      "description": "A stat the technique asks for (\"ВОЛЯ 8 или больше\").",
+      "type": "object",
+      "properties": {
+        "min": {
+          "type": "integer",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "stat": {
+          "$ref": "#/$defs/StatKey"
+        }
+      },
+      "required": [
+        "stat",
+        "min"
+      ]
+    },
+    "Technique": {
+      "description": "A special move of a martial art (p. 179-180). The app only shows it: the GM decides when the\ncondition is met and rolls the check.",
+      "type": "object",
+      "properties": {
+        "code": {
+          "description": "Stable id inside the style (e.g. `disarm`).",
+          "type": "string"
+        },
+        "condition": {
+          "description": "What has to be true first, as printed, in the content language; `None` when there is none.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "dv": {
+          "description": "DV of the check the move asks for, when it has one.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0
+        },
+        "effect": {
+          "description": "What the move does, in the content language.",
+          "type": "string"
+        },
+        "injuries": {
+          "description": "Critical injuries the move inflicts: ids from the critical injury table.",
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "name": {
+          "type": "string"
+        },
+        "requires": {
+          "description": "Stat threshold of the condition, when it has one.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/StatRequirement"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "code",
+        "name",
+        "effect"
+      ]
+    }
+  }
+}

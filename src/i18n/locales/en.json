@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Red Companion",
+    "title": "Favoterm",
     "subtitle": "Cyberpunk RED GM companion"
   },
   "nav": {
@@ -183,7 +183,7 @@
     "imported": "Imported characters: {{count}}.",
     "import_error": "Import failed: {{error}}",
     "export_error": "Export failed: {{error}}",
-    "select_hint": "Pick a character in the explorer on the left or on a card on the right, or create a new one.",
+    "select_hint": "Pick a character in the explorer or create a new one.",
     "kind": {
       "pc": "Player",
       "npc": "NPC"
@@ -215,7 +215,7 @@
     "sp_max": "Max SP",
     "injury_add": "Add injury",
     "injury_remove": "Remove injury",
-    "injury_add_hint": "No roll, no checks; the same injury can be added again (a second leg, a third arm). The death save penalty counts for each one.",
+    "injury_add_hint": "Repeats allowed: a second leg, a third arm.",
     "import_session": "Import session",
     "tab": {
       "general": "General",
@@ -228,7 +228,7 @@
     "derived_hint": "Derived values update after saving.",
     "load_error": "Could not load characters: {{error}}",
     "save_error": "Could not save: {{error}}",
-    "no_backend": "Storage is only available in the app (npm run tauri dev).",
+    "no_backend": "Storage is only available in the app.",
     "validation": {
       "name": "Enter a name",
       "range": "From {{min}} to {{max}}",
@@ -239,7 +239,9 @@
     "skill_specialty_remove": "Remove specialty",
     "saving": "Saving…",
     "skills_search": "Find a skill",
-    "skills_trained_only": "Trained only"
+    "skills_trained_only": "Trained only",
+    "skill_style_pick": "Add a style",
+    "skill_style_missing": "not in the database"
   },
   "skill": {
     "category": {
@@ -327,6 +329,83 @@
       "home": "Your home",
       "badlands": "Badlands",
       "chemistry": "Chemistry"
+    },
+    "summary": {
+      "concentration": "Focus and memory: retain information, ignore distractions, keep your head under pressure.",
+      "conceal_reveal_object": "Hide an object (including a weapon under clothes) or find a hidden one.",
+      "lip_reading": "Understand a conversation from lip movements at a distance.",
+      "perception": "Notice hidden things: clues, traps, people in hiding. Does not find objects hidden with Conceal/Reveal Object.",
+      "tracking": "Follow a trail using clues and tracks found earlier.",
+      "athletics": "Jumping, climbing, swimming, lifting, throwing. Includes thrown weapons.",
+      "contortionist": "Slip out of cuffs and restraints, squeeze into tight spaces.",
+      "dance": "Professional dancing.",
+      "endurance": "Withstand hardship, pain and fatigue: long stretches without food, sleep or water, harsh conditions.",
+      "resist_torture_drugs": "Resist interrogation, torture and drugs.",
+      "stealth": "Move quietly, hide, avoid detection. Others look for you with Perception.",
+      "drive_land_vehicle": "Drive and maneuver land vehicles.",
+      "pilot_air_vehicle": "Fly air vehicles.",
+      "pilot_sea_vehicle": "Pilot sea vehicles.",
+      "riding": "Ride trained animals.",
+      "accounting": "Keep and audit books, find and hide fiddled accounts.",
+      "animal_handling": "Train, care for and work with animals.",
+      "bureaucracy": "Work the bureaucracy: know whom to talk to, speed up or stall paperwork.",
+      "business": "Running a business: managing staff, purchasing, sales, marketing, supply and demand.",
+      "composition": "Write songs, articles and stories.",
+      "criminology": "Investigate crimes: fingerprints, ballistics, crime scenes, police files.",
+      "cryptography": "Encrypt messages and break ciphers.",
+      "deduction": "Draw non-obvious conclusions from a few clues, make a diagnosis.",
+      "education": "General knowledge, school level and above: reading, writing, math, history.",
+      "gambling": "Work out odds and play games of chance.",
+      "language": "Knowledge of a language. Pick the language each time you raise the skill.",
+      "library_search": "Find facts in databases, datapools and libraries.",
+      "local_expert": "Knowing an area: where to get things, where to hide, who runs what. Pick the area when you raise the skill, no bigger than one district.",
+      "science": "Scientific work: experiments, papers, testing hypotheses. Pick the field when you raise the skill (geology, math, physics, zoology, anthropology, biology, chemistry, history, ...).",
+      "tactics": "Direct a large-scale battle and anticipate the enemy.",
+      "wilderness_survival": "Survive in the wild: traps, firewood, hunting, shelters, fires.",
+      "brawling": "Fighting and grappling without weapons.",
+      "evasion": "Dodge melee attacks. With REF 8 or more also ranged attacks and explosions.",
+      "martial_arts": "A martial art. Pick the form when you raise the skill (karate, taekwondo, judo, aikido); each form is learned separately.",
+      "melee_weapon": "Fighting with melee weapons.",
+      "acting": "Play a role, disguise yourself, fake emotions, imitate voices.",
+      "play_instrument": "Playing a musical instrument, singing included. Pick the instrument when you raise the skill.",
+      "archery": "Shooting a bow or crossbow.",
+      "autofire": "Keep on target in automatic fire despite recoil.",
+      "handgun": "Shooting pistols and other light handheld weapons.",
+      "heavy_weapons": "Heavy weapons, including grenade and rocket launchers.",
+      "shoulder_arms": "Shoulder-fired weapons: rifles, shotguns.",
+      "bribery": "Bribe people: pick the approach and the sum.",
+      "conversation": "Draw information out of people without raising suspicion.",
+      "human_perception": "Read faces and body language, gauge mood, spot lies.",
+      "interrogation": "Extract information by force and pressure.",
+      "persuasion": "Persuade and influence people, individuals and crowds.",
+      "personal_grooming": "Grooming for attractiveness. Improves the odds when seducing or persuading.",
+      "streetwise": "Know where to get illegal goods, deal with criminals, stay out of trouble in bad areas.",
+      "trading": "Strike good deals with merchants and clients.",
+      "wardrobe_style": "Pick clothes and a look for the situation.",
+      "air_vehicle_tech": "Repair and maintain air vehicles.",
+      "basic_tech": "Repair simple electronics and any item that no other tech skill covers.",
+      "cybertech": "Understand, maintain and repair cyberware.",
+      "demolitions": "Plant and defuse explosives, size the charge, spot explosives.",
+      "electronics_security_tech": "Complex electronics: computers, cyberdecks, security systems, bugs, laser traps. Repair, install, bypass.",
+      "first_aid": "First aid: keep the wounded alive and treat common critical injuries.",
+      "forgery": "Make and detect forgeries: documents, artwork, IP cards.",
+      "land_vehicle_tech": "Repair and maintain land vehicles.",
+      "paint_draw_sculpt": "Draw, paint, sculpt.",
+      "paramedic": "Stabilize the wounded and treat critical injuries that need no surgery. Surgery is for Medtechs only, through their role ability.",
+      "photography_film": "Photography, film and braindance.",
+      "pick_lock": "Pick non-electronic locks and bypass non-electronic security.",
+      "pick_pocket": "Lift items from pockets unnoticed.",
+      "sea_vehicle_tech": "Repair and maintain sea vehicles.",
+      "weaponstech": "Repair and maintain weapons."
+    },
+    "details": {
+      "basic_tech": "Repair DV and time depend on the item's price category (sidebar on p. 140).",
+      "cybertech": "Repair DV and time depend on the item's price category (sidebar on p. 140).",
+      "electronics_security_tech": "Repair DV and time depend on the item's price category (sidebar on p. 140).",
+      "weaponstech": "Repair DV and time depend on the item's price category (sidebar on p. 140).",
+      "air_vehicle_tech": "Repair DV and time depend on the amount of damage (sidebar on p. 140).",
+      "land_vehicle_tech": "Repair DV and time depend on the amount of damage (sidebar on p. 140).",
+      "sea_vehicle_tech": "Repair DV and time depend on the amount of damage (sidebar on p. 140)."
     }
   },
   "scene": {
@@ -347,7 +426,7 @@
     "nobody": "Nobody",
     "add_character": "Put behind cover…",
     "leave": "Leave cover",
-    "no_backend": "The scene is only available in the app (npm run tauri dev).",
+    "no_backend": "The scene is only available in the app.",
     "load_error": "Could not load the scene: {{error}}"
   },
   "damage": {
@@ -383,7 +462,7 @@
     "injury_manual": "2d6 faces by hand",
     "injury_pick": "Pick an injury",
     "deflect": "Damage Deflection −{{value}}",
-    "deflect_hint": "Solo: the first damage of a round is lower by this much after armor (the critical +5 is not reduced). In a fight it is ticked for the first hit of the round; outside a fight the GM ticks it.",
+    "deflect_hint": "Solo: the first damage of a round is lowered by this much after armor. The critical +5 is not lowered.",
     "injury_owned": "The target already has it: another instance is added",
     "no_free_injury": "The target already has every injury of this table.",
     "apply": "Apply",
@@ -405,7 +484,7 @@
       "aimed_head_multiplier": "Aimed head shot: ×{{factor}} ({{before}} → {{after}})",
       "held_item_dropped": "The target drops one held item (attacker's choice)",
       "leg_broken": "Leg broken: the target gets \"Broken Leg\"",
-      "leg_already_broken": "The leg is already broken; a second leg is not tracked, add the injury by hand",
+      "leg_already_broken": "The leg is already broken. Add the second one as an injury by hand",
       "mortal_wound_critical": "Hit on a mortally wounded target: critical injury, death save penalty +1",
       "critical_bonus": "Critical injury: +{{amount}} damage ignoring armor",
       "hp_lost": "HP {{before}} → {{after}}",
@@ -429,7 +508,7 @@
       "leg": "Aimed shot at the leg: on penetration, Broken Leg"
     },
     "critical": "Crit",
-    "critical_hint": "Critical injury: +5 damage that ignores armor, and an injury. Two sixes on the dice mark it by themselves",
+    "critical_hint": "Critical injury: +5 damage that ignores armor, and an injury. Triggered by two sixes",
     "explosive_short": "Explosion",
     "injury_random": "Random injury (2d6)",
     "injury_default": "None picked: a random injury will be rolled",
@@ -520,10 +599,10 @@
     "edited": "EDIT",
     "reset": "Reset to the book",
     "reset_title": "Bring back the book template?",
-    "reset_body": "Your edits to “{{name}}” will be deleted and the template from the book will show again. NPCs already added to sessions stay as they are."
+    "reset_body": "Edits to “{{name}}” will be deleted and the book template returns. NPCs in sessions stay as they are."
   },
   "card": {
-    "initiative_hint": "Initiative: type the total (REF + d10) from physical dice, or press the die",
+    "initiative_hint": "Initiative: REF + d10. Type the total or press the die",
     "initiative_roll": "Roll initiative: REF {{reflex}} + d10",
     "damage": "Damage",
     "cover": "Cover",
@@ -534,11 +613,11 @@
   },
   "rail": {
     "start_hint": "Start the fight: with an empty column, everyone in the session fights",
-    "empty": "Nobody is in the fight yet. Drag characters here from the explorer or pick \"Add to fight\" in their menu. Start the fight with an empty column and the session takes part."
+    "empty": "Nobody in the fight. Drag characters from the explorer or pick \"Add to fight\" in their menu."
   },
   "crash": {
     "title": "Interface crashed",
-    "hint": "Something broke in the app window. Your data is saved in the database. Reload the window; if it happens again, restart the app.",
+    "hint": "An error in the app window. Your data is saved. Reload the window; if it repeats, restart the app.",
     "reload": "Reload"
   },
   "status": {
@@ -549,11 +628,11 @@
     "close": "Close"
   },
   "transfer": {
-    "empty_session": "No sessions to import: save one with «Export session» or drop a file into the folder.",
+    "empty_session": "No sessions to import. Save one with «Export session» or drop a file into the folder.",
     "exported_one": "Exported 1 character: {{path}}",
     "exported_many": "Exported characters: {{count}}. File: {{path}}",
     "open_folder": "Open folder",
-    "empty": "The export folder has no files. Export at least one character first.",
+    "empty": "The export folder has no files.",
     "import_title": "Import from the app folder",
     "import_hint": "Files of the export folder. Put a file from someone else into this folder.",
     "import_file": "{{name}}",
@@ -577,10 +656,10 @@
     "total_label": "Die total",
     "total_hint": "Your own d10 as a number (10s and 1s are counted at the table)",
     "apply_total": "Apply",
-    "declare": "Stabilized, no roll",
-    "declare_hint": "Stabilize without a roll: same as a success",
+    "declare": "Stabilized",
+    "declare_hint": "Count as a success",
     "result": "{{bonus}} + d10 {{die}} = {{total}} vs DV {{dv}}",
-    "declared_result": "Stabilized without a roll (DV {{dv}})",
+    "declared_result": "Stabilized (DV {{dv}})",
     "failed": "failed"
   },
   "heal": {
@@ -597,10 +676,10 @@
     "skill": "Skill",
     "dv": "DV",
     "surgery_bonus": "Surgery bonus",
-    "surgery_bonus_hint": "Surgery is a Medtech role ability, not a sheet skill: enter TECH + Medicine rank",
+    "surgery_bonus_hint": "Surgery is a Medtech role ability, not a sheet skill: TECH + Medicine rank",
     "roll": "Roll",
-    "declare": "Success without a roll",
-    "declare_hint": "Count it as a success without a roll",
+    "declare": "Success",
+    "declare_hint": "Count as a success",
     "result": "{{bonus}} + d10 {{die}} = {{total}} vs DV {{dv}}",
     "failed": "failed",
     "success_lifted": "{{name}}: the effect of {{injury}} is lifted until the end of the day.",
@@ -610,7 +689,7 @@
   },
   "rest": {
     "button": "Rest",
-    "hint": "Rest up to a target HP",
+    "hint": "Rest up to some HP or for a number of days",
     "title": "Rest",
     "target": "Recover up to, HP",
     "target_range": "Enter HP from {{min}} to {{max}}",
@@ -622,12 +701,16 @@
     "apply": "Rest",
     "done": "{{name}}: rested {{days}} d, HP {{hp}}.",
     "mortal": "A mortally wounded character must be stabilised first.",
-    "full": "HP is already full."
+    "full": "HP is already full.",
+    "mode_hp": "To HP",
+    "mode_days": "Days",
+    "days_input": "Days of rest",
+    "days_range": "Enter days from 1 to {{max}}"
   },
   "reference": {
     "pick": "Pick an entry on the left.",
     "global_title": "Reference search",
-    "global_hint": "Type part of a name or description: weapons, armor, injuries, skills, roles, NPCs.",
+    "global_hint": "Name or description: weapons, armor, injuries, skills, roles, NPCs.",
     "global_placeholder": "Search every reference…",
     "global_keys": "↑↓ choose · Enter open in section · Esc close",
     "global_button": "Search Ctrl+K",
@@ -666,7 +749,8 @@
       "notes": "Notes",
       "ranks": "Ranks",
       "level": "Level",
-      "source": "Book, p. {{page}}"
+      "source": "Book, p. {{page}}",
+      "condition": "Condition"
     },
     "title": "Reference",
     "search": "Search by name and description",
@@ -678,9 +762,10 @@
       "armor": "Armor",
       "weapons": "Weapons",
       "skills": "Skills",
-      "npc": "NPCs",
       "reputation": "Reputation",
-      "roles": "Roles"
+      "roles": "Roles",
+      "articles": "Rules",
+      "martial_arts": "Martial arts"
     },
     "eb": "eb",
     "filter": {
@@ -699,6 +784,11 @@
     "area": {
       "body": "Body",
       "head": "Head"
+    },
+    "martial_kind": {
+      "general": "General",
+      "soft": "Soft style",
+      "hard": "Hard style"
     }
   },
   "textmenu": {
@@ -715,6 +805,7 @@
     "sessions": "Sessions",
     "library": "Library",
     "tools": "Sections",
+    "collapse_level": "Collapse one level",
     "activate": "Make active",
     "export_session": "Export session",
     "open": "Open",
@@ -759,7 +850,7 @@
   },
   "encounters": {
     "tier_hint": "By stats closest to: {{tier}}",
-    "tier_hint_hint": "An estimate from stats; you pick the tier. HP {{hp}}, SP {{sp}}, best combat skill {{skill}} (STAT + level). Thresholds are fitted to the book's 10 NPCs (p. 412-416): SP 10+ lieutenant, skill 13+ mini-boss, skill 16+ or HP 50+ boss. The book prints one boss, so its thresholds are the least certain.",
+    "tier_hint_hint": "Estimate from stats: HP {{hp}}, SP {{sp}}, best combat skill {{skill}} (STAT + level). Thresholds from the book's 10 NPCs (p. 412-416): SP 10+ lieutenant, skill 13+ mini-boss, skill 16+ or HP 50+ boss. You pick the tier.",
     "tier_reason": {
       "baseline": "below the higher tiers' thresholds",
       "armor": "by SP",
@@ -770,12 +861,12 @@
     "export_all": "Export all",
     "exported": "Exported: {{encounters}} encounters, {{templates}} templates. File: {{path}}",
     "imported": "Imported: {{encounters}} encounters, {{templates}} templates",
-    "import_empty": "The export folder has no encounter files. Export at least one encounter or template first.",
+    "import_empty": "The export folder has no encounter files.",
     "title": "Encounters",
     "new": "New encounter",
     "new_title": "New encounter",
     "edit_title": "Encounter",
-    "editor_hint": "An encounter is a set of NPCs: a template and how many. \"Launch\" clones them all into the column on the right.",
+    "editor_hint": "An encounter is a set of NPCs: a template and a count. \"Launch\" adds them all to the column on the right.",
     "name": "Name",
     "notes": "Note",
     "lines": "Lineup",
@@ -790,24 +881,24 @@
     "load_error": "Could not load templates and encounters: {{error}}",
     "section_encounters": "My encounters",
     "section_templates": "My NPC templates",
-    "templates_hint": "A template appears when you open an NPC on the Characters tab and press \"Save as template\". The copy has full HP and SP and no injuries.",
+    "templates_hint": "A template is made with \"Save as template\" on an NPC. The copy has full HP and SP and no injuries.",
     "empty": "No encounters yet. Build the first one with \"New encounter\".",
     "total": "NPCs: {{count}}",
     "launch": "Launch",
     "edit": "Edit",
     "delete_title": "Delete?",
-    "delete_encounter_body": "Encounter \"{{name}}\" will be deleted. NPCs already launched into the session stay.",
-    "delete_template_body": "Template \"{{name}}\" will be deleted. In encounters that use it the line shows \"Template deleted\" and is skipped on launch.",
+    "delete_encounter_body": "Encounter \"{{name}}\" will be deleted. Launched NPCs stay.",
+    "delete_template_body": "Template \"{{name}}\" will be deleted. In encounters its line becomes \"Template deleted\" and is skipped on launch.",
     "save_as_template": "Save as template",
     "template_saved": "Template \"{{name}}\" saved",
     "launched": "NPCs launched: {{count}}",
     "launched_missing": "NPCs launched: {{count}}; skipped because of deleted templates: {{missing}}",
     "players": "Players in session: {{count}}",
-    "players_hint": "The group is the current session's player characters (PCs): encounters are compared with them.",
+    "players_hint": "The group is the current session's player characters (PCs); strength is compared to them.",
     "no_players": "No players in this session — add some to see the strength estimate.",
     "tier": "Tier",
     "strength": "Strength: {{weight}} / {{players}} · {{verdict}}",
-    "strength_hint": "Reference estimate, the GM decides. NPC weight in player slots: mook 1, lieutenant 2, mini-boss 3 (book p. 413-415: mooks match the edgerunners one to one, 1 lieutenant per 2, 1 mini-boss per 3). Boss = 6: the book gives no number, this is our estimate. Total {{weight}} against {{players}} players: up to 0.7 weak, up to 1.3 fair, up to 1.8 strong, above very strong. Own templates count by the tier you pick.",
+    "strength_hint": "Estimate. NPC weight in player slots: mook 1, lieutenant 2, mini-boss 3 (p. 413-415), boss 6 (estimate, not in the book). Total {{weight}} against {{players}} players: up to 0.7 weak, up to 1.3 fair, up to 1.8 strong, above very strong. Own templates count by the chosen tier.",
     "strength_skipped": "NPCs not counted because of deleted templates: {{count}}",
     "verdict": {
       "weak": "weak",
@@ -824,7 +915,7 @@
     "loss_apply": "Lose HUM",
     "after": "HUM after: {{from}} → {{to}}",
     "cyberpsychosis": "cyberpsychosis",
-    "cyberpsychosis_hint": "HUM below zero: emotional death, cyberpsychosis (p. 80). Symptoms: no self-preservation, disregard for others, impulsive and explosive behavior (p. 108). The app applies no penalties; the GM plays the state out.",
+    "cyberpsychosis_hint": "HUM below zero: emotional death, cyberpsychosis (p. 80). Symptoms: no self-preservation, disregard for others, impulsive and explosive behavior (p. 108).",
     "emp_now": "Current EMP",
     "emp_base": "EMP on the sheet",
     "loss_button": "Humanity loss",
@@ -841,12 +932,12 @@
     "price": "Price of the week",
     "materials": "Materials (lost on a failure)",
     "eb": "eb",
-    "therapy_note": "A Medtech cannot treat themselves. The week is spent on therapy. HUM is capped by the sheet's EMP.",
+    "therapy_note": "A Medtech cannot treat themselves. Therapy takes a week. HUM is capped by the sheet's EMP.",
     "bonus": "Medtech bonus",
-    "bonus_hint": "Rank of the Medicine ability + stat; typed in by the GM",
+    "bonus_hint": "Medicine rank + stat",
     "roll": "Roll",
-    "declare": "Success without a roll",
-    "declare_hint": "Count the check as passed without rolling (the HUM dice are still rolled)",
+    "declare": "Success",
+    "declare_hint": "Count the check as passed (the HUM dice are still rolled)",
     "faces_label": "Restoration dice",
     "faces_hint": "Faces of {{dice}} from physical dice; empty = rolled in the app",
     "faces_invalid": "Need the faces of {{dice}}, numbers 1 to 6",
@@ -862,20 +953,20 @@
     "field": "Reputation",
     "decrease": "Decrease reputation",
     "increase": "Increase reputation",
-    "field_hint": "−10 to 10; most characters have 0. Negative for cowardice and shameful deeds (p. 193). Intimidation and \"have they heard of them\" are the GM's call.",
+    "field_hint": "−10 to 10, usually 0. Negative for cowardice and shameful deeds (p. 193).",
     "validation": "From −10 to 10",
     "rule": {
       "how": {
         "name": "How it works",
-        "detail": "The GM awards reputation for deeds; a new deed replaces the old reputation only if its level is higher. On meeting a stranger, roll d10: below the level means they have heard of you (p. 193)."
+        "detail": "Awarded for deeds; a new deed replaces the old reputation if its level is higher. On meeting a stranger, roll d10: below the level means they have heard of you (p. 193)."
       },
       "negative": {
         "name": "Negative reputation",
-        "detail": "For cowardice and the like the GM may award a negative reputation: people who heard of you are not impressed, and it works against you (p. 193)."
+        "detail": "For cowardice and the like. Those who heard of you are not impressed; it works against you (p. 193)."
       },
       "intimidation": {
         "name": "Intimidation",
-        "detail": "Both sides roll COOL + Reputation + d10; if the reputation came from cowardice it counts as negative. A tie does nothing. The loser backs down or takes −2 to all actions against that opponent until they beat them once (p. 194). The app does not calculate it: the GM rolls and decides."
+        "detail": "Both roll COOL + Reputation + d10; reputation from cowardice counts as negative. A tie does nothing. The loser backs down or takes −2 to all actions against that opponent until they beat them (p. 194)."
       }
     },
     "levels": {
@@ -913,7 +1004,7 @@
     "counter_remove": "Remove counter",
     "notes": "Role notes",
     "apply_effects": "Apply the role effects",
-    "solo_effects_hint": "On: Combat Awareness points change initiative, the first damage of a round and Perception checks; the attack bonuses are hints only (hits and attack damage are not calculated). Off: the role is a reference only.",
+    "solo_effects_hint": "On: Combat Awareness points change initiative, the first damage of a round and Perception checks; attack bonuses are hints. Off: the role is a reference only.",
     "rank": "Rank",
     "rank_up": "Raise rank",
     "rank_down": "Lower rank",
@@ -923,7 +1014,7 @@
     "picks": "Picked: {{used}} of {{total}}",
     "skill_surgery": "Surgery skill",
     "skill_med_tech": "Medical Tech skill",
-    "multiclass_warning": "By the book a new role is taken at rank {{rank}}+ in all earlier ones (the GM may allow otherwise).",
+    "multiclass_warning": "A new role is taken at rank {{rank}}+ in all earlier ones (by the book).",
     "synthesis": "Synthesis: Medical Tech DV 13, doses per hour: {{doses}} (200 eb of materials)"
   },
   "drug": {
@@ -931,7 +1022,7 @@
     "give": "Give",
     "doses": "Drugs (limit used):",
     "clear": "Clear limit",
-    "hint": "Speedheal heals at once; the other drugs only mark the limit, the GM plays out the effect. A day of rest clears the daily marks, the cross clears weekly ones.",
+    "hint": "Speedheal acts at once; other drugs mark the limit. Rest clears daily marks, the cross clears weekly ones.",
     "done": "{{name}}: {{drug}} given.",
     "done_hp": "{{name}}: {{drug}}, +{{hp}} HP."
   },
@@ -1069,8 +1160,8 @@
       "bad_template_id": "Custom template “{{id}}” is invalid. Pick the template again."
     },
     "transfer": {
-      "json": "The file does not read as JSON. Pick a file exported from Red Companion.",
-      "wrong_format": "This is not a Red Companion characters file. Pick a file exported from the app.",
+      "json": "The file does not read as JSON. Pick a file exported from Favoterm.",
+      "wrong_format": "This is not a Favoterm characters file. Pick a file exported from the app.",
       "unsupported_version": "The file was made by another version of the app (format {{version}}). Update the app or export the file again.",
       "empty": "The file has no characters.",
       "invalid": "Character #{{index}} (“{{name}}”): {{cause}}",
@@ -1080,8 +1171,8 @@
       "wrong_file_kind": "The file “{{name}}” does not fit this import. Pick a file of the right type from the list."
     },
     "encounter_transfer": {
-      "json": "The file does not read as JSON. Pick a file exported from Red Companion.",
-      "wrong_format": "This is not a Red Companion encounters file. Pick a file exported from the app.",
+      "json": "The file does not read as JSON. Pick a file exported from Favoterm.",
+      "wrong_format": "This is not a Favoterm encounters file. Pick a file exported from the app.",
       "unsupported_version": "The file was made by another version of the app (format {{version}}). Update the app or export the file again.",
       "empty": "The file has no templates and no encounters.",
       "too_many": "The file has more than {{max}} templates and encounters. Split it into parts.",
@@ -1102,5 +1193,287 @@
       "out_of_range": "The reference entry “{{id}}” has a value out of range. Update the app.",
       "incomplete_injury_table": "The injury table of area “{{area}}” is incomplete. Update the app."
     }
+  },
+  "article": {
+    "combat_turn": {
+      "name": "Turn and initiative",
+      "summary": "Initiative = REF + d10. Each turn: 1 move and 1 action.",
+      "details": "A turn lasts about 3 seconds; a round is the turns of everyone in the fight.\nBefore the fight everyone rolls initiative (REF + d10) and lines up in descending order. A tie is rerolled. When the queue ends, a new round begins.\nOn your turn: 1 move (MOVE × 2, MOVE squares on the battle grid) and 1 action: attack, choke, draw or put away a shield, enter a vehicle, stand up, grab."
+    },
+    "martial_arts": {
+      "name": "Martial arts: attack and damage",
+      "summary": "2 attacks per action, at least 1 point of the skill needed. Damage ignores half the armor and depends on BODY.",
+      "details": "Attack and special moves: DEX + style skill + d10 against the opponent's DEX + Evasion + d10, or the move's DV.\nDamage ignores half of the target's armor (rounded up). Damage by BODY: up to 4 — 1d6, 5–6 — 2d6, 7–10 — 3d6, 11+ — 4d6.\nA special move needs at least 1 point in that style. General moves are open to every style, each style has two of its own. Special moves cannot be made as an aimed shot unless stated otherwise."
+    },
+    "other_damage": {
+      "name": "Fire, drowning, suffocation, electricity",
+      "summary": "Damage from fire, water, vacuum and electricity: what deals it and how it repeats.",
+      "details": "Fire: at the end of each of your turns damage straight to HP until you put yourself out with an action; armor is not ablated, damage stacks. Weak (wood) 2, strong (gasoline) 4, deadly (thermite) 6.\nDrowning: you can hold your breath for as many minutes as your BODY. After that, at the start of each turn damage equal to BODY straight to HP; it ignores armor and does not ablate it. Suffocation works the same way. In space an extra 1d6 damage to INT, REF and DEX at the end of the turn; at INT 0 the character is dead. Stat damage is undone once you can breathe again.\nElectricity: 6d6 at once, armor blocks as usual. While you stay at the source the damage repeats at the end of each of your turns, starting with the next one."
+    },
+    "attack_ranged": {
+      "name": "Ranged attack",
+      "summary": "Ranged attack: REF + weapon skill + d10 against the DV set by distance and weapon class.",
+      "details": "The attacker rolls REF + weapon skill + d10 against a DV set by distance and weapon class (the table at right). A defender with REF 8+ may dodge instead of using the table: DEX + Evasion + d10. The attacker wins; on a tie the defender wins. A hit deals damage minus armor."
+    },
+    "attack_melee": {
+      "name": "Melee attack",
+      "summary": "Melee: DEX + skill + d10 against DEX + Evasion + d10; 2 attacks per action.",
+      "details": "The attacker rolls DEX + attack skill + d10 against the defender's DEX + Evasion + d10; the defender wins ties. The target must be within 2 m. Melee weapons have ROF 2 (two attacks per action), very heavy ones ROF 1. Damage ignores half of the armor (rounded up); brawling damage depends on BODY and does not halve armor."
+    },
+    "attack_autofire": {
+      "name": "Autofire",
+      "summary": "Autofire: an action and 10 rounds, damage 2d6 × how much the DV was beaten by.",
+      "details": "Costs an action and 10 rounds (fewer is not allowed). Roll the Autofire skill against the DV from the autofire table. No aimed shots; a target with REF 8+ may dodge. On a hit, 2d6 damage is multiplied by the amount the DV was beaten by, capped by the weapon's multiplier (SMG 3, assault rifle 4). Two sixes cause a critical injury. Armor applies as usual."
+    },
+    "attack_suppression": {
+      "name": "Suppressive fire",
+      "summary": "Suppressive fire: 10 rounds; targets within 25 m in the open roll WILL + Concentration against your REF + Autofire.",
+      "details": "Costs an action and 10 rounds. Everyone within 25 m along the line of fire, in sight and out of cover, rolls WILL + Concentration + d10 against your REF + Autofire + d10. Those who fail spend their movement to reach cover; if it is not enough they must Run to get as close to cover as they can."
+    },
+    "attack_shotgun": {
+      "name": "Shotgun shell",
+      "summary": "Shotgun shell: one attack against DV 13, hits everyone within 6 m in front of the shooter.",
+      "details": "One ranged attack (REF + weapon skill + d10) against DV 13. On a hit, damage (rolled once) is dealt to everyone you can see in front of you within 6 m (3 squares). No aimed shots; targets with REF 8+ may dodge. Armor reduces damage as usual."
+    },
+    "attack_explosives": {
+      "name": "Explosives",
+      "summary": "Explosion: a 10×10 m area around the target, damage rolled once; cover protects until destroyed.",
+      "details": "An explosion hits everyone (and the terrain) in a 10×10 m area (5×5 squares) centred on the target 2×2 m square. Damage is rolled once for all. If the attack check missed its DV, the GM decides where in that area it lands. A target with REF 8+ may dodge by rolling higher than the original check and leave the zone. Behind cover the blast cannot destroy, no damage passes; if the cover is destroyed, the target takes full damage."
+    },
+    "attack_throw": {
+      "name": "Throwing",
+      "summary": "Throwing an item or grenade: DEX + Athletics + d10, up to 25 m, DV as for a grenade launcher.",
+      "details": "A ranged attack with DEX + Athletics + d10 up to 25 m; the DV comes from the grenade launcher row of the range table. A target that can dodge bullets can dodge a thrown item. A thrown melee weapon deals its damage (armor is not halved); a grenade deals what it would from a grenade launcher; improvised items deal damage as the GM decides."
+    },
+    "attack_aimed": {
+      "name": "Aimed shot",
+      "summary": "Aimed shot: the whole action and −8 to the check; the effect depends on the area.",
+      "details": "A ranged or melee attack that takes the whole action and carries a −8 penalty to the check. On a hit an area effect is added. Head: damage that gets through head armor is doubled. Held item: if at least 1 damage gets through the armor, the target drops an item of your choice, which falls in front of them. Leg: if at least 1 damage gets through the armor, the target gets the critical injury Broken Leg (if they still have unbroken legs). Autofire and shotgun shells cannot be aimed."
+    },
+    "attack_items": {
+      "name": "Items and reloading",
+      "summary": "Taking a ready weapon into a free hand and dropping it are not actions; stowing it, drawing a shield and reloading are.",
+      "details": "Taking a readily available weapon into a free hand is not an action. Dropping a weapon is not an action, but putting it away is. Drawing or stowing a shield is an action too. Reloading takes an action: the whole magazine is replaced, and its ammo must be of one type — types cannot be mixed."
+    },
+    "attack_brawl": {
+      "name": "Brawling",
+      "summary": "Brawling: the Brawling skill, damage by BODY — 1d6 (≤4), 2d6 (5–6), 3d6 (7–10), 4d6 (11+).",
+      "details": "An attack with the Brawling skill. Damage depends on the attacker's BODY: 4 or less — 1d6, 5–6 — 2d6, 7–10 — 3d6, 11 or more — 4d6. With a cyberarm 2d6 applies already at BODY 4–6, and brawling damage is never below 2d6. The same skill is used to grapple and to resist a grapple. Unlike melee weapons, punches do not ignore half of the armor."
+    },
+    "attack_grapple": {
+      "name": "Grapple",
+      "summary": "Grapple: DEX + Brawling + d10 against the target; both grapplers get −2 to all actions.",
+      "details": "An action to grab an opponent, snatch an item they hold, or break free. A free hand is required. The attacker and the target within reach roll DEX + Brawling + d10. The winner may grab the target or snatch an item with a free hand. Both grapplers get −2 to all actions; the defender cannot move on their own and is dragged along when the attacker moves. No two-handed weapons can be used in a grapple. The attacker can let go at any time without an action; to break the hold, the defender or another character spends an action on the same check against the attacker. A grapple is required for choking and throwing a person."
+    },
+    "attack_choke": {
+      "name": "Choke",
+      "summary": "Choke a grappled target: BODY damage ignoring armor; never drops to 0 HP; 3 rounds in a row — unconscious.",
+      "details": "An action during a grapple: the held target takes damage equal to your BODY. The damage ignores armor and does not ablate it. If it would take the target to 0 HP, the target is left with 1 HP and falls unconscious. Choking the same target for 3 rounds knocks them unconscious regardless of HP."
+    },
+    "attack_throw_person": {
+      "name": "Throwing a person",
+      "summary": "Throw a grappled target to the ground: BODY damage ignoring armor; the grapple ends, the target is prone.",
+      "details": "An action against a grappled opponent: throwing them to the ground deals damage equal to your BODY. The damage ignores armor and does not ablate it. The grapple ends (both are free of the −2), and the target is prone and cannot move until they spend an action to stand up. Throwing an item is a separate card."
+    },
+    "combat_actions": {
+      "name": "Combat actions",
+      "summary": "In your turn: 1 move and 1 action from the list — attack, grapple, choke, stabilize, use a skill, etc.",
+      "details": "Main actions: move (MOVE × 2 m, on a grid MOVE squares); attack (melee or ranged); choke a grappled target; draw or stow a shield; get into a vehicle; stand up from prone; grapple; hold an action (name a place in the initiative queue or an event after which it triggers, the action itself and its target; within the round); human shield (use a grappled opponent); reload (the whole magazine, ammo of one type); run (an extra move, only if you already moved this turn); start a vehicle (take its MOVE and rise to the top of the initiative queue); stabilize a target (p. 222); throw a grappled opponent to the ground or throw an item; NET actions (p. 197); use an item (handling without a skill; taking a weapon into a free hand and dropping it to the floor take no action, stowing it in a belt does); use a skill (a small task takes an action, a large one several 3-second turns, the check is made at the end); vehicle maneuvering (concentrate on a dangerous maneuver)."
+    },
+    "combat_movement": {
+      "name": "Movement and splitting a turn",
+      "summary": "Movement: MOVE × 2 m (MOVE squares on a grid, diagonals included); no moving while prone until you stand; movement can be split by an action.",
+      "details": "Movement is MOVE × 2 meters or MOVE squares on a grid, diagonals included; on a grid you cannot stop between squares. While prone you cannot move until you spend the Stand Up action. Movement can be split: take your action in the middle of a move and continue afterwards. ROF 2 attacks split too: move, shoot, move, shoot; you can make one attack with each of two ROF 2 items at different points of the path. ROF 1 attacks take the whole attack action, but movement before and after them can be split. You cannot make more than two attacks per turn however many weapons you hold, and cannot attack with two ROF 1 weapons in one action. Swimming, climbing and running jumps cost 2 m of movement per meter (2 squares per square); a standing jump covers half the distance of a running jump. For falling and drowning see p. 180."
+    },
+    "damage_taking": {
+      "name": "Taking damage",
+      "summary": "Damage minus the armor SP of that location; the rest comes off HP; if anything got through, the armor SP drops by 1.",
+      "details": "The attacker rolls damage. The SP of your armor at the hit location (the body unless a head shot was aimed) is subtracted from it, and the remainder is taken from your HP. If any damage got through (and only then), the armor at that location loses 1 SP until repaired. Poison and fire bypass armor."
+    },
+    "wound_states": {
+      "name": "Wound states",
+      "summary": "Light — HP below max; serious — below half (−2 to all actions); mortal — below 1 HP (−4 to all actions, −6 MOVE).",
+      "details": "Each next threshold replaces the effect of the previous one. Lightly wounded: HP below full, no effect, stabilization DV 10. Seriously wounded: below half HP (rounded up), −2 to all actions, DV 13. Mortally wounded: below 1 HP, −4 to all actions, −6 MOVE (minimum 1); a Death Save is made at the start of each of your turns; every hit on a mortally wounded target causes a critical injury and raises the Death Save penalty by 1; stabilization DV 15 — the target returns to 1 HP but is unconscious for a minute. Dead: a failed Death Save, no coming back."
+    },
+    "armor_rules": {
+      "name": "Armor and SP",
+      "summary": "One SP per location — the highest worn; the REF/DEX/MOVE penalty is taken once, from the heaviest armor.",
+      "details": "Armor is worn on the body and the head, and SP is tracked per location. The SP of several pieces on one location does not stack: the highest applies, and all worn protection on that location is damaged together. Heavy armor lowers REF, DEX and MOVE by the highest penalty among the pieces worn; it is applied once even with armor on both body and head, and can fully immobilize a character with MOVE 0."
+    },
+    "critical_hits": {
+      "name": "Critical injuries",
+      "summary": "Two sixes on the damage dice — a critical injury and 5 damage that bypasses armor.",
+      "details": "If two or more of the damage dice of a melee or ranged attack show a 6, a critical injury is caused. Roll 2d6 on the table (body, or head for an aimed head shot) until you get an injury the target does not already have. Every injury has its effect and deals 5 bonus damage straight to HP: it does not damage armor and does not depend on the hit location. The injury and the bonus apply even if only part of the damage got through the SP. First aid and treatment — p. 223."
+    },
+    "cover_rules": {
+      "name": "Cover",
+      "summary": "You are in cover when fully behind something that can stop a bullet; cover has HP.",
+      "details": "You are in cover if you are entirely behind something that can stop a bullet; if you can be seen, there is no cover. There is no partial cover: it either stops a bullet or it does not, and then it has no HP. An enemy can move to get a line of sight or destroy the cover (a grenade, for example). A 2 × 2 m section (1 square) has HP by material and thickness and takes damage like a target; at 0 HP the cover is destroyed, and excess damage is dissipated and does not reach those behind it (explosives are the exception, p. 174). Thin cover can be shifted a little, thick cover only with special equipment or at BODY 10+. Metal cannot be damaged by martial arts or brawling except with a cyberarm or at BODY 10+."
+    },
+    "shields": {
+      "name": "Shields",
+      "summary": "A shield is mobile cover: it takes all the damage on its HP, but you cannot also dodge the attack.",
+      "details": "Drawing or stowing a shield is an action; the hand holding it is busy. While the shield has HP you are in cover. When a target you can see attacks you, you may shield yourself: you cannot dodge then, although the attacker can still miss. The shield takes all the damage on its HP; at 0 HP it is destroyed (a non-organic one can be repaired) and is no cover, but stays in your hand until you spend an action to drop it. Bulletproof shield: 10 HP."
+    },
+    "human_shield": {
+      "name": "Human shield",
+      "summary": "A grappled enemy as cover: takes an action; he cannot dodge, and he does not protect from aimed head shots.",
+      "details": "If you hold an opponent in a grapple and the same hand is free (no shield), spend an action to use him as a human shield: while you hold him, you are in cover. You can cover yourself with him against a ranged attack not aimed at your head; he does not protect against aimed head shots (melee or ranged). A human shield cannot dodge ranged attacks, even with REF 8+. A hit damages him like any person. If he dies, he becomes a shield with HP equal to his BODY in life. To stop, end the grapple (no action); dropping the corpse takes an action, like other shields."
+    },
+    "death_save": {
+      "name": "Death Save",
+      "summary": "A mortally wounded character rolls a d10 at the start of the turn: up to BODY — alive; a 10 always fails; the penalty rises by 1.",
+      "details": "If you are mortally wounded, roll a d10 at the start of each of your turns. A result within your BODY means you live and act as usual. A 10 automatically fails the save. Each save raises the penalty by 1 (the next one is made with +1), and it keeps building until you are stabilized to 1 HP; then it resets to its base value, which critical injuries raise. Fail once and you are dead. Every hit on a mortally wounded character causes a new critical injury and also raises the penalty by 1."
+    },
+    "stabilization": {
+      "name": "Stabilization",
+      "summary": "TECH + First Aid or Paramedic + d10 against DV 10 / 13 / 15 (light / serious / mortal wound).",
+      "details": "Stabilizing is an action; roll TECH + First Aid or Paramedic + d10. The DV depends on the target's wound: light — 10, serious — 13, mortal — 15. You may stabilize yourself or another. A mortally wounded target gets 1 HP at once on success and is unconscious for exactly one minute; while unconscious they make Death Saves if mortally wounded again. To start natural recovery, the patient must be stabilized first."
+    },
+    "natural_healing": {
+      "name": "Natural recovery",
+      "summary": "After stabilization — BODY HP per full day of rest; break the rest and the day is lost and a new stabilization is needed.",
+      "details": "A stabilized target regains HP equal to BODY for each full day of rest: spending most of the day at rest with only light activity, until at full HP. If the rest is broken, no HP is regained that day, the wounds reopen, and the target must be stabilized again to resume the process."
+    },
+    "healing_skills": {
+      "name": "Healing skills",
+      "summary": "Four skills: Cybertech, First Aid, Paramedic (×2), Surgery — each with its own range of tasks.",
+      "details": "Cybertech is not used for stabilization: it repairs and \"treats\" injuries to implants (cyberlimbs, cybereyes). First Aid stabilizes and quickly removes the most common injuries; everyone has it, always trained to at least +2. Paramedic (×2) stabilizes and treats almost every critical injury except the most severe; everyone can learn it, but it is costly. Surgery treats even the deadliest injuries; only Medtechs have it, through their Medicine role ability."
+    },
+    "injury_treatment": {
+      "name": "Treating critical injuries",
+      "summary": "First aid removes the effect until the end of the day (1 minute, can be done on yourself); treatment removes it for good (4 hours, not on yourself).",
+      "details": "There are two ways to deal with a critical injury. First aid removes the effect until the end of the day; an attempt takes a minute and you can help yourself. Treatment removes the effect permanently; each attempt takes four hours and you cannot treat yourself. The skills and DVs needed are in the injury table; the most severe injuries need Surgery. If the injury hits a body part replaced by an implant (cyberarm, cyberleg, cybereye), the effect and bonus damage still apply, but it can be repaired with Cybertech instead of First Aid, Paramedic or Surgery, at the same DV and in the same time."
+    },
+    "hospital_costs": {
+      "name": "A hospital visit",
+      "summary": "You pay only for the highest DV of stabilization or treatment of the visit: 50 / 100 / 500 / 1000 eb; a bed is 100 eb a night.",
+      "details": "When you check into a hospital, you pay only for the highest stabilization or treatment DV needed during the visit: DV 10 — 50 eb (Costly), DV 13 — 100 eb (Premium), DV 15 — 500 eb (Expensive), DV 17 and up — 1000 eb (Very Expensive). Everything else needed for recovery is included. You normally leave the same day; a bed costs 100 eb (Premium) a night. An unpaid bill can be put off until the start of next month, but collection agents come for non-payers."
+    },
+    "medical_replacements": {
+      "name": "Spare parts and the bodybank",
+      "summary": "A lost body part is replaced by a clone or a medical-grade implant (50 eb): no slots, no humanity loss.",
+      "details": "If a body part is lost to a critical injury, the hospital replaces it with a clone grown from the patient's own tissue or a medical-grade cyberimplant. Cloned limbs are included in the hospital visit price (the Bodybank). Buying your own limb to keep in storage \"just in case\" costs 50 eb (Costly). A medical-grade implant restores full function and nothing else: it has no upgrade slots and does not count as a cyberweapon. It causes no humanity loss. A patient who wants a full cybernetic replacement first pays for the Treatment of the injury, then for the implant itself."
+    },
+    "cyberware_install": {
+      "name": "Installing cyberware",
+      "summary": "Medtech only: Mall — DV 13, 100 eb; Clinic — DV 15, 500 eb; Hospital — DV 17, 1000 eb.",
+      "details": "Only a Medtech with Surgery can perform the installation, and not on themselves unless the installation site is a Mall. DV and price depend on the site: Mall — DV 13, 100 eb (Premium); Clinic — DV 15, 500 eb (Expensive); Hospital — DV 17, 1000 eb (Very Expensive). Extracting cyberware from a corpse takes Surgery against the same DV. A failure destroys the implant. The patient bears the humanity loss of the installation."
+    },
+    "humanity": {
+      "name": "Humanity",
+      "summary": "HUM = EMP × 10; when the tens digit of HUM changes, EMP drops to the tens of HUM.",
+      "details": "Empathy is a STAT, and each point of EMP gives 10 points of Humanity: with EMP 5 you have 50 HUM. Humanity is lost mostly by installing cyberware. Whenever the tens digit changes (for example from 50 to 46), EMP drops to the tens of HUM (from 5 to 4). Losing humanity means losing empathy for others and the instinct for self-preservation; the extreme form is cyberpsychosis. Replacing a lost body part with a clone or a medical-grade implant does not reduce humanity."
+    },
+    "humanity_trauma": {
+      "name": "Psychic trauma",
+      "summary": "Severe events cost humanity: 1d6 for a one-off shock, 2d6 for prolonged stress.",
+      "details": "Humanity is lost not only to implants but also to strong, traumatic events; the GM decides. A traumatic physical event (torture) — 1d6. A traumatic psychological event (you witness a particularly horrible death or mutilation) — 1d6. Long-term psychic stress (abduction, imprisonment, prolonged abuse) — 2d6. Long-term stressors in your life (facing starvation, living in a war zone, a month of constant danger) — 2d6."
+    },
+    "therapy": {
+      "name": "Therapy",
+      "summary": "A week of therapy, a Medical Tech check: addiction — DV 15; standard — DV 15, 2d6 HUM; extreme — DV 17, 4d6 HUM.",
+      "details": "Therapy is run by a Medtech (the Medical Tech skill from the Medicine ability): a week during which doctor and patient do nothing else, ending with a roll against the therapy DV. A failure wastes the week. A Medtech cannot treat themselves. Addiction: 1000 eb, DV 15, materials worth 500 eb; clears one addiction, but for a year after therapy you automatically fail attempts to resist the secondary effect of that same source. Standard humanity loss: 500 eb, DV 15, materials worth 100 eb; restores 2d6 HUM. Extreme: 1000 eb, DV 17, materials worth 500 eb; restores 4d6 HUM. Humanity cannot be fully restored without removing cyberware: each installed piece lowers the maximum by 2, each piece of borgware by 4, and implants with zero impact do not reduce it. A hospital night costs 100 eb."
+    },
+    "skill_checks": {
+      "name": "Skill checks",
+      "summary": "STAT + skill + d10 against the task's DV, or against the opponent's STAT + skill + d10; the defender wins ties.",
+      "details": "When the outcome is uncertain, make a skill check. There are two ways. Opposed: you roll STAT + skill + d10 against the opponent's matching STAT + skill + d10; their result is the DV, and the defender wins ties. Against difficulty: the GM rates the task on the DV table, and you roll STAT + skill + d10 and must beat the DV. STAT + skill together are called the skill total. If a task is obviously easy, no roll is needed."
+    },
+    "task_dv": {
+      "name": "Task difficulty (DV)",
+      "summary": "DV: simple 9, everyday 13, difficult 15, professional 17, heroic 21, incredible 24, legendary 29.",
+      "details": "The GM picks a DV from the table. Simple — 9 (most people can do it without thinking). Everyday — 13 (most people without special training). Difficult — 15 (hard without training or natural talent). Professional — 17 (needs real training, professional level). Heroic — 21 (a feat only the best of the best manage, star level). Incredible — 24 (a huge feat; you become one of the best of your class). Legendary — 29 (people will talk about it for years)."
+    },
+    "roll_crits": {
+      "name": "Critical success and failure",
+      "summary": "A natural 10 on the d10 — roll another d10 and add it; a natural 1 — roll another d10 and subtract it; repeats do not chain.",
+      "details": "If the d10 shows a 10, it is a critical success: roll another d10 and add it to the first roll; a second 10 does not give another critical success. If it shows a 1, it is a critical failure: roll another d10 and subtract it from STAT + skill + the first roll; a second 1 does not give another critical failure. Despite the names, a character can succeed after a critical failure, and a high DV can beat a critical success."
+    },
+    "roll_modifiers": {
+      "name": "Roll modifiers",
+      "summary": "The GM subtracts a penalty: poor light and a first attempt −1; hard task, no tools, stress −2; exhaustion, intoxication, stealth, smoke −4.",
+      "details": "External conditions give a modifier subtracted from the roll; they stack. Examples: night or poor light −1; never done it before −1; a complicated task −2; no tools or parts −2; slept badly the night before −2; stressful conditions −2; exhausted −4; drunk or on drugs −4; having to act covertly −4; smoke or darkness hampering the task −4. Positive modifiers come from gear, implants, abilities and drugs."
+    },
+    "check_options": {
+      "name": "Retries, related skills, time, luck",
+      "summary": "No repeats without a change; related skill +1, 4× time +1, no skill — only the STAT; Luck +1 per point.",
+      "details": "After a failure you cannot retry until your odds improve: more time, a better tool, or a related-skill check. Related skill: at the GM's discretion a good roll in another skill (possibly by another character) gives +1 to the next attempt; the bonus applies once and bonuses from different related skills do not stack. Extra time: +1 if the task takes 4 times longer. No skill: roll only the STAT + d10. Luck: before a roll you may spend Luck points (their number equals LUCK, refreshed at the start of each session), each giving +1."
+    },
+    "scale_and_movement": {
+      "name": "Distance, time and speed",
+      "summary": "Meters and yards are equal; a square is 2 m; reach is 2 m; a turn is ≈ 3 seconds; walking 4 km/h, running 11 km/h.",
+      "details": "All distances are measured in meters and yards (treated as equal). On a grid one square is 2 meters. Reach is 2 m: you can touch what is within arm's length and need a tool or weapon for the rest. You can interact with what you can see with the naked eye or through a scope. There are three scales of movement: narrative (speed in km/h), figurative (comparing the MOVE of two moving bodies) and literal (meters in combat: MOVE × 2 m or MOVE squares). Human speed per the book: walking 2.5 mph (4 km/h), running 5 mph (11 km/h, as printed). Time: roleplay time runs as in life; combat time is divided into turns of ≈ 3 seconds, and a round is a turn of every participant."
+    }
+  },
+  "stat_info": {
+    "INT": {
+      "name": "Intelligence",
+      "summary": "How smart you are: quick wits, awareness, perception, the ability to learn."
+    },
+    "WILL": {
+      "name": "Willpower",
+      "summary": "Determination, resistance to danger and stress, endurance of hardship. Affects HP."
+    },
+    "COOL": {
+      "name": "Cool",
+      "summary": "Making an impression and influencing people, conduct in social situations."
+    },
+    "EMP": {
+      "name": "Empathy",
+      "summary": "Attitude to other people, care for them, taking their view into account. Softens the effects of cyberpsychosis."
+    },
+    "TECH": {
+      "name": "Technique",
+      "summary": "Handling tools and devices. Not the same as Reflexes."
+    },
+    "REF": {
+      "name": "Reflexes",
+      "summary": "Reaction time and coordination for aiming and throwing. Affects hitting with ranged weapons."
+    },
+    "LUCK": {
+      "name": "Luck",
+      "summary": "Points that raise a roll. They refill at the start of the next game session."
+    },
+    "BODY": {
+      "name": "Body",
+      "summary": "Size, stamina, the ability to survive and stay conscious. Affects HP."
+    },
+    "DEX": {
+      "name": "Dexterity",
+      "summary": "General fitness: jumping, balance, fighting. Affects hitting with melee weapons and dodging."
+    },
+    "MOVE": {
+      "name": "Movement",
+      "summary": "Speed of movement: running, jumping, swimming."
+    }
+  },
+  "range_table": {
+    "single": "Single shot",
+    "autofire": "Autofire"
+  },
+  "range_row": {
+    "pistol": "Pistol",
+    "smg": "SMG",
+    "shotgun_slug": "Shotgun (slug)",
+    "assault_rifle": "Assault rifle",
+    "sniper_rifle": "Sniper rifle",
+    "bow_crossbow": "Bow / crossbow",
+    "grenade_launcher": "Grenade launcher",
+    "rocket_launcher": "Rocket launcher"
+  },
+  "attackRef": {
+    "title": "Attack reference",
+    "weapons": "Weapons",
+    "modes": "Modes and actions",
+    "single": "Single shot",
+    "autofire": "Autofire",
+    "distance": "Distance, m",
+    "dv": "DV",
+    "impossible": "no shot",
+    "noRow": "This table has no such weapon",
+    "note": "Reference only: the GM decides hits.",
+    "pickHint": "Pick a weapon or a mode",
+    "page": "p. {{page}}"
   }
 }

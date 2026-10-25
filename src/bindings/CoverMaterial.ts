@@ -19,4 +19,8 @@ code: string,
 /**
  * Material name in the content language.
  */
-name: string, thickness: CoverThickness, hp: number, source: Source, };
+name: string, thickness: CoverThickness, hp: number, 
+/**
+ * Content pack the entry belongs to: `core` (the main book) or `dlc:<code>`.
+ */
+pack: string, source: Source, };

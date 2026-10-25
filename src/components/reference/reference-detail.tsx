@@ -1,22 +1,10 @@
+import { useSkillText } from "@/components/character/skill-hint";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { CriticalInjury } from "@/bindings/CriticalInjury";
-import type { Stats } from "@/bindings/Stats";
 import type { TreatmentOption } from "@/bindings/TreatmentOption";
 import { weaponSkillName, type RefEntry } from "@/lib/reference-entries";
-
-const STAT_ORDER: { key: keyof Stats; label: string }[] = [
-  { key: "int", label: "INT" },
-  { key: "reflex", label: "REF" },
-  { key: "dex", label: "DEX" },
-  { key: "tech", label: "TECH" },
-  { key: "cool", label: "COOL" },
-  { key: "will", label: "WILL" },
-  { key: "luck", label: "LUCK" },
-  { key: "movement", label: "MOVE" },
-  { key: "body", label: "BODY" },
-  { key: "emp", label: "EMP" },
-];
+import { STAT_ABBR } from "@/lib/stat-abbr";
 
 type FieldProps = { label: string; children: ReactNode };
 
@@ -34,7 +22,7 @@ function Field({ label, children }: FieldProps) {
 function Big({ label, children }: FieldProps) {
   return (
     <div className="cut shrink-0 px-4 py-2 text-center [--cut:6px]">
-      <div className="num font-display text-3xl leading-none font-bold text-primary">{children}</div>
+      <div className="num font-display text-3xl leading-none font-bold text-emphasis">{children}</div>
       <div className="mt-1 text-xs text-muted-foreground uppercase">{label}</div>
     </div>
   );
@@ -109,12 +97,31 @@ function InjuryCard({ injury }: { injury: CriticalInjury }) {
   );
 }
 
+function SkillText({ id }: { id: string }) {
+  const { summary, details } = useSkillText(id);
+  return (
+    <>
+      {summary && <p className="text-sm">{summary}</p>}
+      {details && <p className="text-sm text-muted-foreground">{details}</p>}
+    </>
+  );
+}
+
 /** The detail card of one reference entry: a layout per section, not a generic text blob. */
 export function ReferenceDetail({ entry }: { entry: RefEntry }) {
   const { t } = useTranslation();
 
   const body = (() => {
     switch (entry.section) {
+      case "articles": {
+        const a = entry.item;
+        return (
+          <>
+            <Header name={t(a.name_key)} subtitle={t(a.summary_key)} />
+            {a.details_key && <p className="text-sm whitespace-pre-line">{t(a.details_key)}</p>}
+          </>
+        );
+      }
       case "injuries":
         return <InjuryCard injury={entry.item} />;
       case "cover": {
@@ -192,74 +199,44 @@ export function ReferenceDetail({ entry }: { entry: RefEntry }) {
         return (
           <>
             <Header name={t(s.name_key)} subtitle={t(`skill.category.${s.category}`)} />
+            <SkillText id={s.id} />
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <Field label={t("reference.detail.stat")}>{t(`stats.${s.stat}`)}</Field>
+              <Field label={t("reference.detail.stat")}>{t(`stats.${STAT_ABBR[s.stat]}`)}</Field>
               <Field label={t("reference.detail.cost")}>{s.double_cost ? "×2" : "×1"}</Field>
             </div>
             {s.specialty && <p className="text-sm text-muted-foreground">{t("reference.detail.specialty")}</p>}
           </>
         );
       }
-      case "npc": {
-        const n = entry.item;
-        const skills = Object.entries(n.skill_totals).sort(([, a], [, b]) => b - a);
+      case "martial_arts": {
+        const m = entry.item;
         return (
           <>
-            <Header
-              name={n.name}
-              subtitle={t(`npc.tier.${n.tier}`)}
-              big={
-                <Big label={t("reference.detail.armor_sp")}>
-                  {n.armor_head_sp}/{n.armor_body_sp}
-                </Big>
-              }
-            />
-            <div className="grid grid-cols-5 gap-2">
-              {STAT_ORDER.map(({ key, label }) => (
-                <Field key={key} label={t(`stats.${label}`)}>
-                  <span className="font-bold">{n.stats[key]}</span>
-                </Field>
+            <Header name={m.name} subtitle={t(`reference.martial_kind.${m.kind}`)} />
+            <p className="text-sm">{m.summary}</p>
+            <div className="space-y-3">
+              {m.techniques.map((x) => (
+                <section key={x.code} className="cut space-y-2 p-3 [--cut:6px]">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="text-sm">{x.name}</h4>
+                    {x.dv !== null && (
+                      <Chip>
+                        {t("reference.detail.dv")} <span className="num font-bold">{x.dv}</span>
+                      </Chip>
+                    )}
+                    {x.injuries.map((id) => (
+                      <Chip key={id}>{t(`injury.${id}.name`)}</Chip>
+                    ))}
+                  </div>
+                  {x.condition && (
+                    <p className="text-sm text-muted-foreground">
+                      {t("reference.detail.condition")}: {x.condition}
+                    </p>
+                  )}
+                  <p className="text-sm">{x.effect}</p>
+                </section>
               ))}
             </div>
-            <Block title={t("reference.detail.armor")}>
-              <p className="text-sm">{n.armor_name}</p>
-            </Block>
-            {n.weapons.length > 0 && (
-              <Block title={t("reference.detail.weapons")}>
-                <ul className="space-y-0.5 text-sm">
-                  {n.weapons.map((w) => (
-                    <li key={w.name}>
-                      {w.name} — <span className="num font-bold">{w.damage}</span>
-                    </li>
-                  ))}
-                </ul>
-              </Block>
-            )}
-            {skills.length > 0 && (
-              <Block title={t("reference.detail.skills")}>
-                <div className="flex flex-wrap gap-2">
-                  {skills.map(([key, total]) => {
-                    const [id, specialty] = key.split(":");
-                    return (
-                      <Chip key={key}>
-                        {t(`skill.items.${id}`, { defaultValue: id })}
-                        {specialty ? ` (${specialty})` : ""} <span className="num font-bold">{total}</span>
-                      </Chip>
-                    );
-                  })}
-                </div>
-              </Block>
-            )}
-            {n.gear && (
-              <Block title={t("reference.detail.gear")}>
-                <p className="text-sm">{n.gear}</p>
-              </Block>
-            )}
-            {n.notes && (
-              <Block title={t("reference.detail.notes")}>
-                <p className="text-sm whitespace-pre-line">{n.notes}</p>
-              </Block>
-            )}
           </>
         );
       }
@@ -277,7 +254,7 @@ export function ReferenceDetail({ entry }: { entry: RefEntry }) {
                 <ol className="divide-y border text-sm">
                   {r.ranks.map((n) => (
                     <li key={n.rank} className="flex gap-3 px-3 py-1.5">
-                      <span className="num w-5 shrink-0 font-bold text-primary">{n.rank}</span>
+                      <span className="num w-5 shrink-0 font-bold text-emphasis">{n.rank}</span>
                       <span>{n.summary}</span>
                     </li>
                   ))}
@@ -301,7 +278,7 @@ export function ReferenceDetail({ entry }: { entry: RefEntry }) {
                   <ul className="space-y-0.5 text-sm">
                     {sub.levels.map((l) => (
                       <li key={l.points}>
-                        <span className="num font-bold text-primary">{l.points}</span>{" "}
+                        <span className="num font-bold text-emphasis">{l.points}</span>{" "}
                         <span>{l.summary}</span>
                       </li>
                     ))}
@@ -312,20 +289,9 @@ export function ReferenceDetail({ entry }: { entry: RefEntry }) {
           </>
         );
       }
-      case "reputation": {
-        const r = entry.item;
-        return r.kind === "rule" ? (
-          <>
-            <Header name={entry.name} />
-            <p className="text-sm whitespace-pre-line">{t(`reputation.rule.${r.key}.detail`)}</p>
-          </>
-        ) : (
-          <>
-            <Header name={entry.name} big={<Big label={t("reference.detail.level")}>{r.level}</Big>} />
-            <p className="text-sm">{t(`reputation.levels.${r.level}`)}</p>
-          </>
-        );
-      }
+      case "reputation":
+        // Reputation is one page of its own (ReputationReference), not a card.
+        return null;
     }
   })();
 

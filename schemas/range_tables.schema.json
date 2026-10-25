@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Collection",
+  "description": "A versioned set of entries of one type, the unit of sync with the future API.",
+  "type": "object",
+  "properties": {
+    "entries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/RangeTable"
+      }
+    },
+    "name": {
+      "description": "Collection name, e.g. `critical_injuries`.",
+      "type": "string"
+    },
+    "version": {
+      "description": "Bumped by hand whenever the content changes.",
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "name",
+    "version",
+    "entries"
+  ],
+  "$defs": {
+    "RangeBand": {
+      "description": "A distance band in metres, inclusive.",
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "to": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ]
+    },
+    "RangeRow": {
+      "description": "One weapon class of a range table; `dv` has one cell per band, `None` = the shot is impossible.",
+      "type": "object",
+      "properties": {
+        "dv": {
+          "type": "array",
+          "items": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint8",
+            "maximum": 255,
+            "minimum": 0
+          }
+        },
+        "id": {
+          "type": "string"
+        },
+        "name_key": {
+          "description": "`range_row.<id>`.",
+          "type": "string"
+        },
+        "weapon_codes": {
+          "description": "Weapon `code`s of the catalog this row applies to.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name_key",
+        "weapon_codes",
+        "dv"
+      ]
+    },
+    "RangeTable": {
+      "description": "DV by distance for weapon classes. Reference only: the app never rolls to hit (see ROADMAP, 0).",
+      "type": "object",
+      "properties": {
+        "bands": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RangeBand"
+          }
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/RangeTableKind"
+        },
+        "name_key": {
+          "description": "`range_table.<id>`.",
+          "type": "string"
+        },
+        "pack": {
+          "type": "string",
+          "default": "core"
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RangeRow"
+          }
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        }
+      },
+      "required": [
+        "id",
+        "name_key",
+        "kind",
+        "bands",
+        "rows",
+        "source"
+      ]
+    },
+    "RangeTableKind": {
+      "description": "What a range table describes.",
+      "oneOf": [
+        {
+          "description": "One aimed shot (p. 173).",
+          "type": "string",
+          "const": "single"
+        },
+        {
+          "description": "Autofire (p. 173).",
+          "type": "string",
+          "const": "autofire"
+        }
+      ]
+    },
+    "Source": {
+      "description": "Where a value comes from in the rulebook.",
+      "type": "object",
+      "properties": {
+        "page": {
+          "description": "Printed page number (PDF page minus one).",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "page"
+      ]
+    }
+  }
+}

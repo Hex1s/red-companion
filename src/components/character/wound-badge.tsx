@@ -6,7 +6,7 @@ const TONE: Record<WoundState, string> = {
   healthy: "text-state-ok",
   light: "text-state-light",
   serious: "text-state-serious",
-  mortal: "text-state-mortal",
+  mortal: "text-state-mortal-text",
   dead: "text-state-dead",
 };
 

@@ -14,7 +14,7 @@ const ICON: Record<StatusKind, typeof Check> = {
 const TONE: Record<StatusKind, string> = {
   loading: "text-muted-foreground",
   success: "text-state-ok",
-  error: "text-destructive",
+  error: "text-destructive-text",
   info: "text-foreground",
 };
 const BORDER: Record<StatusKind, string> = {

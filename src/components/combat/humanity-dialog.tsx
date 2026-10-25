@@ -132,7 +132,7 @@ function LossForm({ target, onDone, onClose }: LossFormProps) {
       {lossOk && (
         <p className="num text-sm">
           {t("humanity.after", { from: derived.humanity, to: after })}
-          {after < 0 && <span className="ml-2 text-state-mortal">{t("humanity.cyberpsychosis")}</span>}
+          {after < 0 && <span className="ml-2 text-state-mortal-text">{t("humanity.cyberpsychosis")}</span>}
         </p>
       )}
       <ErrorNotice message={error} />

@@ -10,7 +10,7 @@ type ErrorNoticeProps = {
 export function ErrorNotice({ message, className }: ErrorNoticeProps) {
   if (!message) return null;
   return (
-    <p role="alert" className={cn("text-sm text-destructive", className)}>
+    <p role="alert" className={cn("text-sm text-destructive-text", className)}>
       {message}
     </p>
   );
