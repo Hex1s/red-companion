@@ -7,6 +7,7 @@ import type { SubAbility } from "@/bindings/SubAbility";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import type { RoleCounter } from "@/bindings/RoleCounter";
@@ -255,7 +256,7 @@ export function RoleDialog({ role, entry, derived, onChange, onAdminister, onClo
                 ...entry,
                 counters: entry.counters.map((o, j) => (j === i ? { ...o, ...patch } : o)),
               });
-            const num = (v: string) => (v === "" ? null : Math.trunc(Number(v)));
+            const num = (v: string) => (Number.isFinite(Number(v)) && v !== "" ? Math.trunc(Number(v)) : null);
             return (
               <div key={i} className="flex items-center gap-2">
                 <Input
@@ -265,16 +266,14 @@ export function RoleDialog({ role, entry, derived, onChange, onAdminister, onClo
                   onChange={(e) => set({ name: e.target.value })}
                   className="flex-1"
                 />
-                <Input
-                  type="number"
+                <NumberInput
                   value={c.value}
                   aria-label={t("roles.counter_value")}
                   onChange={(e) => set({ value: num(e.target.value) ?? 0 })}
                   className="num w-16"
                 />
                 <span className="text-muted-foreground">/</span>
-                <Input
-                  type="number"
+                <NumberInput
                   value={c.max ?? ""}
                   placeholder="∞"
                   aria-label={t("roles.counter_max")}

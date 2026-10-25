@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { FieldBadge } from "@/components/ui/field-badge";
-import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { Label } from "@/components/ui/label";
 import { cloneNames, npcNotes } from "@/lib/encounter";
 import { cn } from "@/lib/utils";
@@ -134,9 +134,8 @@ export function NpcTemplateDialog({
               error={countValid ? null : t("validation.count", { max: COUNT_MAX })}
             >
               {(invalid) => (
-                <Input
+                <NumberInput
                   id="npc-clone-count"
-                  type="number"
                   min={COUNT_MIN}
                   max={COUNT_MAX}
                   value={count}

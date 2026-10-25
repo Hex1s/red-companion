@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { FieldBadge } from "@/components/ui/field-badge";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { Label } from "@/components/ui/label";
 import { SKILL_MAX } from "@/lib/character-schema";
 import { STAT_ABBR } from "@/lib/stat-abbr";
@@ -104,9 +105,8 @@ export function SkillsSection({ characterId, form, skills, onChange }: SkillsSec
         error={message ? t("characters.validation.range", { min: 0, max: SKILL_MAX }) : null}
       >
         {(invalid) => (
-          <Input
+          <NumberInput
             id={`skills.${key}`}
-            type="number"
             min={0}
             max={SKILL_MAX}
             className="num h-7 w-14"
@@ -154,7 +154,7 @@ export function SkillsSection({ characterId, form, skills, onChange }: SkillsSec
     }
     const nameMatches = q === "" || t(skill.name_key).toLowerCase().includes(q);
     return (
-      <li key={skill.id} className="col-span-2 space-y-1 text-sm">
+      <li key={skill.id} className="space-y-1 text-sm">
         <div className="flex items-center gap-2">
           <span className="flex-1">{title}</span>
           {stat}
@@ -223,7 +223,13 @@ export function SkillsSection({ characterId, form, skills, onChange }: SkillsSec
         </label>
       </div>
 
-      {groups.map(([category, group]) => {
+      {/* Two fixed columns (even / odd groups): opening a group never moves a group to the other
+          column. Below `xl` the column wrappers vanish and `order` restores the plain list. */}
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-start">
+      {[0, 1].map((column) => (
+      <div key={column} className="contents xl:flex xl:min-w-0 xl:flex-1 xl:flex-col xl:gap-3">
+      {groups.map(([category, group], index) => {
+        if (index % 2 !== column) return null;
         const visible = group.filter(skillVisible);
         if (filtering && visible.length === 0) return null;
         const open = filtering || openGroups.has(category);
@@ -240,21 +246,28 @@ export function SkillsSection({ characterId, form, skills, onChange }: SkillsSec
                 return copy;
               })
             }
-            className="cut p-3 [--cut:6px]"
+            style={{ order: index }}
+            className="cut p-0 [--cut:6px] xl:order-none!"
           >
             <CollapsibleTrigger asChild>
-              <button type="button" className="flex w-full items-center gap-2 text-left">
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 p-3 text-left transition-colors hover:bg-accent/40"
+              >
                 <span className="flex-1 text-xs text-muted-foreground">{t(`skill.category.${category}`)}</span>
                 {trained > 0 && <span className="num text-xs text-primary">{trained}</span>}
                 <ChevronDown className={cn("size-4 text-muted-foreground transition-transform", open && "rotate-180")} />
               </button>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <ul className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1">{visible.map(skillRow)}</ul>
+              <ul className="space-y-1 px-3 pb-3">{visible.map(skillRow)}</ul>
             </CollapsibleContent>
           </Collapsible>
         );
       })}
+      </div>
+      ))}
+      </div>
     </div>
   );
 }

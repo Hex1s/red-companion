@@ -10,6 +10,7 @@ import type { Derived } from "@/bindings/Derived";
 import type { Stats } from "@/bindings/Stats";
 import { InjuryIcon } from "@/components/combat/injury-icons";
 import { HpBar } from "@/components/character/hp-bar";
+import { ReputationMeter } from "@/components/character/reputation-meter";
 import { RolesSection } from "@/components/character/roles-section";
 import { SkillsSection } from "@/components/character/skills-section";
 import { WoundBadge } from "@/components/character/wound-badge";
@@ -17,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { FieldBadge } from "@/components/ui/field-badge";
 import { Hint } from "@/components/ui/hint";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -26,7 +28,7 @@ import { useRoles } from "@/hooks/use-roles";
 import { useUiStore, type SheetTab } from "@/store/ui-store";
 import { useSkills } from "@/hooks/use-skills";
 import { api } from "@/lib/api";
-import { characterSchema, REPUTATION_MAX, SP_MAX, STAT_MAX, STAT_MIN } from "@/lib/character-schema";
+import { characterSchema, SP_MAX, STAT_MAX, STAT_MIN } from "@/lib/character-schema";
 import { status } from "@/store/status-store";
 
 /** Pause after the last edit before the sheet saves itself / asks Rust for the derived numbers. */
@@ -138,6 +140,7 @@ export function CharacterSheet({
     register,
     handleSubmit,
     watch,
+    setValue,
     getValues,
     reset,
     formState: { errors },
@@ -257,9 +260,8 @@ export function CharacterSheet({
             <Label htmlFor={`${area}.sp`}>{t("characters.sp")}</Label>
             <FieldBadge error={errorText(errors[area]?.sp ?? errors[area], range)}>
               {(invalid) => (
-                <Input
+                <NumberInput
                   id={`${area}.sp`}
-                  type="number"
                   min={0}
                   max={SP_MAX}
                   className="num"
@@ -273,9 +275,8 @@ export function CharacterSheet({
             <Label htmlFor={`${area}.max_sp`}>{t("characters.sp_max")}</Label>
             <FieldBadge error={errorText(errors[area]?.max_sp, range)}>
               {(invalid) => (
-                <Input
+                <NumberInput
                   id={`${area}.max_sp`}
-                  type="number"
                   min={0}
                   max={SP_MAX}
                   className="num"
@@ -291,7 +292,7 @@ export function CharacterSheet({
   };
 
   return (
-    <form onSubmit={(e) => e.preventDefault()} className="max-w-3xl space-y-4" noValidate>
+    <form onSubmit={(e) => e.preventDefault()} className="space-y-4" noValidate>
       <Tabs value={sheetTab} onValueChange={(v) => setSheetTab(v as SheetTab)} className="gap-4">
         <div className="sticky top-0 z-10 -mx-1 space-y-3 bg-background px-1 pb-2">
         <div className="flex items-end gap-3">
@@ -316,9 +317,8 @@ export function CharacterSheet({
                 <Label htmlFor="hp">{t("characters.hp")}</Label>
                 <FieldBadge error={errorText(errors.hp, { min: 0, max: derived.max_hp })}>
                   {(invalid) => (
-                    <Input
+                    <NumberInput
                       id="hp"
-                      type="number"
                       min={0}
                       className="num"
                       aria-invalid={invalid}
@@ -360,9 +360,8 @@ export function CharacterSheet({
                   })}
                 >
                   {(invalid) => (
-                    <Input
+                    <NumberInput
                       id={`stats.${key}`}
-                      type="number"
                       min={key === "emp" || key === "luck" ? 0 : STAT_MIN}
                       max={STAT_MAX}
                       className="num text-lg font-bold"
@@ -373,27 +372,11 @@ export function CharacterSheet({
                 </FieldBadge>
               </div>
             ))}
-            <div className="cut [--cut:6px] space-y-1 p-3">
-              <Hint label={t("reputation.field_hint")}>
-                <Label htmlFor="reputation" className="text-xs text-muted-foreground">
-                  {t("reputation.field")}
-                </Label>
-              </Hint>
-              <FieldBadge error={errors.reputation ? t("reputation.validation") : null}>
-                {(invalid) => (
-                  <Input
-                    id="reputation"
-                    type="number"
-                    min={-REPUTATION_MAX}
-                    max={REPUTATION_MAX}
-                    className="num text-lg font-bold"
-                    aria-invalid={invalid}
-                    {...num("reputation")}
-                  />
-                )}
-              </FieldBadge>
-            </div>
           </div>
+          <ReputationMeter
+            value={Number(watch("reputation"))}
+            onChange={(v) => setValue("reputation", v, { shouldDirty: true, shouldValidate: true })}
+          />
         </Section>
 
         <Section title={t("characters.section.derived")}>

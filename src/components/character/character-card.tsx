@@ -156,7 +156,7 @@ export function CharacterCard({
   return (
     <div
       className={cn(
-        "cut cursor-pointer space-y-2 p-3 text-left [--cut:8px]",
+        "cut animate-in cursor-pointer space-y-2 p-3 text-left duration-200 fade-in-0 slide-in-from-right-4 [--cut:8px]",
         inCover && "[--cut-border:var(--cover)]",
         selected && !active && !inCover && "[--cut-border:var(--muted-foreground)]",
         active && "[--cut-border:var(--primary)]",

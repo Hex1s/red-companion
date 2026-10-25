@@ -146,4 +146,38 @@
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-thumb { background: var(--border); }
   ::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
+  /* The scrollbar's place is always reserved, so content does not jump when it appears (switching
+     tabs, opening a group). Only scrolling boxes: on overflow-hidden ones it would be a blank strip. */
+  .overflow-y-auto,
+  .overflow-auto,
+  .overflow-y-scroll {
+    scrollbar-gutter: stable;
+  }
+}
+
+/* Motion is decoration: with "reduce motion" on, animations and transitions finish at once. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Plain fade for swapping pages and tabs. `animate-in fade-in` also carries a transform (translate3d,
+   scale3d), which moves the text onto its own compositor layer for the animation and snaps it back
+   at the end: a visible 1px jump. Opacity alone keeps the text where it is. */
+@keyframes fade-plain {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@utility animate-fade {
+  animation: fade-plain 0.18s ease-out;
 }

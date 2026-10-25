@@ -21,7 +21,7 @@ export function HpBar({ current, max, className }: HpBarProps) {
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <div className="h-1.5 flex-1 bg-muted">
-        <div className={cn("h-full", tone)} style={{ width: `${ratio * 100}%` }} />
+        <div className={cn("h-full transition-[width,background-color] duration-300", tone)} style={{ width: `${ratio * 100}%` }} />
       </div>
       <span className="num text-xs text-muted-foreground">
         {current}/{max}

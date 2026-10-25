@@ -550,7 +550,8 @@ export default function App() {
           </>
         }
         main={
-          tab === "characters" ? (
+          <div key={tab} className="h-full animate-fade">
+          {tab === "characters" ? (
             <div className="space-y-6">
               {!hasBackend && <p className="text-muted-foreground">{t("characters.no_backend")}</p>}
               {shown ? (
@@ -609,7 +610,8 @@ export default function App() {
             )
           ) : (
             <ReferencePage />
-          )
+          )}
+          </div>
         }
         rail={
           <>

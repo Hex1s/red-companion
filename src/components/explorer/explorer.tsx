@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Plus } from "lucide-react";
+import { ChevronRight, Plus } from "lucide-react";
 import { useState, type DragEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { CharacterKind } from "@/bindings/CharacterKind";
@@ -276,7 +276,7 @@ export function Explorer({
           dragFolder={node.id}
           drop={dropProps(node.id)}
         />
-        {open && containerChildren(node, depth + 1)}
+        {open && <div className="animate-in fade-in-0 slide-in-from-top-1 duration-150">{containerChildren(node, depth + 1)}</div>}
       </div>
     );
   };
@@ -302,7 +302,7 @@ export function Explorer({
           }}
           drop={dropProps(node.id, "characters")}
         />
-        {open && containerChildren(node, 2)}
+        {open && <div className="animate-in fade-in-0 slide-in-from-top-1 duration-150">{containerChildren(node, 2)}</div>}
       </div>
     );
   };
@@ -435,12 +435,12 @@ function Section({ label, open, onToggle, add, plain, onDropFolder, children }: 
           disabled={plain}
           className="flex min-w-0 flex-1 items-center gap-1 px-1.5 py-1 text-left font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground outline-none hover:text-foreground disabled:pointer-events-none"
         >
-          {!plain && (open ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />)}
+          {!plain && <ChevronRight className={cn("size-3.5 transition-transform duration-150", open && "rotate-90")} />}
           <span className="truncate">{label}</span>
         </button>
         <MoreMenu entries={add} alwaysVisible icon={<Plus className="size-4" />} />
       </div>
-      {open && <div>{children}</div>}
+      {open && <div className="animate-in fade-in-0 slide-in-from-top-1 duration-150">{children}</div>}
     </section>
   );
 }
@@ -518,7 +518,7 @@ function TreeRow({
           onClick={onToggle}
           className="flex size-4 shrink-0 items-center justify-center text-muted-foreground"
         >
-          {open ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+          <ChevronRight className={cn("size-3.5 transition-transform duration-150", open && "rotate-90")} />
         </button>
       ) : (
         <span className="size-4 shrink-0" />

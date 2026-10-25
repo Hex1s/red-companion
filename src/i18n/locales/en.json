@@ -691,6 +691,12 @@
       "head": "Head"
     }
   },
+  "textmenu": {
+    "cut": "Cut",
+    "copy": "Copy",
+    "paste": "Paste",
+    "select_all": "Select all"
+  },
   "explorer": {
     "title": "Explorer",
     "actions": "Actions",
@@ -840,6 +846,8 @@
     "title": "Reputation",
     "level": "Level {{level}}",
     "field": "Reputation",
+    "decrease": "Decrease reputation",
+    "increase": "Increase reputation",
     "field_hint": "−10 to 10; most characters have 0. Negative for cowardice and shameful deeds (p. 193). Intimidation and \"have they heard of them\" are the GM's call.",
     "validation": "From −10 to 10",
     "rule": {
