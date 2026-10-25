@@ -1,6 +1,8 @@
-import { useMemo, useState } from "react";
+import { X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ReferenceDetail } from "@/components/reference/reference-detail";
+import { ReferenceTable, type SortState } from "@/components/reference/reference-table";
 import { ReputationReference } from "@/components/reference/reputation-reference";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -8,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useReferenceData } from "@/hooks/use-reference-data";
 import { hasBackend } from "@/lib/api";
+import { modalOpen } from "@/lib/hotkeys";
+import { columnsOf, sortEntries } from "@/lib/reference-columns";
 import { entriesOf, fold, REFERENCE_SECTIONS } from "@/lib/reference-entries";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/store/ui-store";
@@ -43,8 +47,28 @@ export function ReferencePage() {
     }
     return true;
   });
-  // The chosen entry stays while it is in the list; otherwise the first one is shown.
-  const current = shown.find((e) => e.id === referenceId) ?? shown[0] ?? null;
+  // Only an entry the filters still show can be open.
+  const current = shown.find((e) => e.id === referenceId) ?? null;
+
+  const columns = useMemo(() => columnsOf(referenceSection, t), [referenceSection, t]);
+  const [sort, setSort] = useState<SortState>(null);
+  // Columns differ per section, so the sort starts over with it.
+  useEffect(() => setSort(null), [referenceSection]);
+  const sortColumn = sort ? columns.find((c) => c.id === sort.column) : undefined;
+  const rows = sort && sortColumn ? sortEntries(shown, sortColumn, sort.dir) : shown;
+  // A header cycles ascending → descending → the book's order.
+  const cycleSort = (column: string) =>
+    setSort((s) => (s?.column !== column ? { column, dir: "asc" } : s.dir === "asc" ? { column, dir: "desc" } : null));
+
+  // Esc closes the card, unless a dialog or popover wants it.
+  useEffect(() => {
+    if (!current) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !modalOpen()) setReferenceId(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [current, setReferenceId]);
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
@@ -63,13 +87,19 @@ export function ReferencePage() {
       ) : !hasBackend ? (
         <p className="text-muted-foreground">{t("characters.no_backend")}</p>
       ) : (
-        <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,18rem)_minmax(0,1fr)] gap-4">
+        <div
+          className={cn(
+            "grid min-h-0 flex-1 gap-4",
+            current ? "grid-cols-[minmax(0,1fr)_minmax(0,28rem)]" : "grid-cols-[minmax(0,1fr)]",
+          )}
+        >
           <div className="flex min-h-0 flex-col gap-2">
             <Input
               value={referenceQuery}
               onChange={(e) => setReferenceQuery(e.target.value)}
               placeholder={t("reference.search")}
               aria-label={t("reference.search")}
+              className="max-w-md"
             />
             {referenceSection === "weapons" && (
               <div className="flex flex-wrap items-center gap-1.5">
@@ -109,37 +139,34 @@ export function ReferencePage() {
             {shown.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("reference.nothing_found")}</p>
             ) : (
-              <ul className="min-h-0 flex-1 divide-y overflow-y-auto border">
-                {shown.map((e) => (
-                  <li key={e.id}>
-                    <button
-                      type="button"
-                      onClick={() => setReferenceId(e.id)}
-                      className={cn(
-                        "flex w-full items-baseline gap-2 px-3 py-1.5 text-left text-sm hover:bg-accent",
-                        e.id === current?.id && "bg-accent text-accent-foreground",
-                      )}
-                    >
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-medium">{e.name}</span>
-                        {e.subtitle && (
-                          <span className="block truncate text-xs text-muted-foreground">{e.subtitle}</span>
-                        )}
-                      </span>
-                      <span className="num shrink-0 text-muted-foreground">{e.value}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              <ReferenceTable
+                columns={columns}
+                entries={rows}
+                currentId={current?.id ?? null}
+                sort={sort}
+                onSort={cycleSort}
+                onSelect={(id) => setReferenceId(id === current?.id ? null : id)}
+              />
             )}
           </div>
-          <div className="min-h-0 overflow-y-auto border p-4">
-            {current ? (
-              <ReferenceDetail entry={current} />
-            ) : (
-              <p className="text-sm text-muted-foreground">{t("reference.pick")}</p>
-            )}
-          </div>
+          {current && (
+            <aside className="cut flex min-h-0 animate-in flex-col duration-200 fade-in-0 slide-in-from-right-4 [--cut:10px]">
+              <div className="flex justify-end p-1">
+                <Button
+                  type="button"
+                  size="icon-sm"
+                  variant="ghost"
+                  aria-label={t("reference.close")}
+                  onClick={() => setReferenceId(null)}
+                >
+                  <X />
+                </Button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+                <ReferenceDetail entry={current} />
+              </div>
+            </aside>
+          )}
         </div>
       )}
     </div>

@@ -708,7 +708,6 @@
     "days_range": "Enter days from 1 to {{max}}"
   },
   "reference": {
-    "pick": "Pick an entry on the left.",
     "global_title": "Reference search",
     "global_hint": "Name or description: weapons, armor, injuries, skills, roles, NPCs.",
     "global_placeholder": "Search every reference…",
@@ -789,7 +788,30 @@
       "general": "General",
       "soft": "Soft style",
       "hard": "Hard style"
-    }
+    },
+    "col": {
+      "name": "Name",
+      "roll": "2d6",
+      "area": "Area",
+      "thickness": "Thickness",
+      "hp": "HP",
+      "sp": "SP",
+      "penalty": "Penalty",
+      "skill": "Skill",
+      "damage": "Damage",
+      "rof": "ROF",
+      "price": "Price",
+      "stat": "Stat",
+      "category": "Category",
+      "cost": "Cost",
+      "kind": "Kind",
+      "techniques": "Techniques",
+      "ability": "Ability",
+      "summary": "Summary"
+    },
+    "sort_by": "Sort by {{column}}",
+    "close": "Close card",
+    "pick": "Pick an entry on the left."
   },
   "textmenu": {
     "cut": "Cut",
