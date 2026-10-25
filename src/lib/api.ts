@@ -59,6 +59,12 @@ async function inLanguage<T>(lang: string, load: () => Promise<T>): Promise<T> {
   return load();
 }
 
+/**
+ * The framed square of a picture: its centre as fractions of the width and height, and its side as a
+ * fraction of the shorter side (1 = the biggest square). Mirrors `portrait::Crop` in Rust.
+ */
+export type PortraitCrop = { cx: number; cy: number; size: number };
+
 /** True inside the Tauri window; false in plain `npm run dev` in a browser. */
 export const hasBackend = "__TAURI_INTERNALS__" in globalThis;
 
@@ -113,6 +119,11 @@ export const api = {
   listCharacters: (kind: CharacterKind) => invoke<CharacterRecord[]>("list_characters", { kind }),
   createCharacter: (kind: CharacterKind, name: string) =>
     invoke<CharacterRecord>("create_character", { kind, name }),
+  /** Raw bytes of a picture in, portrait data URI (small square WebP) out; nothing is saved yet. */
+  makePortrait: (bytes: ArrayBuffer, crop: PortraitCrop) =>
+    invoke<string>("make_portrait", bytes, {
+      headers: { "crop-x": String(crop.cx), "crop-y": String(crop.cy), "crop-size": String(crop.size) },
+    }),
   saveCharacter: (id: number, character: Character) =>
     invoke<CharacterRecord>("save_character", { id, character }),
   /** Deletes at once; the snapshot it returns is what `restoreCharacter` needs to undo it. */

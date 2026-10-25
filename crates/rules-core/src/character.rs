@@ -25,6 +25,24 @@ pub const STAT_MIN: u8 = 1;
 pub const STAT_MAX: u8 = 99;
 /// Reputation runs 1..=10 (p. 193); negative values are the same scale after cowardice.
 pub const REPUTATION_MAX: i8 = 10;
+
+/// Start of a portrait data URI.
+pub const PORTRAIT_PREFIX: &str = "data:image/webp;base64,";
+/// Longest portrait data URI, chars (the app's own are ~10-15 thousand; this guards imports).
+pub const PORTRAIT_MAX_LEN: usize = 60_000;
+
+/// A WebP data URI of sane size with a pure base64 body.
+pub fn is_portrait(s: &str) -> bool {
+    s.len() <= PORTRAIT_MAX_LEN
+        && s.strip_prefix(PORTRAIT_PREFIX).is_some_and(|b| {
+            !b.is_empty() && b.bytes().all(|c| c.is_ascii_alphanumeric() || matches!(c, b'+' | b'/' | b'='))
+        })
+}
+
+/// `#rrggbb` with lower-case hex digits: the one form the colour label is stored in.
+pub fn is_hex_color(s: &str) -> bool {
+    s.len() == 7 && s.starts_with('#') && s[1..].bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
+}
 /// Armor SP range accepted on the sheet (best armor in the book is 18).
 pub const SP_MAX: u8 = 20;
 /// Humanity per point of EMP (p. 79).
@@ -122,6 +140,16 @@ pub struct Character {
     /// comes from cowardice or other shameful deeds (the sign is kept: p. 194).
     #[serde(default)]
     pub reputation: i8,
+    /// GM's colour label, `#rrggbb` in lower case; `None` = neutral. User data, not a theme
+    /// colour: the GM picks it (usually by a player's clothes) to tell characters apart.
+    #[serde(default)]
+    #[ts(type = "string | null")]
+    pub color: Option<String>,
+    /// Portrait: a small square WebP as a data URI (`PORTRAIT_PREFIX` + base64), made by the app
+    /// from the GM's own picture; `None` = initials instead.
+    #[serde(default)]
+    #[ts(type = "string | null")]
+    pub portrait: Option<String>,
     #[serde(default)]
     pub notes: String,
     /// Drugs whose once-per-period benefit this character already got (p. 150); see `roles`.
@@ -214,6 +242,10 @@ pub enum CharacterError {
     FirstAidWithoutInjury(String),
     #[error("reputation {0} is out of range")]
     ReputationOutOfRange(i8),
+    #[error("colour label {0:?} is not #rrggbb")]
+    BadColor(String),
+    #[error("portrait is not a small WebP data URI")]
+    BadPortrait,
     #[error(transparent)]
     Role(#[from] RoleError),
     #[error(transparent)]
@@ -240,6 +272,8 @@ impl Character {
             dead: false,
             humanity: None,
             reputation: 0,
+            color: None,
+            portrait: None,
             notes: String::new(),
             doses: Vec::new(),
             roles: Vec::new(),
@@ -371,6 +405,16 @@ impl Character {
         }
         if !(-REPUTATION_MAX..=REPUTATION_MAX).contains(&self.reputation) {
             return Err(CharacterError::ReputationOutOfRange(self.reputation));
+        }
+        if let Some(color) = &self.color {
+            if !is_hex_color(color) {
+                return Err(CharacterError::BadColor(color.clone()));
+            }
+        }
+        if let Some(portrait) = &self.portrait {
+            if !is_portrait(portrait) {
+                return Err(CharacterError::BadPortrait);
+            }
         }
         roles::validate_entries(&self.roles)?;
         roles::validate_doses(&self.doses)?;
@@ -515,6 +559,25 @@ mod tests {
         assert!(matches!(c.validate(), Err(CharacterError::SkillOutOfRange { level: 11, .. })));
         c.skills.insert("handgun".into(), SKILL_MAX);
         assert_eq!(c.validate(), Ok(()));
+
+        let mut c = Character::quick("V");
+        for bad in ["red", "#FFAA00", "#12345", "#12345g", "ff0000"] {
+            c.color = Some(bad.into());
+            assert_eq!(c.validate(), Err(CharacterError::BadColor(bad.into())));
+        }
+        c.color = Some("#d6302b".into());
+        assert_eq!(c.validate(), Ok(()));
+        // A template's portrait survives cloning too.
+        c.portrait = Some(format!("{PORTRAIT_PREFIX}AAAA"));
+        assert_eq!(c.validate(), Ok(()));
+        assert_eq!(c.as_fresh().portrait, c.portrait);
+        for bad in ["http://x/y.png", "data:image/png;base64,AAAA", "data:image/webp;base64,", "data:image/webp;base64,<b>"] {
+            c.portrait = Some(bad.into());
+            assert_eq!(c.validate(), Err(CharacterError::BadPortrait));
+        }
+        c.portrait = None;
+        // A template's label survives cloning.
+        assert_eq!(c.as_fresh().color.as_deref(), Some("#d6302b"));
 
         let mut c = Character::quick("V");
         c.schema_version = 99;

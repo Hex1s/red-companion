@@ -48,6 +48,11 @@ export const characterSchema = z.object({
   dead: z.boolean(),
   humanity: z.number().int().nullable(),
   reputation: z.number().int().min(-REPUTATION_MAX).max(REPUTATION_MAX),
+  color: z
+    .string()
+    .regex(/^#[0-9a-f]{6}$/)
+    .nullable(),
+  portrait: z.string().nullable(),
   notes: z.string(),
   doses: z.array(z.string()),
   roles: z.array(

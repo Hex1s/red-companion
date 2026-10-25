@@ -9,6 +9,7 @@ import type { HealKind } from "@/bindings/HealKind";
 import type { Derived } from "@/bindings/Derived";
 import type { Stats } from "@/bindings/Stats";
 import { InjuryIcon } from "@/components/combat/injury-icons";
+import { MarkPicker } from "@/components/character/color-mark";
 import { HpBar } from "@/components/character/hp-bar";
 import { ReputationMeter } from "@/components/character/reputation-meter";
 import { RolesSection } from "@/components/character/roles-section";
@@ -303,6 +304,16 @@ export function CharacterSheet({
       <Tabs value={sheetTab} onValueChange={(v) => setSheetTab(v as SheetTab)} className="gap-4">
         <div className="sticky top-0 z-10 -mx-1 space-y-3 bg-background px-1 pb-2">
         <div className="flex items-end gap-3">
+          <MarkPicker
+            color={watch("color")}
+            portrait={watch("portrait")}
+            name={watch("name")}
+            markClassName="size-10"
+            onChange={(change) => {
+              if (change.color !== undefined) setValue("color", change.color, { shouldDirty: true, shouldValidate: true });
+              if (change.portrait !== undefined) setValue("portrait", change.portrait, { shouldDirty: true, shouldValidate: true });
+            }}
+          />
           <div className="flex-1 space-y-1">
             <Label htmlFor="name">{t("characters.name")}</Label>
             <FieldBadge error={errorText(errors.name, { min: 0, max: 0 })}>

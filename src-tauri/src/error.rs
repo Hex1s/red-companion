@@ -59,6 +59,14 @@ impl CmdError {
         Self::new("healing.surgery_bonus_missing", Params::new(), "surgery needs a bonus".to_string())
     }
 
+    pub fn portrait_unreadable() -> Self {
+        Self::new("portrait.unreadable", Params::new(), "the file is not a readable image".to_string())
+    }
+
+    pub fn portrait_too_large(max_mb: usize) -> Self {
+        Self::new("portrait.too_large", params! { "max" => max_mb }, format!("the picture is larger than {max_mb} MB"))
+    }
+
     pub fn nothing_to_undo() -> Self {
         Self::new("scene.nothing_to_undo", Params::new(), "nothing to undo".to_string())
     }
@@ -198,6 +206,8 @@ mod tests {
                 "not_found.npc_template",
                 "not_found.injury",
                 "not_found.cover_preset",
+                "portrait.unreadable",
+                "portrait.too_large",
                 "scene.nothing_to_undo",
                 "injury.not_on_sheet",
                 "healing.surgery_bonus_missing",

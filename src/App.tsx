@@ -824,6 +824,11 @@ export default function App() {
                     selectCharacter(e.id);
                     setTab("characters");
                   }}
+                  onSetMark={(change) =>
+                    void save(e.id, { ...e.character, ...change }).catch((err) =>
+                      status.fail(err, "character:mark", { text: errorMessage(err) }),
+                    )
+                  }
                   onDamage={() => openDamage(e.id)}
                   onSetInitiative={(value) => void sceneState.combatSetInitiative(e.id, value)}
                   initiativeRoll={fighter?.roll ?? null}

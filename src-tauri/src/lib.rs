@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 mod error;
+mod portrait;
 
 use error::CmdError;
 use rules_core::RulesInfo;
@@ -577,6 +578,24 @@ fn export_items(storage: &Storage, ids: Option<&[i64]>) -> Result<Vec<ExportedCh
         }
     }
     Ok(items)
+}
+
+/// Turns the raw bytes of a picture (the request body) into a portrait data URI; the sheet stores
+/// it with the next save. The frame comes in the `crop-x`, `crop-y`, `crop-size` headers (see
+/// `portrait::Crop`); without them the biggest centred square is taken.
+#[tauri::command]
+fn make_portrait(request: tauri::ipc::Request<'_>) -> Result<String, CmdError> {
+    let tauri::ipc::InvokeBody::Raw(bytes) = request.body() else {
+        return Err(CmdError::portrait_unreadable());
+    };
+    let header = |name: &str, default: f32| {
+        request.headers().get(name).and_then(|v| v.to_str().ok()).and_then(|v| v.parse().ok()).unwrap_or(default)
+    };
+    let crop = portrait::Crop { cx: header("crop-x", 0.5), cy: header("crop-y", 0.5), size: header("crop-size", 1.0) };
+    portrait::encode(bytes, crop).map_err(|e| match e {
+        portrait::PortraitError::TooLarge => CmdError::portrait_too_large(portrait::SOURCE_MAX_BYTES / (1024 * 1024)),
+        portrait::PortraitError::Unreadable => CmdError::portrait_unreadable(),
+    })
 }
 
 /// Writes characters (`ids`, or everyone when `None`) into a new character file.
@@ -1902,6 +1921,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             rules_info,
+            make_portrait,
             set_content_lang,
             list_skills,
             list_articles,

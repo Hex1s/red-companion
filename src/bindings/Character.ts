@@ -26,7 +26,17 @@ humanity: number | null,
  * Reputation (p. 193): 0 for most characters, 1..=10 for a known one, negative when it
  * comes from cowardice or other shameful deeds (the sign is kept: p. 194).
  */
-reputation: number, notes: string, 
+reputation: number, 
+/**
+ * GM's colour label, `#rrggbb` in lower case; `None` = neutral. User data, not a theme
+ * colour: the GM picks it (usually by a player's clothes) to tell characters apart.
+ */
+color: string | null, 
+/**
+ * Portrait: a small square WebP as a data URI (`PORTRAIT_PREFIX` + base64), made by the app
+ * from the GM's own picture; `None` = initials instead.
+ */
+portrait: string | null, notes: string, 
 /**
  * Drugs whose once-per-period benefit this character already got (p. 150); see `roles`.
  */

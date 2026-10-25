@@ -355,6 +355,7 @@ export function Explorer({
       key={`${container?.id ?? "all"}-${entry.id}`}
       depth={depth}
       label={entry.character.name}
+      color={entry.character.color}
       tag={t(instanceIds.has(entry.id) ? "explorer.kind.instance" : `explorer.kind.${entry.kind}`)}
       selected={tab === "characters" && selectedId === entry.id}
       menu={characterMenu(entry, container)}
@@ -673,6 +674,8 @@ type TreeRowProps = {
   label: string;
   /** Small kind tag after the name (PC / NPC). */
   tag?: string;
+  /** The GM's colour label of a character (`#rrggbb`); a dot before the name. */
+  color?: string | null;
   /** How many shortcuts a container holds. */
   count?: number;
   /** Set for a node that has children: the arrow shows its state. */
@@ -701,6 +704,7 @@ function TreeRow({
   depth,
   label,
   tag,
+  color,
   count,
   open,
   onToggle,
@@ -753,6 +757,13 @@ function TreeRow({
         <span className="size-4 shrink-0" />
       )}
       {marked && <span aria-hidden className="mr-1.5 size-2 shrink-0 bg-primary" />}
+      {color && (
+        <span
+          aria-hidden
+          style={{ "--mark": color } as React.CSSProperties}
+          className="mr-1.5 size-2 shrink-0 bg-(--mark)"
+        />
+      )}
       <button
         type="button"
         onClick={onClick}

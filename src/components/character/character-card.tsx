@@ -3,6 +3,7 @@ import { RotateCcw, Swords } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { CheckRoll } from "@/bindings/CheckRoll";
 import type { DeathSave } from "@/bindings/DeathSave";
+import { MarkPicker, type MarkChange } from "@/components/character/color-mark";
 import { WoundBadge } from "@/components/character/wound-badge";
 import { item, MoreMenu, separator, tidy } from "@/components/explorer/node-menu";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,8 @@ type CharacterCardProps = {
   /** Result of the last death save of this character, shown until the next turn. */
   lastSave: DeathSave | null;
   onSelect: () => void;
+  /** Sets or clears (`null`) the colour label and the portrait. */
+  onSetMark: (change: MarkChange) => void;
   onDamage: () => void;
   onSetInitiative: (value: number) => void;
   onRollInitiative: () => void;
@@ -88,6 +91,7 @@ export function CharacterCard({
   deathSaveDue,
   lastSave,
   onSelect,
+  onSetMark,
   onDamage,
   onSetInitiative,
   onRollInitiative,
@@ -178,14 +182,16 @@ export function CharacterCard({
   return (
     <div
       className={cn(
-        "cut animate-in cursor-pointer p-3 text-left duration-200 fade-in-0 slide-in-from-right-4 [--cut:8px]",
+        "cut relative animate-in cursor-pointer p-3 text-left duration-200 fade-in-0 slide-in-from-right-4 [--cut:8px]",
         inCover && "[--cut-border:var(--cover)]",
         selected && !active && !inCover && "[--cut-border:var(--muted-foreground)]",
         active && "[--cut-border:var(--primary)]",
         derived.wound_state === "dead" && "opacity-60",
       )}
       onClick={select}
+      style={character.color ? ({ "--mark": character.color } as React.CSSProperties) : undefined}
     >
+      {character.color && <span aria-hidden className="absolute inset-y-3 left-0 z-10 w-1 bg-(--mark)" />}
       {/* The glitch plays on this inner box: `glitch-hit` would replace the card's own entry animation. */}
       <div
         className={cn("space-y-2", hit && "glitch-hit")}
@@ -225,6 +231,16 @@ export function CharacterCard({
             className="num h-7 w-12 px-1 text-center text-base font-bold text-emphasis"
           />
         </Hint>
+        {/* Popovers are portals: their clicks must not reach the card. */}
+        <span onClick={stop}>
+          <MarkPicker
+            color={character.color}
+            portrait={character.portrait}
+            name={character.name}
+            markClassName="size-8"
+            onChange={onSetMark}
+          />
+        </span>
         <span className="min-w-0 flex-1 truncate font-display text-sm font-semibold uppercase">
           {character.name}
         </span>

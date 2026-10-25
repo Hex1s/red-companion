@@ -947,6 +947,22 @@
     "lost": "{{name}}: HUM {{from}} → {{to}}, EMP {{emp}}.",
     "lost_psycho": "{{name}}: HUM {{from}} → {{to}}. Cyberpsychosis!"
   },
+  "portrait": {
+    "frame": "Frame: drag the picture, wheel to zoom",
+    "zoom": "Zoom",
+    "done": "Done",
+    "cancel": "Cancel",
+    "label": "Portrait",
+    "choose": "Choose a picture",
+    "change": "Change",
+    "remove": "Remove portrait",
+    "hint": "Portrait: click to choose or change the picture"
+  },
+  "color": {
+    "label": "Colour label",
+    "hint": "Colour label: click to pick a colour",
+    "reset": "Clear"
+  },
   "reputation": {
     "title": "Reputation",
     "level": "Level {{level}}",
@@ -1064,6 +1080,10 @@
       "name_length": "The name must be 1 to {{max}} characters.",
       "notes_too_long": "The notes are longer than {{max}} characters. Shorten the text."
     },
+    "portrait": {
+      "unreadable": "Could not make a portrait: the file is not a readable image. Pick a PNG, JPEG, GIF, BMP or WebP file.",
+      "too_large": "The picture is larger than {{max}} MB. Pick a smaller file."
+    },
     "scene": {
       "nothing_to_undo": "Nothing to undo: there is no last damage anymore.",
       "cover_not_found": "The cover was not found (maybe it was already removed). Refresh the scene.",
@@ -1136,6 +1156,8 @@
       "skill_out_of_range": "The level of skill “{{skill}}” ({{level}}) is outside the allowed range.",
       "first_aid_without_injury": "First aid is recorded for the injury “{{injury}}”, which the character does not have.",
       "reputation_out_of_range": "Reputation {{value}} is outside the allowed range.",
+      "bad_color": "Colour label “{{value}}” is not valid. Pick the colour again or clear the label.",
+      "bad_portrait": "The portrait is damaged. Pick the picture again or remove the portrait.",
       "unsupported_version": "The character was saved by a newer version of the app (format {{version}}). Update the app."
     },
     "role": {
