@@ -5,6 +5,32 @@ export type AppTab = "characters" | "encounters" | "notes" | "rules";
 export type SheetTab = "general" | "state" | "skills" | "roles" | "gear";
 export type ReferenceSection = "injuries" | "cover" | "armor" | "weapons" | "skills" | "npc" | "roles" | "reputation";
 
+const EXPLORER_KEY = "rc.explorer";
+
+type StoredExplorer = { open: boolean; expanded: Record<string, boolean> };
+
+/** The explorer's look is a per-viewer convenience: kept in the browser, never required. */
+function loadExplorer(): StoredExplorer {
+  try {
+    const raw = localStorage.getItem(EXPLORER_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<StoredExplorer>;
+      return { open: parsed.open !== false, expanded: parsed.expanded ?? {} };
+    }
+  } catch {
+    // Storage may be blocked or hold junk; the defaults below are fine.
+  }
+  return { open: true, expanded: {} };
+}
+
+function saveExplorer(state: StoredExplorer) {
+  try {
+    localStorage.setItem(EXPLORER_KEY, JSON.stringify(state));
+  } catch {
+    // Not being able to remember the layout is harmless.
+  }
+}
+
 /** UI state only: game data lives in Rust and comes through Tauri commands. */
 type UiState = {
   tab: AppTab;
@@ -17,12 +43,25 @@ type UiState = {
   referenceQuery: string;
   setReferenceSection: (section: ReferenceSection) => void;
   setReferenceQuery: (query: string) => void;
+  /** Entry shown in the reference card; `null` = the first one of the list. */
+  referenceId: string | null;
+  setReferenceId: (id: string | null) => void;
+  /** Jumps to one reference entry on the reference page. */
+  openReference: (section: ReferenceSection, id: string) => void;
   openDamage: (id: number | null) => void;
   setTab: (tab: AppTab) => void;
   selectCharacter: (id: number | null) => void;
+  /** Whether the explorer panel is shown. */
+  explorerOpen: boolean;
+  toggleExplorer: () => void;
+  /** Open/closed state of tree nodes by key ("session:3", "library", ...). */
+  expanded: Record<string, boolean>;
+  setExpanded: (key: string, open: boolean) => void;
 };
 
-export const useUiStore = create<UiState>((set) => ({
+const initialExplorer = loadExplorer();
+
+export const useUiStore = create<UiState>((set, get) => ({
   tab: "characters",
   selectedCharacterId: null,
   damageTargetId: null,
@@ -30,9 +69,23 @@ export const useUiStore = create<UiState>((set) => ({
   setSheetTab: (sheetTab) => set({ sheetTab }),
   referenceSection: "injuries",
   referenceQuery: "",
-  setReferenceSection: (referenceSection) => set({ referenceSection }),
+  setReferenceSection: (referenceSection) => set({ referenceSection, referenceId: null }),
   setReferenceQuery: (referenceQuery) => set({ referenceQuery }),
+  referenceId: null,
+  setReferenceId: (referenceId) => set({ referenceId }),
+  openReference: (referenceSection, referenceId) =>
+    set({ tab: "rules", referenceSection, referenceId, referenceQuery: "" }),
   openDamage: (id) => set({ damageTargetId: id }),
   setTab: (tab) => set({ tab }),
   selectCharacter: (id) => set({ selectedCharacterId: id }),
+  explorerOpen: initialExplorer.open,
+  toggleExplorer: () => {
+    set({ explorerOpen: !get().explorerOpen });
+    saveExplorer({ open: get().explorerOpen, expanded: get().expanded });
+  },
+  expanded: initialExplorer.expanded,
+  setExpanded: (key, open) => {
+    set({ expanded: { ...get().expanded, [key]: open } });
+    saveExplorer({ open: get().explorerOpen, expanded: get().expanded });
+  },
 }));

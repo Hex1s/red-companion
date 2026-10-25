@@ -10,6 +10,7 @@ use thiserror::Error;
 use ts_rs::TS;
 
 use crate::catalog::CoverThickness;
+use crate::character::CharacterKind;
 use crate::damage_event::DamageEvent;
 use crate::data_source::{DataResult, DataSource};
 use crate::initiative::Combat;
@@ -119,6 +120,63 @@ pub struct SessionInfo {
     pub name: String,
     /// The session the app is working with; exactly one is active.
     pub active: bool,
+}
+
+/// What a node of the explorer tree is.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(export)]
+pub enum NodeKind {
+    /// Has its own scene and fight; at the root only.
+    Session,
+    /// Groups characters; may sit in a root folder.
+    Folder,
+}
+
+/// A scene document as it was before and right after a character was deleted from it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct SceneSnapshot {
+    #[ts(type = "number")]
+    pub id: i64,
+    /// The scene as it was before the character was taken out of it.
+    pub before: String,
+    /// The scene right after; restoring puts `before` back only if nobody changed the scene since.
+    pub after: String,
+}
+
+/// Everything a deleted character took with it, so that "undo" can bring it all back.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct DeletedCharacter {
+    #[ts(type = "number")]
+    pub id: i64,
+    pub kind: CharacterKind,
+    pub name: String,
+    /// The stored sheet document, as it was.
+    pub data: String,
+    /// Folders and sessions that held a shortcut to the character.
+    #[ts(type = "number[]")]
+    pub containers: Vec<i64>,
+    /// Scenes that had the character in a fight or behind a cover.
+    pub scenes: Vec<SceneSnapshot>,
+}
+
+/// One node of the explorer tree. The list is flat: the UI nests it by `parent_id`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct ExplorerNode {
+    #[ts(type = "number")]
+    pub id: i64,
+    pub kind: NodeKind,
+    #[ts(type = "number | null")]
+    pub parent_id: Option<i64>,
+    pub name: String,
+    /// The session the app is working with; always false for a folder.
+    pub active: bool,
+    /// Shortcuts to characters lying in this node, in the order they were put there.
+    #[ts(type = "number[]")]
+    pub members: Vec<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]

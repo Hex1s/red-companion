@@ -61,6 +61,24 @@ pub struct SessionRow {
     pub active: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ContainerKind {
+    Session,
+    Folder,
+}
+
+/// A node of the explorer tree. `active` is only ever true for a session.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ContainerRow {
+    pub id: i64,
+    pub kind: ContainerKind,
+    pub parent_id: Option<i64>,
+    pub name: String,
+    pub active: bool,
+}
+
+const CONTAINER_SELECT: &str = "SELECT c.id, c.kind, c.parent_id, c.name, COALESCE(s.active, 0)      FROM containers c LEFT JOIN sessions s ON s.id = c.id";
+
 /// A named JSON document (user template or encounter).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DocRow {
@@ -140,6 +158,25 @@ impl Storage {
         Ok(self.conn.execute("DELETE FROM characters WHERE id = ?1", [id])? > 0)
     }
 
+    /// Puts a deleted character back under its old id (ids are never reused, so it is free).
+    /// False, and nothing changes, when a character with that id exists.
+    pub fn restore_character(&self, id: i64, kind: CharacterKind, name: &str, data: &str) -> Result<bool> {
+        let n = self.conn.execute(
+            "INSERT OR IGNORE INTO characters (id, kind, name, data) VALUES (?1, ?2, ?3, ?4)",
+            params![id, kind.as_str(), name, data],
+        )?;
+        Ok(n > 0)
+    }
+
+    /// The containers holding a shortcut to a character.
+    pub fn containers_of(&self, character_id: i64) -> Result<Vec<i64>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT container_id FROM container_characters WHERE character_id = ?1 ORDER BY rowid",
+        )?;
+        let rows = stmt.query_map([character_id], |r| r.get(0))?;
+        Ok(rows.collect::<std::result::Result<_, _>>()?)
+    }
+
     pub fn insert_doc(&self, table: DocTable, name: &str, data: &str) -> Result<i64> {
         self.conn.execute(
             &format!("INSERT INTO {} (name, data) VALUES (?1, ?2)", table.name()),
@@ -185,29 +222,96 @@ impl Storage {
             > 0)
     }
 
+    /// Creates a session: a root container plus its session row.
     pub fn create_session(&self, name: &str) -> Result<i64> {
-        self.conn.execute("INSERT INTO sessions (name) VALUES (?1)", [name])?;
-        Ok(self.conn.last_insert_rowid())
+        let tx = self.conn.unchecked_transaction()?;
+        tx.execute("INSERT INTO containers (kind, name) VALUES ('session', ?1)", [name])?;
+        let id = tx.last_insert_rowid();
+        tx.execute("INSERT INTO sessions (id) VALUES (?1)", [id])?;
+        tx.commit()?;
+        Ok(id)
     }
 
-    pub fn list_sessions(&self) -> Result<Vec<SessionRow>> {
-        let mut stmt = self.conn.prepare("SELECT id, name, active FROM sessions ORDER BY id")?;
-        let rows = stmt.query_map([], |r| {
-            Ok(SessionRow { id: r.get(0)?, name: r.get(1)?, active: r.get::<_, i64>(2)? != 0 })
-        })?;
+    /// Creates a folder at the root, or inside `parent`. Folders nest one level only: `None` when
+    /// `parent` does not exist or is not a root folder.
+    pub fn create_folder(&self, parent: Option<i64>, name: &str) -> Result<Option<i64>> {
+        if let Some(parent) = parent {
+            let root_folder = self
+                .container(parent)?
+                .is_some_and(|c| c.kind == ContainerKind::Folder && c.parent_id.is_none());
+            if !root_folder {
+                return Ok(None);
+            }
+        }
+        self.conn.execute(
+            "INSERT INTO containers (kind, parent_id, name) VALUES ('folder', ?1, ?2)",
+            params![parent, name],
+        )?;
+        Ok(Some(self.conn.last_insert_rowid()))
+    }
+
+    pub fn container(&self, id: i64) -> Result<Option<ContainerRow>> {
+        Ok(self
+            .conn
+            .query_row(&format!("{CONTAINER_SELECT} WHERE c.id = ?1"), [id], container_row)
+            .optional()?)
+    }
+
+    /// Every container, sessions and folders alike, in creation order.
+    pub fn list_containers(&self) -> Result<Vec<ContainerRow>> {
+        let mut stmt = self.conn.prepare(&format!("{CONTAINER_SELECT} ORDER BY c.id"))?;
+        let rows = stmt.query_map([], container_row)?;
         Ok(rows.collect::<std::result::Result<_, _>>()?)
     }
 
-    pub fn rename_session(&self, id: i64, name: &str) -> Result<bool> {
-        Ok(self.conn.execute("UPDATE sessions SET name = ?2 WHERE id = ?1", params![id, name])? > 0)
+    pub fn list_sessions(&self) -> Result<Vec<SessionRow>> {
+        Ok(self
+            .list_containers()?
+            .into_iter()
+            .filter(|c| c.kind == ContainerKind::Session)
+            .map(|c| SessionRow { id: c.id, name: c.name, active: c.active })
+            .collect())
+    }
+
+    /// Moves a folder to the root (`parent` `None`) or into a root folder. False, and nothing
+    /// changes, when that would break the rules: `id` is not a folder, the parent is not a root
+    /// folder (or is the folder itself), or the folder has subfolders and would nest a second level.
+    pub fn move_folder(&self, id: i64, parent: Option<i64>) -> Result<bool> {
+        let Some(folder) = self.container(id)?.filter(|c| c.kind == ContainerKind::Folder) else {
+            return Ok(false);
+        };
+        if let Some(parent) = parent {
+            let root_folder = self
+                .container(parent)?
+                .is_some_and(|c| c.kind == ContainerKind::Folder && c.parent_id.is_none());
+            let has_subfolders: bool = self.conn.query_row(
+                "SELECT EXISTS (SELECT 1 FROM containers WHERE parent_id = ?1)",
+                [id],
+                |r| r.get(0),
+            )?;
+            if parent == id || !root_folder || has_subfolders {
+                return Ok(false);
+            }
+        }
+        if folder.parent_id != parent {
+            self.conn
+                .execute("UPDATE containers SET parent_id = ?2 WHERE id = ?1", params![id, parent])?;
+        }
+        Ok(true)
+    }
+
+    /// Renames a session or a folder.
+    pub fn rename_container(&self, id: i64, name: &str) -> Result<bool> {
+        Ok(self.conn.execute("UPDATE containers SET name = ?2 WHERE id = ?1", params![id, name])? > 0)
     }
 
     /// Makes `id` the only active session; false (and no change) when it does not exist.
     pub fn set_active_session(&self, id: i64) -> Result<bool> {
         let tx = self.conn.unchecked_transaction()?;
+        // The unique index allows one active row, so the old one is cleared first.
+        tx.execute("UPDATE sessions SET active = 0 WHERE active = 1 AND id <> ?1", [id])?;
         let found = tx.execute("UPDATE sessions SET active = 1 WHERE id = ?1", [id])? > 0;
         if found {
-            tx.execute("UPDATE sessions SET active = 0 WHERE id <> ?1", [id])?;
             tx.commit()?;
         }
         Ok(found)
@@ -220,28 +324,37 @@ impl Storage {
             .optional()?)
     }
 
-    /// The characters taking part in a session, in the order they joined.
-    pub fn session_members(&self, session_id: i64) -> Result<Vec<i64>> {
+    /// The characters lying in a container, in the order they were put there.
+    pub fn container_members(&self, container_id: i64) -> Result<Vec<i64>> {
         let mut stmt = self.conn.prepare(
-            "SELECT character_id FROM session_characters WHERE session_id = ?1 ORDER BY rowid",
+            "SELECT character_id FROM container_characters WHERE container_id = ?1 ORDER BY rowid",
         )?;
-        let rows = stmt.query_map([session_id], |r| r.get(0))?;
+        let rows = stmt.query_map([container_id], |r| r.get(0))?;
         Ok(rows.collect::<std::result::Result<_, _>>()?)
     }
 
-    /// Adds a character to a session; adding an existing member changes nothing.
-    pub fn add_member(&self, session_id: i64, character_id: i64) -> Result<()> {
+    /// Every shortcut as `(container, character)`, for building the explorer tree in one pass.
+    pub fn all_memberships(&self) -> Result<Vec<(i64, i64)>> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT container_id, character_id FROM container_characters ORDER BY rowid")?;
+        let rows = stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?;
+        Ok(rows.collect::<std::result::Result<_, _>>()?)
+    }
+
+    /// Puts a shortcut to a character into a container; adding an existing one changes nothing.
+    pub fn add_member(&self, container_id: i64, character_id: i64) -> Result<()> {
         self.conn.execute(
-            "INSERT OR IGNORE INTO session_characters (session_id, character_id) VALUES (?1, ?2)",
-            params![session_id, character_id],
+            "INSERT OR IGNORE INTO container_characters (container_id, character_id) VALUES (?1, ?2)",
+            params![container_id, character_id],
         )?;
         Ok(())
     }
 
-    pub fn remove_member(&self, session_id: i64, character_id: i64) -> Result<bool> {
+    pub fn remove_member(&self, container_id: i64, character_id: i64) -> Result<bool> {
         Ok(self.conn.execute(
-            "DELETE FROM session_characters WHERE session_id = ?1 AND character_id = ?2",
-            params![session_id, character_id],
+            "DELETE FROM container_characters WHERE container_id = ?1 AND character_id = ?2",
+            params![container_id, character_id],
         )? > 0)
     }
 
@@ -256,9 +369,10 @@ impl Storage {
             .optional()?)
     }
 
-    /// Deleting a session deletes its scenes (ON DELETE CASCADE).
-    pub fn delete_session(&self, id: i64) -> Result<bool> {
-        Ok(self.conn.execute("DELETE FROM sessions WHERE id = ?1", [id])? > 0)
+    /// Deletes a container with everything under it: a session's scenes, a folder's subfolders and
+    /// the shortcuts (the characters stay).
+    pub fn delete_container(&self, id: i64) -> Result<bool> {
+        Ok(self.conn.execute("DELETE FROM containers WHERE id = ?1", [id])? > 0)
     }
 
     pub fn create_scene(&self, session_id: i64, name: &str, data: &str) -> Result<i64> {
@@ -316,6 +430,20 @@ impl Storage {
             )
             .optional()?)
     }
+}
+
+fn container_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<ContainerRow> {
+    Ok(ContainerRow {
+        id: r.get(0)?,
+        kind: if r.get::<_, String>(1)? == "session" {
+            ContainerKind::Session
+        } else {
+            ContainerKind::Folder
+        },
+        parent_id: r.get(2)?,
+        name: r.get(3)?,
+        active: r.get::<_, i64>(4)? != 0,
+    })
 }
 
 fn doc_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<DocRow> {
@@ -384,7 +512,7 @@ mod tests {
         s.set_session_notes(session, "notes").unwrap();
         assert_eq!(s.session_notes(session).unwrap().as_deref(), Some("notes"));
 
-        s.delete_session(session).unwrap();
+        s.delete_container(session).unwrap();
         assert!(s.list_scenes(session).unwrap().is_empty());
     }
 
@@ -413,7 +541,7 @@ mod tests {
         assert!(!s.set_active_session(999).unwrap());
         assert_eq!(s.active_session().unwrap(), Some(two));
 
-        assert!(s.rename_session(two, "Renamed").unwrap());
+        assert!(s.rename_container(two, "Renamed").unwrap());
         assert_eq!(s.list_sessions().unwrap()[1].name, "Renamed");
     }
 
@@ -429,8 +557,8 @@ mod tests {
         s.add_member(one, gang).unwrap();
         s.add_member(one, v).unwrap(); // joining twice changes nothing
         s.add_member(two, v).unwrap();
-        assert_eq!(s.session_members(one).unwrap(), vec![v, gang]);
-        assert_eq!(s.session_members(two).unwrap(), vec![v]);
+        assert_eq!(s.container_members(one).unwrap(), vec![v, gang]);
+        assert_eq!(s.container_members(two).unwrap(), vec![v]);
 
         // Leaving a session does not delete the character.
         assert!(s.remove_member(one, gang).unwrap());
@@ -439,14 +567,82 @@ mod tests {
 
         // Deleting a character removes it from every session.
         s.delete_character(v).unwrap();
-        assert!(s.session_members(one).unwrap().is_empty());
-        assert!(s.session_members(two).unwrap().is_empty());
+        assert!(s.container_members(one).unwrap().is_empty());
+        assert!(s.container_members(two).unwrap().is_empty());
 
         // Deleting a session keeps its characters.
         s.add_member(two, gang).unwrap();
-        s.delete_session(two).unwrap();
+        s.delete_container(two).unwrap();
         assert!(s.get_character(gang).unwrap().is_some());
-        assert!(s.session_members(two).unwrap().is_empty());
+        assert!(s.container_members(two).unwrap().is_empty());
+    }
+
+    #[test]
+    fn folders_nest_one_level_and_hold_shortcuts() {
+        let s = Storage::open_in_memory().unwrap();
+        let gangs = s.create_folder(None, "Gangs").unwrap().unwrap();
+        let maelstrom = s.create_folder(Some(gangs), "Maelstrom").unwrap().unwrap();
+        // A third level, a session as parent and an unknown parent are all refused.
+        assert!(s.create_folder(Some(maelstrom), "Deeper").unwrap().is_none());
+        let session = s.create_session("Night 1").unwrap();
+        assert!(s.create_folder(Some(session), "In session").unwrap().is_none());
+        assert!(s.create_folder(Some(999), "Nowhere").unwrap().is_none());
+
+        let tree = s.list_containers().unwrap();
+        assert_eq!(tree.len(), 3);
+        let child = tree.iter().find(|c| c.id == maelstrom).unwrap();
+        assert_eq!((child.kind, child.parent_id), (ContainerKind::Folder, Some(gangs)));
+        // Only sessions are listed as sessions.
+        assert_eq!(s.list_sessions().unwrap().len(), 1);
+
+        // One character may lie in a folder and a session at once.
+        let ganger = s.insert_character(CharacterKind::Npc, "Ganger", "{}").unwrap();
+        s.add_member(maelstrom, ganger).unwrap();
+        s.add_member(session, ganger).unwrap();
+        assert_eq!(s.all_memberships().unwrap(), vec![(maelstrom, ganger), (session, ganger)]);
+
+        // Deleting the parent folder takes the subfolder and its shortcuts; the character stays.
+        assert!(s.delete_container(gangs).unwrap());
+        assert!(s.container(maelstrom).unwrap().is_none());
+        assert_eq!(s.all_memberships().unwrap(), vec![(session, ganger)]);
+        assert!(s.get_character(ganger).unwrap().is_some());
+    }
+
+    #[test]
+    fn folders_move_between_the_root_and_root_folders_within_the_depth_limit() {
+        let s = Storage::open_in_memory().unwrap();
+        let gangs = s.create_folder(None, "Gangs").unwrap().unwrap();
+        let places = s.create_folder(None, "Places").unwrap().unwrap();
+        let maelstrom = s.create_folder(Some(gangs), "Maelstrom").unwrap().unwrap();
+        let session = s.create_session("Night 1").unwrap();
+
+        // Into another root folder, and back to the root.
+        assert!(s.move_folder(maelstrom, Some(places)).unwrap());
+        assert_eq!(s.container(maelstrom).unwrap().unwrap().parent_id, Some(places));
+        assert!(s.move_folder(maelstrom, None).unwrap());
+        assert_eq!(s.container(maelstrom).unwrap().unwrap().parent_id, None);
+
+        // A folder with a subfolder cannot go inside another one (a third level), nor into itself.
+        assert!(s.move_folder(maelstrom, Some(gangs)).unwrap());
+        assert!(!s.move_folder(gangs, Some(places)).unwrap());
+        assert!(!s.move_folder(places, Some(places)).unwrap());
+        // Not into a nested folder, a session, or nowhere; sessions do not move at all.
+        let loose = s.create_folder(None, "Loose").unwrap().unwrap();
+        assert!(!s.move_folder(loose, Some(maelstrom)).unwrap());
+        assert!(!s.move_folder(loose, Some(session)).unwrap());
+        assert!(!s.move_folder(loose, Some(999)).unwrap());
+        assert!(!s.move_folder(session, None).unwrap());
+        assert_eq!(s.container(gangs).unwrap().unwrap().parent_id, None);
+    }
+
+    #[test]
+    fn a_folder_is_never_active_and_holds_no_scene() {
+        let s = Storage::open_in_memory().unwrap();
+        let folder = s.create_folder(None, "Gangs").unwrap().unwrap();
+        assert!(!s.set_active_session(folder).unwrap());
+        assert!(s.active_session().unwrap().is_none());
+        assert!(s.create_scene(folder, "x", "{}").is_err());
+        assert!(!s.container(folder).unwrap().unwrap().active);
     }
 
     #[test]

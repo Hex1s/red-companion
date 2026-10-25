@@ -16,7 +16,10 @@ use rules_core::dice::{
     roll_manual,
 };
 use rules_core::skill_check::{self, SkillCheck};
-use rules_core::scene::{CoverPreset, Scene, SceneRecord, SessionInfo, cover_presets};
+use rules_core::scene::{
+    CoverPreset, DeletedCharacter, ExplorerNode, NodeKind, Scene, SceneRecord, SceneSnapshot,
+    SessionInfo, cover_presets,
+};
 use rules_core::encounter_transfer::{self, EncountersImported, EncountersSaved};
 use rules_core::transfer::{self, ExportFile, ExportKind, ExportSaved, ExportedCharacter};
 use rules_core::healing::{self, HealApplied, HealKind, RestApplied, RestPlan};
@@ -310,6 +313,13 @@ fn storage_kind(kind: CharacterKind) -> storage::CharacterKind {
     }
 }
 
+fn rules_kind(kind: storage::CharacterKind) -> CharacterKind {
+    match kind {
+        storage::CharacterKind::Pc => CharacterKind::Pc,
+        storage::CharacterKind::Npc => CharacterKind::Npc,
+    }
+}
+
 /// Parses a stored character. Filler NPCs have no mortal wound: at 0 HP they are dead.
 fn parse_row(row: &CharacterRow) -> Result<Character, CmdError> {
     let mut character: Character = serde_json::from_str(&row.data)?;
@@ -478,7 +488,7 @@ fn export_session(
 ) -> Result<ExportSaved, CmdError> {
     let storage = lock(&state)?;
     let session = ensure_session(&storage)?;
-    let members = storage.session_members(session)?;
+    let members = storage.container_members(session)?;
     let name = storage
         .list_sessions()
         ?
@@ -659,22 +669,77 @@ fn open_exports_folder(
     app.opener().open_path(target.display().to_string(), None::<&str>).map_err(CmdError::from)
 }
 
+/// Deletes a character at once and returns a snapshot of what went with it, for `restore_character`.
 #[tauri::command]
-fn delete_character(state: State<'_, AppStorage>, id: i64) -> Result<(), CmdError> {
+fn delete_character(state: State<'_, AppStorage>, id: i64) -> Result<DeletedCharacter, CmdError> {
     let storage = lock(&state)?;
+    delete_character_in(&storage, id)
+}
+
+fn delete_character_in(storage: &Storage, id: i64) -> Result<DeletedCharacter, CmdError> {
+    let row = storage.get_character(id)?.ok_or_else(|| CmdError::not_found("character", id))?;
+    let containers = storage.containers_of(id)?;
     // Membership rows go with the character (ON DELETE CASCADE).
     storage.delete_character(id)?;
     // A deleted character must not linger behind a cover or in a fight, in any session.
-    for row in storage.all_scenes()? {
-        let mut scene: Scene = serde_json::from_str(&row.data)?;
-        scene.unlink_character(id);
-        if scene.combat.combatants.iter().any(|c| c.character_id == id) {
-            let skip = dead_ids(&storage, &scene)?;
-            scene.combat.remove(id, &skip)?;
-            // The turn may have passed to a mortally wounded fighter (or to nobody).
-            refresh_death_save_due(&mut scene, &storage)?;
+    let mut scenes = Vec::new();
+    for scene_row in storage.all_scenes()? {
+        let mut scene: Scene = serde_json::from_str(&scene_row.data)?;
+        let before = serde_json::to_string(&scene)?;
+        purge_from_scene(storage, &mut scene, id)?;
+        let after = serde_json::to_string(&scene)?;
+        if before != after {
+            storage.save_scene(scene_row.id, &after)?;
+            scenes.push(SceneSnapshot { id: scene_row.id, before, after });
         }
-        save_scene_row(&storage, row.id, &scene)?;
+    }
+    Ok(DeletedCharacter {
+        id,
+        kind: rules_kind(row.kind),
+        name: row.name,
+        data: row.data,
+        containers,
+        scenes,
+    })
+}
+
+/// Undoes `delete_character`: the character comes back under its old id, with its shortcuts
+/// (to containers that still exist) and its place in fights and covers (in scenes nobody has
+/// changed since).
+#[tauri::command]
+fn restore_character(state: State<'_, AppStorage>, deleted: DeletedCharacter) -> Result<(), CmdError> {
+    let storage = lock(&state)?;
+    restore_character_in(&storage, deleted)
+}
+
+fn restore_character_in(storage: &Storage, deleted: DeletedCharacter) -> Result<(), CmdError> {
+    // The sheet must still parse; the row is put back exactly as it was.
+    serde_json::from_str::<Character>(&deleted.data)?;
+    if !storage.restore_character(deleted.id, storage_kind(deleted.kind), &deleted.name, &deleted.data)? {
+        return Err(CmdError::already_exists("character", deleted.id));
+    }
+    for container in deleted.containers {
+        if storage.container(container)?.is_some() {
+            storage.add_member(container, deleted.id)?;
+        }
+    }
+    let current = storage.all_scenes()?;
+    for snapshot in deleted.scenes {
+        if current.iter().any(|row| row.id == snapshot.id && row.data == snapshot.after) {
+            storage.save_scene(snapshot.id, &snapshot.before)?;
+        }
+    }
+    Ok(())
+}
+
+/// Takes a character out of a scene's covers and fight.
+fn purge_from_scene(storage: &Storage, scene: &mut Scene, character_id: i64) -> Result<(), CmdError> {
+    scene.unlink_character(character_id);
+    if scene.combat.combatants.iter().any(|c| c.character_id == character_id) {
+        let skip = dead_ids(storage, scene)?;
+        scene.combat.remove(character_id, &skip)?;
+        // The turn may have passed to a mortally wounded fighter (or to nobody).
+        refresh_death_save_due(scene, storage)?;
     }
     Ok(())
 }
@@ -719,19 +784,14 @@ fn ensure_session(storage: &Storage) -> Result<i64, CmdError> {
     Ok(id)
 }
 
-/// Puts a new character into the active session.
+/// Puts a new player character into the active session. NPCs do not live in sessions (the GM
+/// keeps them in the library and in folders, and drags them into a fight), so they are skipped.
 fn join_active_session(storage: &Storage, character_id: i64) -> Result<(), CmdError> {
+    if storage.get_character(character_id)?.is_some_and(|row| row.kind == storage::CharacterKind::Npc) {
+        return Ok(());
+    }
     let session = ensure_session(storage)?;
     storage.add_member(session, character_id).map_err(CmdError::from)
-}
-
-/// Like `session_infos`, but an empty database stays empty: the UI creates the first session
-/// itself so that its name follows the interface language.
-fn list_session_infos(storage: &Storage) -> Result<Vec<SessionInfo>, CmdError> {
-    if storage.list_sessions()?.is_empty() {
-        return Ok(Vec::new());
-    }
-    session_infos(storage)
 }
 
 fn session_infos(storage: &Storage) -> Result<Vec<SessionInfo>, CmdError> {
@@ -770,32 +830,12 @@ fn with_scene(
     Ok(SceneRecord { id, scene })
 }
 
-#[tauri::command]
-fn list_sessions(state: State<'_, AppStorage>) -> Result<Vec<SessionInfo>, CmdError> {
-    let storage = lock(&state)?;
-    list_session_infos(&storage)
-}
-
 /// Creates a session with an empty scene and switches to it.
 #[tauri::command]
 fn create_session(state: State<'_, AppStorage>, name: String) -> Result<Vec<SessionInfo>, CmdError> {
     let storage = lock(&state)?;
     let id = new_session(&storage, &name)?;
     storage.set_active_session(id)?;
-    session_infos(&storage)
-}
-
-#[tauri::command]
-fn rename_session(
-    state: State<'_, AppStorage>,
-    id: i64,
-    name: String,
-) -> Result<Vec<SessionInfo>, CmdError> {
-    let storage = lock(&state)?;
-    let name = clean_session_name(&name)?;
-    if !storage.rename_session(id, &name)? {
-        return Err(CmdError::not_found("session", id));
-    }
     session_infos(&storage)
 }
 
@@ -833,58 +873,125 @@ fn switch_session(state: State<'_, AppStorage>, id: i64) -> Result<Vec<SessionIn
     session_infos(&storage)
 }
 
-/// Deletes a session with its scene and fight. Its characters stay in the common list. Deleting
-/// the active session activates another one; the list comes back empty after the last one.
-#[tauri::command]
-fn delete_session(state: State<'_, AppStorage>, id: i64) -> Result<Vec<SessionInfo>, CmdError> {
-    let storage = lock(&state)?;
-    if !storage.delete_session(id)? {
-        return Err(CmdError::not_found("session", id));
-    }
-    if storage.list_sessions()?.is_empty() {
-        return Ok(Vec::new());
-    }
-    session_infos(&storage)
+/// The explorer tree as a flat list: sessions and folders with the characters lying in them.
+fn explorer_nodes(storage: &Storage) -> Result<Vec<ExplorerNode>, CmdError> {
+    let memberships = storage.all_memberships()?;
+    Ok(storage
+        .list_containers()?
+        .into_iter()
+        .map(|c| ExplorerNode {
+            id: c.id,
+            kind: match c.kind {
+                storage::ContainerKind::Session => NodeKind::Session,
+                storage::ContainerKind::Folder => NodeKind::Folder,
+            },
+            parent_id: c.parent_id,
+            name: c.name,
+            active: c.active,
+            members: memberships.iter().filter(|(n, _)| *n == c.id).map(|(_, ch)| *ch).collect(),
+        })
+        .collect())
 }
 
-/// Ids of the active session's characters, in the order they joined.
 #[tauri::command]
-fn session_members(state: State<'_, AppStorage>) -> Result<Vec<i64>, CmdError> {
+fn explorer_tree(state: State<'_, AppStorage>) -> Result<Vec<ExplorerNode>, CmdError> {
     let storage = lock(&state)?;
-    let session = ensure_session(&storage)?;
-    storage.session_members(session).map_err(CmdError::from)
+    explorer_nodes(&storage)
 }
 
+/// Creates a folder at the root, or inside a root folder.
 #[tauri::command]
-fn add_to_session(state: State<'_, AppStorage>, character_id: i64) -> Result<Vec<i64>, CmdError> {
+fn create_folder(
+    state: State<'_, AppStorage>,
+    parent: Option<i64>,
+    name: String,
+) -> Result<Vec<ExplorerNode>, CmdError> {
     let storage = lock(&state)?;
+    let name = clean_session_name(&name)?;
+    if storage.create_folder(parent, &name)?.is_none() {
+        return Err(CmdError::invalid_folder_parent());
+    }
+    explorer_nodes(&storage)
+}
+
+/// Renames a session or a folder.
+#[tauri::command]
+fn rename_node(
+    state: State<'_, AppStorage>,
+    id: i64,
+    name: String,
+) -> Result<Vec<ExplorerNode>, CmdError> {
+    let storage = lock(&state)?;
+    let name = clean_session_name(&name)?;
+    if !storage.rename_container(id, &name)? {
+        return Err(CmdError::not_found("container", id));
+    }
+    explorer_nodes(&storage)
+}
+
+/// Moves a folder to the root (`parent` null) or into a root folder.
+#[tauri::command]
+fn move_folder(
+    state: State<'_, AppStorage>,
+    id: i64,
+    parent: Option<i64>,
+) -> Result<Vec<ExplorerNode>, CmdError> {
+    let storage = lock(&state)?;
+    if !storage.container(id)?.is_some_and(|c| c.kind == storage::ContainerKind::Folder) {
+        return Err(CmdError::not_found("container", id));
+    }
+    if !storage.move_folder(id, parent)? {
+        return Err(CmdError::invalid_folder_parent());
+    }
+    explorer_nodes(&storage)
+}
+
+/// Deletes a session (with its scene and fight) or a folder (with its subfolders). The characters
+/// stay in the library. Deleting the active session hands the role to another one.
+#[tauri::command]
+fn delete_node(state: State<'_, AppStorage>, id: i64) -> Result<Vec<ExplorerNode>, CmdError> {
+    let storage = lock(&state)?;
+    if !storage.delete_container(id)? {
+        return Err(CmdError::not_found("container", id));
+    }
+    if storage.active_session()?.is_none() && !storage.list_sessions()?.is_empty() {
+        ensure_session(&storage)?;
+    }
+    explorer_nodes(&storage)
+}
+
+/// Puts a shortcut to a character into a session or a folder.
+#[tauri::command]
+fn add_to_container(
+    state: State<'_, AppStorage>,
+    container_id: i64,
+    character_id: i64,
+) -> Result<Vec<ExplorerNode>, CmdError> {
+    let storage = lock(&state)?;
+    if storage.container(container_id)?.is_none() {
+        return Err(CmdError::not_found("container", container_id));
+    }
     if storage.get_character(character_id)?.is_none() {
         return Err(CmdError::not_found("character", character_id));
     }
-    join_active_session(&storage, character_id)?;
-    let session = ensure_session(&storage)?;
-    storage.session_members(session).map_err(CmdError::from)
+    storage.add_member(container_id, character_id)?;
+    explorer_nodes(&storage)
 }
 
-/// Takes a character out of the active session: out of its covers and fight too. The character
-/// itself stays in the common list.
+/// Takes the shortcut out of a session or a folder; the character stays in the library. Who
+/// fights is a separate matter (the initiative order), so leaving a session changes no fight.
 #[tauri::command]
-fn remove_from_session(
+fn remove_from_container(
     state: State<'_, AppStorage>,
+    container_id: i64,
     character_id: i64,
-) -> Result<SceneRecord, CmdError> {
+) -> Result<Vec<ExplorerNode>, CmdError> {
     let storage = lock(&state)?;
-    let session = ensure_session(&storage)?;
-    storage.remove_member(session, character_id)?;
-    let (id, mut scene) = load_scene(&storage)?;
-    scene.unlink_character(character_id);
-    if scene.combat.combatants.iter().any(|c| c.character_id == character_id) {
-        let skip = dead_ids(&storage, &scene)?;
-        scene.combat.remove(character_id, &skip)?;
-        refresh_death_save_due(&mut scene, &storage)?;
+    if storage.container(container_id)?.is_none() {
+        return Err(CmdError::not_found("container", container_id));
     }
-    save_scene_row(&storage, id, &scene)?;
-    Ok(SceneRecord { id, scene })
+    storage.remove_member(container_id, character_id)?;
+    explorer_nodes(&storage)
 }
 
 /// Solo's Damage Deflection for the "damage taken" window: how much, and whether this is the
@@ -1081,28 +1188,49 @@ fn combat_remove(state: State<'_, AppStorage>, character_id: i64) -> Result<Scen
     })
 }
 
-/// Starts the fight. Everyone in the active session fights: living characters who have no initiative
-/// yet get one rolled here, so the GM only types in the ones rolled with physical dice.
+/// Puts a character into the fight with a freshly rolled initiative; someone already in the
+/// fight keeps theirs (use `combat_roll` to re-roll).
+fn add_fighter(scene: &mut Scene, storage: &Storage, id: i64) -> Result<(), CmdError> {
+    let character = require_character(storage, id)?;
+    if scene.combat.is_in_fight(id) {
+        return Ok(());
+    }
+    let die = d10_check(None)?;
+    let bonus = rules_core::roles::initiative_bonus(&character);
+    scene
+        .combat
+        .add_with_bonus(id, character.stats.reflex, bonus, die)
+        .map_err(CmdError::from)
+}
+
+/// Starts the fight with whoever is in the initiative order. With nobody there, the living
+/// members of the active session fight: the GM only drags in the exceptions (absent players,
+/// NPCs from a folder). Fighters without initiative get one rolled when added.
+fn start_fight(scene: &mut Scene, storage: &Storage) -> Result<(), CmdError> {
+    if scene.combat.combatants.is_empty() {
+        let session = ensure_session(storage)?;
+        for id in storage.container_members(session)? {
+            let Some(character) = load_character(storage, id)? else { continue };
+            if !character.dead {
+                add_fighter(scene, storage, id)?;
+            }
+        }
+    }
+    let skip = dead_ids(storage, scene)?;
+    scene.combat.start(&skip)?;
+    refresh_death_save_due(scene, storage)
+}
+
+/// Adds a character to the fight (initiative is rolled for them), before or during the fight.
+#[tauri::command]
+fn combat_add(state: State<'_, AppStorage>, character_id: i64) -> Result<SceneRecord, CmdError> {
+    with_combat(&state, |scene, storage| add_fighter(scene, storage, character_id))
+}
+
+/// Starts the fight (see `start_fight` for who takes part).
 #[tauri::command]
 fn combat_start(state: State<'_, AppStorage>) -> Result<SceneRecord, CmdError> {
-    with_combat(&state, |scene, storage| {
-        let session = ensure_session(storage)?;
-        for id in storage.session_members(session)? {
-            let Some(character) = load_character(storage, id)? else { continue };
-            if character.dead || scene.combat.is_in_fight(id) {
-                continue;
-            }
-            let die = d10_check(None)?;
-            let bonus = rules_core::roles::initiative_bonus(&character);
-            scene
-                .combat
-                .add_with_bonus(id, character.stats.reflex, bonus, die)
-                ?;
-        }
-        let skip = dead_ids(storage, scene)?;
-        scene.combat.start(&skip)?;
-        refresh_death_save_due(scene, storage)
-    })
+    with_combat(&state, start_fight)
 }
 
 #[tauri::command]
@@ -1577,6 +1705,7 @@ pub fn run() {
             create_character,
             save_character,
             delete_character,
+            restore_character,
             export_characters,
             list_exports,
             export_session,
@@ -1584,16 +1713,17 @@ pub fn run() {
             import_encounter_file,
             import_export_file,
             open_exports_folder,
-            list_sessions,
             create_session,
-            rename_session,
             switch_session,
             session_notes,
             set_session_notes,
-            delete_session,
-            session_members,
-            add_to_session,
-            remove_from_session,
+            explorer_tree,
+            create_folder,
+            rename_node,
+            move_folder,
+            delete_node,
+            add_to_container,
+            remove_from_container,
             get_scene,
             list_cover_presets,
             add_cover,
@@ -1611,6 +1741,7 @@ pub fn run() {
             undo_damage,
             revive_character,
             combat_roll,
+            combat_add,
             preview_derived,
             combat_set_initiative,
             combat_shift,
@@ -1652,15 +1783,147 @@ mod tests {
     }
 
     #[test]
-    fn listing_an_empty_database_creates_no_session() {
+    fn reading_the_tree_of_an_empty_database_creates_no_session() {
+        // The UI creates the first session itself, so that its name follows the language.
         let s = storage();
-        assert!(list_session_infos(&s).unwrap().is_empty());
+        assert!(explorer_nodes(&s).unwrap().is_empty());
         assert!(s.list_sessions().unwrap().is_empty());
-        // Sessions exist but none is active: the first one is activated.
+        // Sessions exist but none is active: the tree shows it as it is.
         let one = new_session(&s, "One").unwrap();
-        let infos = list_session_infos(&s).unwrap();
-        assert_eq!(infos.len(), 1);
-        assert!(infos[0].active && infos[0].id == one);
+        let tree = explorer_nodes(&s).unwrap();
+        assert_eq!(tree.len(), 1);
+        assert!(!tree[0].active && tree[0].id == one);
+    }
+
+    #[test]
+    fn the_explorer_tree_lists_sessions_and_folders_with_their_shortcuts() {
+        let s = storage();
+        let session = new_session(&s, "Night 1").unwrap();
+        let folder = s.create_folder(None, "Gangs").unwrap().unwrap();
+        let ganger = s.insert_character(storage::CharacterKind::Npc, "Ganger", "{}").unwrap();
+        s.add_member(folder, ganger).unwrap();
+        s.add_member(session, ganger).unwrap();
+
+        let tree = explorer_nodes(&s).unwrap();
+        assert_eq!(tree.len(), 2);
+        let node = |id| tree.iter().find(|n| n.id == id).unwrap();
+        assert_eq!(node(session).kind, NodeKind::Session);
+        assert_eq!(node(folder).kind, NodeKind::Folder);
+        assert_eq!(node(folder).members, vec![ganger]);
+        assert_eq!(node(session).members, vec![ganger]);
+        assert!(tree.iter().all(|n| !n.active));
+    }
+
+    fn add_character(s: &Storage, kind: storage::CharacterKind, name: &str) -> i64 {
+        let character = Character::quick(name);
+        let data = serde_json::to_string(&character).unwrap();
+        s.insert_character(kind, name, &data).unwrap()
+    }
+
+    #[test]
+    fn a_deleted_character_comes_back_with_its_shortcuts_and_place_in_the_fight() {
+        let s = storage();
+        let pc = add_character(&s, storage::CharacterKind::Pc, "V");
+        join_active_session(&s, pc).unwrap();
+        let folder = s.create_folder(None, "Crew").unwrap().unwrap();
+        s.add_member(folder, pc).unwrap();
+        let (scene_id, mut scene) = load_scene(&s).unwrap();
+        scene.combat.set_or_add(pc, 6, 12).unwrap();
+        save_scene_row(&s, scene_id, &scene).unwrap();
+
+        let deleted = delete_character_in(&s, pc).unwrap();
+        assert!(s.get_character(pc).unwrap().is_none());
+        assert_eq!(deleted.containers.len(), 2);
+        let (_, gone) = load_scene(&s).unwrap();
+        assert!(gone.combat.combatants.is_empty());
+
+        restore_character_in(&s, deleted.clone()).unwrap();
+        assert_eq!(s.get_character(pc).unwrap().unwrap().name, "V");
+        assert_eq!(s.containers_of(pc).unwrap().len(), 2);
+        let (_, back) = load_scene(&s).unwrap();
+        assert_eq!(back.combat.combatants.len(), 1);
+
+        // A second undo finds the id taken.
+        assert_eq!(restore_character_in(&s, deleted).unwrap_err().0.code, "already_exists.character");
+    }
+
+    #[test]
+    fn undo_leaves_a_scene_alone_when_it_changed_in_the_meantime() {
+        let s = storage();
+        let pc = add_character(&s, storage::CharacterKind::Pc, "V");
+        let other = add_character(&s, storage::CharacterKind::Pc, "Jackie");
+        let (scene_id, mut scene) = load_scene(&s).unwrap();
+        scene.combat.set_or_add(pc, 6, 12).unwrap();
+        save_scene_row(&s, scene_id, &scene).unwrap();
+
+        let deleted = delete_character_in(&s, pc).unwrap();
+        let (_, mut changed) = load_scene(&s).unwrap();
+        changed.combat.set_or_add(other, 6, 9).unwrap();
+        save_scene_row(&s, scene_id, &changed).unwrap();
+
+        restore_character_in(&s, deleted).unwrap();
+        let (_, now) = load_scene(&s).unwrap();
+        assert_eq!(now.combat.combatants.len(), 1);
+        assert_eq!(now.combat.combatants[0].character_id, other);
+    }
+
+    #[test]
+    fn deleting_a_missing_character_is_not_found() {
+        let s = storage();
+        assert_eq!(delete_character_in(&s, 99).unwrap_err().0.code, "not_found.character");
+    }
+
+    #[test]
+    fn npcs_do_not_join_the_session_but_players_do() {
+        let s = storage();
+        let pc = add_character(&s, storage::CharacterKind::Pc, "V");
+        let npc = add_character(&s, storage::CharacterKind::Npc, "Ganger");
+        join_active_session(&s, pc).unwrap();
+        join_active_session(&s, npc).unwrap();
+        let session = ensure_session(&s).unwrap();
+        assert_eq!(s.container_members(session).unwrap(), vec![pc]);
+    }
+
+    #[test]
+    fn a_fight_started_with_nobody_takes_the_session_and_otherwise_only_the_chosen() {
+        let s = storage();
+        let (v, jackie, absent) = (
+            add_character(&s, storage::CharacterKind::Pc, "V"),
+            add_character(&s, storage::CharacterKind::Pc, "Jackie"),
+            add_character(&s, storage::CharacterKind::Pc, "Absent"),
+        );
+        let ganger = add_character(&s, storage::CharacterKind::Npc, "Ganger");
+        for id in [v, jackie, absent] {
+            join_active_session(&s, id).unwrap();
+        }
+
+        // Nobody was picked: every living member of the session fights.
+        let mut everyone = Scene::default();
+        start_fight(&mut everyone, &s).unwrap();
+        assert_eq!(everyone.combat.combatants.len(), 3);
+
+        // The GM picked a folder NPC and two players: the absent one stays out.
+        let mut picked = Scene::default();
+        for id in [v, jackie, ganger] {
+            add_fighter(&mut picked, &s, id).unwrap();
+        }
+        start_fight(&mut picked, &s).unwrap();
+        assert!(picked.combat.is_in_fight(ganger));
+        assert!(!picked.combat.is_in_fight(absent));
+        assert_eq!(picked.combat.combatants.len(), 3);
+        assert!(picked.combat.is_started());
+    }
+
+    #[test]
+    fn adding_a_fighter_twice_keeps_the_first_initiative() {
+        let s = storage();
+        let v = add_character(&s, storage::CharacterKind::Pc, "V");
+        let mut scene = Scene::default();
+        add_fighter(&mut scene, &s, v).unwrap();
+        let first = scene.combat.combatants[0].initiative;
+        add_fighter(&mut scene, &s, v).unwrap();
+        assert_eq!(scene.combat.combatants.len(), 1);
+        assert_eq!(scene.combat.combatants[0].initiative, first);
     }
 
     #[test]
@@ -1679,13 +1942,13 @@ mod tests {
         let (scene_two, other) = load_scene(&s).unwrap();
         assert_ne!(scene_one, scene_two);
         assert!(other.covers.is_empty(), "cover must stay in session one");
-        assert!(s.session_members(two).unwrap().is_empty());
+        assert!(s.container_members(two).unwrap().is_empty());
 
         // A new character joins the active session only.
-        let ganger = s.insert_character(storage::CharacterKind::Npc, "Ganger", "{}").unwrap();
-        join_active_session(&s, ganger).unwrap();
-        assert_eq!(s.session_members(one).unwrap(), vec![v]);
-        assert_eq!(s.session_members(two).unwrap(), vec![ganger]);
+        let jackie = s.insert_character(storage::CharacterKind::Pc, "Jackie", "{}").unwrap();
+        join_active_session(&s, jackie).unwrap();
+        assert_eq!(s.container_members(one).unwrap(), vec![v]);
+        assert_eq!(s.container_members(two).unwrap(), vec![jackie]);
 
         // Back in session one the cover is still there.
         s.set_active_session(one).unwrap();
@@ -1698,7 +1961,7 @@ mod tests {
         let one = new_session(&s, "One").unwrap();
         let two = new_session(&s, "Two").unwrap();
         s.set_active_session(two).unwrap();
-        s.delete_session(two).unwrap();
+        s.delete_container(two).unwrap();
         assert_eq!(ensure_session(&s).unwrap(), one);
         assert!(session_infos(&s).unwrap()[0].active);
     }

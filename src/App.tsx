@@ -1,3 +1,4 @@
+import { PanelLeft, Search } from "lucide-react";
 import { useDeferredValue, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { CharacterKind } from "@/bindings/CharacterKind";
@@ -5,8 +6,8 @@ import type { DeathSave } from "@/bindings/DeathSave";
 import type { ExportFile } from "@/bindings/ExportFile";
 import type { ExportKind } from "@/bindings/ExportKind";
 import { CharacterCard } from "@/components/character/character-card";
-import { CharacterList } from "@/components/character/character-list";
 import { CharacterSheet } from "@/components/character/character-sheet";
+import { Explorer } from "@/components/explorer/explorer";
 import { ImportDialog } from "@/components/character/import-dialog";
 import { NpcTemplateDialog, type CloneRequest } from "@/components/character/npc-template-dialog";
 import { EncountersPage } from "@/components/encounter/encounters-page";
@@ -20,12 +21,11 @@ import { TherapyDialog } from "@/components/combat/therapy-dialog";
 import type { HealKind } from "@/bindings/HealKind";
 import { StabilizeDialog } from "@/components/combat/stabilize-dialog";
 import { ReferencePage } from "@/components/reference/reference-page";
+import { ReferenceSearch } from "@/components/reference/reference-search";
 import { AppShell } from "@/components/layout/app-shell";
-import { SessionSwitcher } from "@/components/layout/session-switcher";
 import { CoverPicker } from "@/components/scene/cover-picker";
 import { SessionNotes } from "@/components/session/session-notes";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { errorMessage } from "@/lib/errors";
 import { useCharacters } from "@/hooks/use-characters";
@@ -33,30 +33,44 @@ import { useEncounters } from "@/hooks/use-encounters";
 import { useInjuries } from "@/hooks/use-injuries";
 import { useNpcTemplates } from "@/hooks/use-npc-templates";
 import { useScene } from "@/hooks/use-scene";
-import { useSessions } from "@/hooks/use-sessions";
+import { useExplorer } from "@/hooks/use-explorer";
 import { api, hasBackend } from "@/lib/api";
 import { coverLabel } from "@/lib/cover-label";
 import { formatCheck } from "@/lib/dice";
 import { cloneNames, npcNotes, templateKey } from "@/lib/encounter";
+import type { DeletedCharacter } from "@/bindings/DeletedCharacter";
 import type { EncounterRecord } from "@/bindings/EncounterRecord";
 import type { UserTemplateRecord } from "@/bindings/UserTemplateRecord";
 import { SUPPORTED_LANGUAGES } from "@/i18n";
 import { status } from "@/store/status-store";
-import { useUiStore, type AppTab } from "@/store/ui-store";
+import { useUiStore } from "@/store/ui-store";
+
+/** How long the "deleted — undo" message stays. */
+const UNDO_DELETE_MS = 8000;
 
 export default function App() {
   const { t, i18n } = useTranslation();
-  const { tab, setTab, selectedCharacterId, selectCharacter, damageTargetId, openDamage } =
-    useUiStore();
-  const sessionState = useSessions();
-  const sessionId = sessionState.active?.id ?? null;
-  const { entries, members, error, create, save, remove, reload, addToSession } =
-    useCharacters(sessionId);
+  const {
+    tab,
+    setTab,
+    selectedCharacterId,
+    selectCharacter,
+    damageTargetId,
+    openDamage,
+    explorerOpen,
+    toggleExplorer,
+  } = useUiStore();
+  const explorer = useExplorer();
+  const sessionId = explorer.active?.id ?? null;
+  const { entries, error, create, save, remove, restore, reload } = useCharacters(sessionId, explorer.reload);
+  // Who lies in the active session; the tree is the single source for it.
+  const members = explorer.active?.members ?? [];
   const sceneState = useScene(sessionId);
   const injuries = useInjuries();
   const npcTemplates = useNpcTemplates();
   const encounterState = useEncounters();
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [stabilizeTargetId, setStabilizeTargetId] = useState<number | null>(null);
   const [restTargetId, setRestTargetId] = useState<number | null>(null);
   const [humanityLossTargetId, setHumanityLossTargetId] = useState<number | null>(null);
@@ -105,28 +119,56 @@ export default function App() {
     }
   }, [encounterState.error, encounterState.reload, t]);
 
+  // Ctrl+B shows or hides the explorer, like the side bar of an editor.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.code === "KeyB") {
+        e.preventDefault();
+        toggleExplorer();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [toggleExplorer]);
+
+  // Ctrl+K (or "/" outside a text field) opens the reference search over whatever page is open.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const typing = target?.closest("input, textarea, select, [contenteditable=true]") != null;
+      const ctrlK = (e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.code === "KeyK";
+      const slash = e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey && !typing;
+      if (ctrlK || slash) {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   // A death save result is shown until the turn moves on.
   useEffect(() => setLastSave(null), [combat?.active, combat?.round]);
 
-  // The rail shows the session's characters only: fighters first, in acting order, then the
-  // others in the order they joined.
   const sessionEntries = members.flatMap((id) => entries.filter((e) => e.id === id));
+  // The rail shows the fight, not the session: its order is the initiative order. The session's
+  // members who are not fighting (an absent player) wait in the explorer.
+  const fighters = combat
+    ? combat.combatants.flatMap((c) => entries.filter((e) => e.id === c.character_id))
+    : [];
+  const railEntries = fighters;
+  // Helpers (healers, who gives a dose) may be anyone at the table: fighters and the session.
+  const tableEntries = [...fighters, ...sessionEntries.filter((e) => !fighters.some((f) => f.id === e.id))];
   // A dose can go to anyone in the session, or to the Medtech themselves.
   const drugHelper = drugRequest ? (entries.find((e) => e.id === drugRequest.helperId) ?? null) : null;
   const drugTargets =
-    drugHelper && !sessionEntries.some((e) => e.id === drugHelper.id)
-      ? [drugHelper, ...sessionEntries]
-      : sessionEntries;
+    drugHelper && !tableEntries.some((e) => e.id === drugHelper.id)
+      ? [drugHelper, ...tableEntries]
+      : tableEntries;
   const healHelpers =
-    healPatient && !sessionEntries.some((e) => e.id === healPatient.id)
-      ? [healPatient, ...sessionEntries]
-      : sessionEntries;
-  const railEntries = combat
-    ? [
-        ...combat.combatants.flatMap((c) => sessionEntries.filter((e) => e.id === c.character_id)),
-        ...sessionEntries.filter((e) => !combat.combatants.some((c) => c.character_id === e.id)),
-      ]
-    : sessionEntries;
+    healPatient && !tableEntries.some((e) => e.id === healPatient.id)
+      ? [healPatient, ...tableEntries]
+      : tableEntries;
   // The group an encounter is compared with: the session's player characters.
   const players = sessionEntries.filter((e) => e.kind === "pc").length;
 
@@ -141,13 +183,10 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
-  const leaveSession = async (id: number) => {
-    try {
-      sceneState.replaceScene(await api.removeFromSession(id));
-      await reload();
-    } catch (e) {
-      status.fail(e, "session:leave");
-    }
+  /** Puts a character into the fight (initiative is rolled) and says what was rolled. */
+  const addToCombat = async (id: number, name: string) => {
+    if (combat?.combatants.some((c) => c.character_id === id)) return;
+    await rollInitiative(id, name);
   };
 
   const rollInitiative = async (id: number, name: string) => {
@@ -177,17 +216,12 @@ export default function App() {
     }
   };
 
-  const joinSession = async (id: number) => {
-    try {
-      await addToSession(id);
-    } catch (e) {
-      status.fail(e, "session:join");
-    }
-  };
-
-  const createCharacter = async (kind: CharacterKind) => {
+  /** Creates a character; with `containerId` it also gets a shortcut in that folder or session. */
+  const createCharacter = async (kind: CharacterKind, containerId?: number) => {
     const record = await create(kind, t(`characters.default_name_${kind}`));
+    if (containerId !== undefined) await explorer.addTo(containerId, record.id);
     selectCharacter(record.id);
+    setTab("characters");
   };
 
   /** Clones a ready-made NPC once per name. */
@@ -218,6 +252,7 @@ export default function App() {
     let last: number | null = null;
     let created = 0;
     let missing = 0;
+    const launched: number[] = [];
     try {
       for (const line of encounter.entries) {
         const key = templateKey(line.source, line.template);
@@ -235,6 +270,7 @@ export default function App() {
             : await api.createNpcFromUserTemplate(own!.id, name);
           taken.push(name);
           last = record.id;
+          launched.push(record.id);
           created += 1;
         }
       }
@@ -242,6 +278,8 @@ export default function App() {
       // Even after a partial failure the clones that exist must show up.
       await reload();
     }
+    // A launched encounter is the enemy side of a fight: its NPCs go into the initiative order.
+    for (const id of launched) await sceneState.combatAdd(id);
     if (last !== null) selectCharacter(last);
     status.show({
       id: "encounter:launch",
@@ -252,6 +290,51 @@ export default function App() {
       }),
       autoHideMs: 6000,
     });
+  };
+
+  /**
+   * Deletes a character without asking; the status area offers "Undo" for a few seconds. The
+   * backend deleted it already, the snapshot it returned is what brings everything back.
+   */
+  const deleteCharacter = async (id: number) => {
+    const name = entries.find((e) => e.id === id)?.character.name ?? "";
+    const toastId = `character:delete:${id}`;
+    try {
+      const deleted = await remove(id);
+      if (selectedCharacterId === id) selectCharacter(null);
+      // The backend passed the turn on if the deleted one was active.
+      sceneState.replaceScene(await api.getScene());
+      status.show({
+        id: toastId,
+        kind: "info",
+        text: t("characters.deleted", { name }),
+        action: {
+          label: t("damage.undo"),
+          run: () => {
+            status.dismiss(toastId);
+            void undoDelete(deleted);
+          },
+        },
+        autoHideMs: UNDO_DELETE_MS,
+      });
+    } catch (e) {
+      status.fail(e, "character:delete");
+    }
+  };
+
+  const undoDelete = async (deleted: DeletedCharacter) => {
+    try {
+      await restore(deleted);
+      sceneState.replaceScene(await api.getScene());
+      selectCharacter(deleted.id);
+      status.show({
+        id: `character:delete:${deleted.id}`,
+        kind: "success",
+        text: t("characters.restored", { name: deleted.name }),
+      });
+    } catch (e) {
+      status.fail(e, "character:restore");
+    }
   };
 
   const saveAsTemplate = async (id: number) => {
@@ -382,25 +465,76 @@ export default function App() {
   return (
     <TooltipProvider>
       <AppShell
+        onRailDrop={(id) => {
+          const entry = entries.find((e) => e.id === id);
+          if (entry) void addToCombat(id, entry.character.name);
+        }}
+        explorerOpen={explorerOpen}
+        explorer={
+          <Explorer
+            nodes={explorer.nodes}
+            entries={entries}
+            selectedId={selectedCharacterId}
+            tab={tab}
+            enabled={hasBackend}
+            hasTemplates={npcTemplates.length > 0}
+            fighters={combat?.combatants.map((c) => c.character_id) ?? []}
+            actions={{
+              openCharacter: (id) => {
+                selectCharacter(id);
+                setTab("characters");
+              },
+              openNotes: (id) => {
+                if (id !== sessionId) void explorer.switchTo(id);
+                setTab("notes");
+              },
+              openEncounters: () => setTab("encounters"),
+              openReference: () => setTab("rules"),
+              activateSession: (id) => {
+                if (id !== sessionId) void explorer.switchTo(id);
+                setTab("characters");
+              },
+              createSession: explorer.createSession,
+              createFolder: explorer.createFolder,
+              rename: explorer.rename,
+              removeNode: explorer.remove,
+              addToContainer: (containerId, characterId) =>
+                void explorer.addTo(containerId, characterId),
+              removeFromContainer: (containerId, characterId) =>
+                void explorer.removeFrom(containerId, characterId),
+              addToCombat: (id) => {
+                const entry = entries.find((e) => e.id === id);
+                if (entry) void addToCombat(id, entry.character.name);
+              },
+              removeFromCombat: (id) => void sceneState.combatRemove(id),
+              newCharacter: (kind, containerId) => void createCharacter(kind, containerId),
+              moveFolder: (id, parent) => void explorer.moveFolder(id, parent),
+              fromTemplate: () => setTemplatesOpen(true),
+              importCharacters: () => void startImport("character"),
+              importSession: () => void startImport("session"),
+              exportCharacter: (id) => void exportCharacters({ ids: [id] }),
+              exportSession: () => void exportCharacters("session"),
+              saveAsTemplate: (id) => void saveAsTemplate(id),
+              deleteCharacter: (id) => void deleteCharacter(id),
+            }}
+          />
+        }
         header={
           <>
-            <h1 className="text-lg font-bold text-primary">{t("app.title")}</h1>
-            <Tabs value={tab} onValueChange={(v) => setTab(v as AppTab)} className="flex-1">
-              <TabsList>
-                <TabsTrigger value="characters">{t("nav.characters")}</TabsTrigger>
-                <TabsTrigger value="encounters">{t("nav.encounters")}</TabsTrigger>
-                <TabsTrigger value="notes">{t("nav.notes")}</TabsTrigger>
-                <TabsTrigger value="rules">{t("nav.rules")}</TabsTrigger>
-              </TabsList>
-            </Tabs>
-            <SessionSwitcher
-              sessions={sessionState.sessions}
-              disabled={!hasBackend}
-              onSwitch={(id) => void sessionState.switchTo(id)}
-              onCreate={(name) => sessionState.create(name)}
-              onRename={sessionState.rename}
-              onDelete={sessionState.remove}
-            />
+            <Button
+              size="xs"
+              variant="outline"
+              aria-label={t(explorerOpen ? "explorer.hide" : "explorer.show")}
+              title={t(explorerOpen ? "explorer.hide" : "explorer.show")}
+              onClick={toggleExplorer}
+            >
+              <PanelLeft className="size-4" />
+            </Button>
+            <h1 className="mr-auto text-lg font-bold text-primary">{t("app.title")}</h1>
+            <Button size="xs" variant="outline" onClick={() => setSearchOpen(true)}>
+              <Search className="size-4" />
+              {t("reference.global_button")}
+            </Button>
             <div className="flex gap-1">
               {SUPPORTED_LANGUAGES.map((lng) => (
                 <Button
@@ -418,55 +552,7 @@ export default function App() {
         main={
           tab === "characters" ? (
             <div className="space-y-6">
-              <div className="flex items-center gap-2">
-                <h2 className="mr-auto text-2xl font-bold">{t("characters.title")}</h2>
-                <Button disabled={!hasBackend} onClick={() => createCharacter("pc")}>
-                  {t("characters.new_pc")}
-                </Button>
-                <Button variant="outline" disabled={!hasBackend} onClick={() => createCharacter("npc")}>
-                  {t("characters.new_npc")}
-                </Button>
-                <Button
-                  variant="outline"
-                  disabled={!hasBackend || npcTemplates.length === 0}
-                  onClick={() => setTemplatesOpen(true)}
-                >
-                  {t("npc.from_template")}
-                </Button>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="xs" disabled={!hasBackend} onClick={() => void startImport("character")}>
-                  {t("characters.import")}
-                </Button>
-                <Button variant="outline" size="xs" disabled={!hasBackend} onClick={() => void startImport("session")}>
-                  {t("characters.import_session")}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="xs"
-                  disabled={!hasBackend || !selected}
-                  onClick={() => selected && exportCharacters({ ids: [selected.id] })}
-                >
-                  {t("characters.export_selected")}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="xs"
-                  disabled={!hasBackend || members.length === 0}
-                  onClick={() => exportCharacters("session")}
-                >
-                  {t("characters.export_all")}
-                </Button>
-              </div>
               {!hasBackend && <p className="text-muted-foreground">{t("characters.no_backend")}</p>}
-              <CharacterList
-                entries={entries}
-                members={members}
-                selectedId={selectedCharacterId}
-                onSelect={selectCharacter}
-                onAdd={(id) => void joinSession(id)}
-                onLeave={(id) => void leaveSession(id)}
-              />
               {shown ? (
                 <div className={shown.id === selectedCharacterId ? undefined : "opacity-60 transition-opacity"}>
                 <CharacterSheet
@@ -480,20 +566,8 @@ export default function App() {
                   }
                   onAddInjury={(injuryId) => void changeInjury(shown.id, "add", injuryId)}
                   onRemoveInjury={(injuryId) => void changeInjury(shown.id, "remove", injuryId)}
-                  onRest={() => setRestTargetId(shown.id)}
                   onAdminister={(drug) => setDrugRequest({ helperId: shown.id, drug })}
                   onLoseHumanity={() => setHumanityLossTargetId(shown.id)}
-                  onTherapy={() => setTherapyTargetId(shown.id)}
-                  onDelete={async () => {
-                    try {
-                      await remove(shown.id);
-                      // The backend passed the turn on if the deleted one was active.
-                      sceneState.replaceScene(await api.getScene());
-                      selectCharacter(null);
-                    } catch (e) {
-                      status.fail(e, "character:delete");
-                    }
-                  }}
                 />
                 </div>
               ) : (
@@ -524,11 +598,11 @@ export default function App() {
               }}
             />
           ) : tab === "notes" ? (
-            sessionState.active ? (
+            explorer.active ? (
               <SessionNotes
-                key={sessionState.active.id}
-                sessionId={sessionState.active.id}
-                sessionName={sessionState.active.name}
+                key={explorer.active.id}
+                sessionId={explorer.active.id}
+                sessionName={explorer.active.name}
               />
             ) : (
               <p className="text-muted-foreground">{t("notes.no_session")}</p>
@@ -542,7 +616,7 @@ export default function App() {
             {combat && (
               <CombatBar
                 combat={combat}
-                hasCharacters={sessionEntries.length > 0}
+                hasCharacters={sessionEntries.length > 0 || fighters.length > 0}
                 lastDamage={scene?.last_damage ?? null}
                 onStart={() => void sceneState.combatStart()}
                 onNextTurn={() => void sceneState.combatNextTurn()}
@@ -595,6 +669,13 @@ export default function App() {
                   onShift={(delta) => void sceneState.combatShift(e.id, delta)}
                   onStabilize={() => setStabilizeTargetId(e.id)}
                   onRest={() => setRestTargetId(e.id)}
+                  onLoseHumanity={() => setHumanityLossTargetId(e.id)}
+                  onTherapy={() => setTherapyTargetId(e.id)}
+                  inSession={members.includes(e.id)}
+                  onLeaveSession={() => sessionId !== null && void explorer.removeFrom(sessionId, e.id)}
+                  onExport={() => void exportCharacters({ ids: [e.id] })}
+                  onSaveAsTemplate={() => void saveAsTemplate(e.id)}
+                  onDelete={() => void deleteCharacter(e.id)}
                   onRevive={() =>
                     api.reviveCharacter(e.id).then(
                       () => reload(),
@@ -602,13 +683,14 @@ export default function App() {
                     )
                   }
                   onDeathSave={(manual) => deathSave(e.id, manual)}
-                  onLeave={() => void leaveSession(e.id)}
+                  onLeave={() => void sceneState.combatRemove(e.id)}
                 />
               );
             })}
-            {sessionEntries.length === 0 && sessionState.active && (
-              <p className="p-2 text-sm text-muted-foreground">{t("sessions.empty_rail")}</p>
+            {railEntries.length === 0 && explorer.active && (
+              <p className="p-2 text-sm text-muted-foreground">{t("rail.empty")}</p>
             )}
+            <ReferenceSearch open={searchOpen} onOpenChange={setSearchOpen} />
             <NpcTemplateDialog
               open={templatesOpen}
               templates={npcTemplates}
@@ -650,7 +732,7 @@ export default function App() {
             />
             <StabilizeDialog
               target={entries.find((e) => e.id === stabilizeTargetId) ?? null}
-              helpers={sessionEntries}
+              helpers={tableEntries}
               onDone={() => void reload()}
               onClose={() => setStabilizeTargetId(null)}
             />

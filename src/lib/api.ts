@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type { Character } from "@/bindings/Character";
 import type { CharacterKind } from "@/bindings/CharacterKind";
 import type { CharacterRecord } from "@/bindings/CharacterRecord";
+import type { DeletedCharacter } from "@/bindings/DeletedCharacter";
 import type { Armor } from "@/bindings/Armor";
 import type { Role } from "@/bindings/Role";
 import type { BodyArea } from "@/bindings/BodyArea";
@@ -27,6 +28,7 @@ import type { DeathSaveApplied } from "@/bindings/DeathSaveApplied";
 import type { InjuryRoll } from "@/bindings/InjuryRoll";
 import type { RollResult } from "@/bindings/RollResult";
 import type { SceneRecord } from "@/bindings/SceneRecord";
+import type { ExplorerNode } from "@/bindings/ExplorerNode";
 import type { SessionInfo } from "@/bindings/SessionInfo";
 import type { StabilizeApplied } from "@/bindings/StabilizeApplied";
 import type { NpcTemplate } from "@/bindings/NpcTemplate";
@@ -90,7 +92,9 @@ export const api = {
     invoke<CharacterRecord>("create_character", { kind, name }),
   saveCharacter: (id: number, character: Character) =>
     invoke<CharacterRecord>("save_character", { id, character }),
-  deleteCharacter: (id: number) => invoke<void>("delete_character", { id }),
+  /** Deletes at once; the snapshot it returns is what `restoreCharacter` needs to undo it. */
+  deleteCharacter: (id: number) => invoke<DeletedCharacter>("delete_character", { id }),
+  restoreCharacter: (deleted: DeletedCharacter) => invoke<void>("restore_character", { deleted }),
   /** Writes `ids` (or everyone when `null`) into a new file in the exports folder. */
   exportCharacters: (ids: number[] | null) => invoke<ExportSaved>("export_characters", { ids }),
   /** Writes the participants of the active session into a session file named after the session. */
@@ -112,21 +116,28 @@ export const api = {
   /** Imports one encounters file as new templates and encounters; rejects the whole file if anything is invalid. */
   importEncounterFile: (name: string) =>
     invoke<EncountersImported>("import_encounter_file", { name }),
-  listSessions: () => invoke<SessionInfo[]>("list_sessions"),
-  /** Creates a session with an empty scene and switches to it; answers with the updated list. */
+  /** Creates a session with an empty scene and switches to it. */
   createSession: (name: string) => invoke<SessionInfo[]>("create_session", { name }),
-  renameSession: (id: number, name: string) => invoke<SessionInfo[]>("rename_session", { id, name }),
   sessionNotes: (id: number) => invoke<string>("session_notes", { id }),
   setSessionNotes: (id: number, notes: string) => invoke<void>("set_session_notes", { id, notes }),
   switchSession: (id: number) => invoke<SessionInfo[]>("switch_session", { id }),
-  /** Deletes a session with its scene and fight; its characters stay. The list is empty after the last one. */
-  deleteSession: (id: number) => invoke<SessionInfo[]>("delete_session", { id }),
-  /** Ids of the active session's characters. */
-  sessionMembers: () => invoke<number[]>("session_members"),
-  addToSession: (characterId: number) => invoke<number[]>("add_to_session", { characterId }),
-  /** Takes a character out of the active session (covers and fight too); the character is kept. */
-  removeFromSession: (characterId: number) =>
-    invoke<SceneRecord>("remove_from_session", { characterId }),
+  /** The explorer tree as a flat list: sessions and folders with the characters lying in them. */
+  explorerTree: () => invoke<ExplorerNode[]>("explorer_tree"),
+  /** Creates a folder at the root (`parent` null) or inside a root folder. */
+  createFolder: (parent: number | null, name: string) =>
+    invoke<ExplorerNode[]>("create_folder", { parent, name }),
+  renameNode: (id: number, name: string) => invoke<ExplorerNode[]>("rename_node", { id, name }),
+  /** Moves a folder to the root (`parent` null) or into a root folder (one level of nesting). */
+  moveFolder: (id: number, parent: number | null) =>
+    invoke<ExplorerNode[]>("move_folder", { id, parent }),
+  /** Deletes a session (with its scene and fight) or a folder; the characters stay. */
+  deleteNode: (id: number) => invoke<ExplorerNode[]>("delete_node", { id }),
+  /** Puts a shortcut to a character into a session or a folder. */
+  addToContainer: (containerId: number, characterId: number) =>
+    invoke<ExplorerNode[]>("add_to_container", { containerId, characterId }),
+  /** Takes the shortcut out (a session's covers and fight too); the character is kept. */
+  removeFromContainer: (containerId: number, characterId: number) =>
+    invoke<ExplorerNode[]>("remove_from_container", { containerId, characterId }),
   getScene: () => invoke<SceneRecord>("get_scene"),
   listCoverPresets: (lang: string) =>
     inLanguage(lang, () => invoke<CoverPreset[]>("list_cover_presets")),
@@ -216,6 +227,8 @@ export const api = {
     invoke<SceneRecord>("combat_set_initiative", { characterId, initiative }),
   combatShift: (characterId: number, delta: number) =>
     invoke<SceneRecord>("combat_shift", { characterId, delta }),
+  /** Puts a character into the fight with a rolled initiative; someone already there keeps theirs. */
+  combatAdd: (characterId: number) => invoke<SceneRecord>("combat_add", { characterId }),
   combatRemove: (characterId: number) => invoke<SceneRecord>("combat_remove", { characterId }),
   combatStart: () => invoke<SceneRecord>("combat_start"),
   combatNextTurn: () => invoke<SceneRecord>("combat_next_turn"),

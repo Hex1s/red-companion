@@ -12,7 +12,8 @@
   "app": {
     "windows": [
       {
-        "title": "red-companion"
+        "title": "red-companion",
+        "dragDropEnabled": false
       }
     ],
     "security": {

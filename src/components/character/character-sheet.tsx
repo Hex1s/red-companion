@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { BedDouble, BrainCircuit, HeartPulse, Plus, X } from "lucide-react";
+import { BrainCircuit, Plus, X } from "lucide-react";
 import { useForm, type Path } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import type { Character } from "@/bindings/Character";
@@ -14,14 +14,6 @@ import { RolesSection } from "@/components/character/roles-section";
 import { SkillsSection } from "@/components/character/skills-section";
 import { WoundBadge } from "@/components/character/wound-badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { FieldBadge } from "@/components/ui/field-badge";
 import { Hint } from "@/components/ui/hint";
 import { Input } from "@/components/ui/input";
@@ -59,7 +51,6 @@ const STAT_KEYS: { key: keyof Stats; label: string }[] = [
 type CharacterSheetProps = {
   entry: CharacterEntry;
   onSave: (character: Character) => Promise<unknown>;
-  onDelete: () => Promise<unknown>;
   /** Saves a copy of this NPC as one of the GM's own templates; only NPCs offer it. */
   onSaveAsTemplate: () => Promise<unknown>;
   /** Critical injury table, to offer the ways each injury can be healed. */
@@ -69,12 +60,8 @@ type CharacterSheetProps = {
   /** The GM adds an injury by hand (no roll, may repeat) or removes one instance of it. */
   onAddInjury: (injuryId: string) => void;
   onRemoveInjury: (injuryId: string) => void;
-  /** Opens the rest window. */
-  onRest: () => void;
   /** Opens the humanity loss window. */
   onLoseHumanity: () => void;
-  /** Opens the therapy window. */
-  onTherapy: () => void;
   /** Opens the dose window: this character (a Medtech) gives a drug they picked. */
   onAdminister: (drug: string) => void;
 };
@@ -114,28 +101,21 @@ function StatTile({ label, value }: StatTileProps) {
 export function CharacterSheet({
   entry,
   onSave,
-  onDelete,
   onSaveAsTemplate,
   injuryTable,
   onHeal,
   onAddInjury,
   onRemoveInjury,
-  onRest,
   onLoseHumanity,
-  onTherapy,
   onAdminister,
 }: CharacterSheetProps) {
   const { t } = useTranslation();
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const sheetTab = useUiStore((st) => st.sheetTab);
   const setSheetTab = useUiStore((st) => st.setSheetTab);
   const [derived, setDerived] = useState<Derived>(entry.derived);
   const skills = useSkills();
   const roles = useRoles();
   const alive = { dead: derived.wound_state === "dead" };
-  // Rest needs a living character who is not mortally wounded (stabilise first) and not at full HP.
-  const canRest =
-    !alive.dead && derived.wound_state !== "mortal" && entry.character.hp < derived.max_hp;
 
   // Every plain catalog skill gets an input; missing levels start at 0. Skills with
   // specialties (languages, areas...) only have the rows that were added.
@@ -329,9 +309,6 @@ export function CharacterSheet({
               {t("encounters.save_as_template")}
             </Button>
           )}
-          <Button type="button" variant="outline" onClick={() => setConfirmDelete(true)}>
-            {t("characters.delete")}
-          </Button>
         </div>
           <div className="cut space-y-3 p-3 [--cut:6px]">
             <div className="flex items-end gap-3">
@@ -352,14 +329,6 @@ export function CharacterSheet({
               </div>
               <HpBar current={Number(watch("hp")) || 0} max={derived.max_hp} className="flex-1 pb-3" />
               <WoundBadge state={derived.wound_state} className="pb-2" />
-              {canRest && (
-                <Hint label={t("rest.hint")}>
-                  <Button type="button" size="sm" variant="outline" className="mb-1.5" onClick={onRest}>
-                    <BedDouble />
-                    {t("rest.button")}
-                  </Button>
-                </Hint>
-              )}
             </div>
             <div className="grid grid-cols-2 gap-2">
               {armorField("armor_head", t("armor.head"))}
@@ -452,18 +421,6 @@ export function CharacterSheet({
               <Button type="button" size="sm" variant="outline" disabled={alive.dead} onClick={onLoseHumanity}>
                 <BrainCircuit />
                 {t("humanity.loss_button")}
-              </Button>
-            </Hint>
-            <Hint label={t("humanity.therapy_hint")}>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={alive.dead || derived.humanity >= derived.max_humanity}
-                onClick={onTherapy}
-              >
-                <HeartPulse />
-                {t("humanity.therapy_button")}
               </Button>
             </Hint>
           </div>
@@ -606,30 +563,6 @@ export function CharacterSheet({
         </TabsContent>
       </Tabs>
 
-      <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t("characters.delete_title")}</DialogTitle>
-            <DialogDescription>
-              {t("characters.delete_body", { name: entry.character.name })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setConfirmDelete(false)}>
-              {t("characters.cancel")}
-            </Button>
-            <Button
-              type="button"
-              onClick={async () => {
-                setConfirmDelete(false);
-                await onDelete();
-              }}
-            >
-              {t("characters.delete")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </form>
   );
 }

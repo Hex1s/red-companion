@@ -24,12 +24,23 @@ impl CmdError {
         Self::new(&format!("not_found.{what}"), params! { "id" => id }, message)
     }
 
+    /// Undo of a delete found the id taken again.
+    pub fn already_exists(what: &str, id: impl std::fmt::Display) -> Self {
+        let message = format!("{what} {id} already exists");
+        Self::new(&format!("already_exists.{what}"), params! { "id" => id }, message)
+    }
+
     pub fn name_length(max: usize) -> Self {
         Self::new("session.name_length", params! { "max" => max }, format!("session name must be 1..{max} characters"))
     }
 
     pub fn notes_too_long(max: usize) -> Self {
         Self::new("session.notes_too_long", params! { "max" => max }, format!("notes are longer than {max} characters"))
+    }
+
+    /// Folders nest one level only, and only a root folder can hold one.
+    pub fn invalid_folder_parent() -> Self {
+        Self::new("folder.invalid_parent", Params::new(), "a folder can only sit in a root folder".to_string())
     }
 
     pub fn nothing_to_export() -> Self {
@@ -179,6 +190,7 @@ mod tests {
                 "file.permission_denied",
                 "file.io",
                 "file.open_folder",
+                "already_exists.character",
                 "not_found.character",
                 "not_found.template",
                 "not_found.encounter",

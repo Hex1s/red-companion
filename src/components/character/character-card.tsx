@@ -1,9 +1,10 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { BedDouble, ChevronDown, ChevronUp, Dices, RotateCcw, Swords, UserMinus, Zap } from "lucide-react";
+import { ChevronDown, ChevronUp, Dices, RotateCcw, Swords, UserMinus, Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { CheckRoll } from "@/bindings/CheckRoll";
 import type { DeathSave } from "@/bindings/DeathSave";
 import { WoundBadge } from "@/components/character/wound-badge";
+import { item, MoreMenu, separator, tidy } from "@/components/explorer/node-menu";
 import { Button } from "@/components/ui/button";
 import { FieldBadge } from "@/components/ui/field-badge";
 import { Hint } from "@/components/ui/hint";
@@ -46,6 +47,19 @@ type CharacterCardProps = {
   onStabilize: () => void;
   /** Opens the rest window (HP back over days of rest). */
   onRest: () => void;
+  /** Opens the humanity loss window. */
+  onLoseHumanity: () => void;
+  /** Opens the therapy window. */
+  onTherapy: () => void;
+  /** The character lies in the active session, so it can be taken out of it. */
+  inSession: boolean;
+  /** Takes the character out of the active session (the character itself is kept). */
+  onLeaveSession: () => void;
+  onExport: () => void;
+  /** Saves a copy as one of the GM's own templates; only NPCs offer it. */
+  onSaveAsTemplate: () => void;
+  /** Deletes the character; the status area offers to undo. */
+  onDelete: () => void;
   /** Brings a dead character back (1 HP, no penalty, no injuries). */
   onRevive: () => void;
   /** Resolves `true` when the save was made. */
@@ -80,6 +94,13 @@ export function CharacterCard({
   onShift,
   onStabilize,
   onRest,
+  onLoseHumanity,
+  onTherapy,
+  inSession,
+  onLeaveSession,
+  onExport,
+  onSaveAsTemplate,
+  onDelete,
   onRevive,
   onDeathSave,
   onLeave,
@@ -115,6 +136,22 @@ export function CharacterCard({
     derived.solo_precision > 0 ||
     derived.solo_spot_weakness > 0;
   const dead = derived.wound_state === "dead";
+  // Rest needs a living character who is not mortally wounded (stabilise first) and not at full HP.
+  const canRest = !dead && !mortal && character.hp < derived.max_hp;
+  const menu = tidy([
+    item("rest", t("rest.button"), onRest, { disabled: !canRest }),
+    item("stabilize", t("initiative.stabilize"), onStabilize, { disabled: !mortal }),
+    item("humanity-loss", t("humanity.loss_button"), onLoseHumanity, { disabled: dead }),
+    item("therapy", t("humanity.therapy_button"), onTherapy, {
+      disabled: dead || derived.humanity >= derived.max_humanity,
+    }),
+    separator("s1"),
+    item("leave-session", t("sessions.leave"), onLeaveSession, { disabled: !inSession }),
+    item("export", t("characters.export_selected"), onExport),
+    ...(entry.kind === "npc" ? [item("template", t("encounters.save_as_template"), onSaveAsTemplate)] : []),
+    separator("s2"),
+    item("delete", t("characters.delete"), onDelete, { destructive: true }),
+  ]);
 
   return (
     <div
@@ -207,12 +244,12 @@ export function CharacterCard({
         <span className="min-w-0 flex-1 truncate font-display text-sm font-semibold uppercase">
           {character.name}
         </span>
-        <Hint label={t("sessions.leave")}>
+        <Hint label={t("initiative.remove_from_fight")}>
           <Button
             type="button"
             variant="ghost"
             size="icon-xs"
-            aria-label={t("sessions.leave")}
+            aria-label={t("initiative.remove_from_fight")}
             onClick={onLeave}
           >
             <UserMinus />
@@ -262,14 +299,6 @@ export function CharacterCard({
             {t("initiative.stabilize")}
           </Button>
         )}
-        {!dead && !mortal && character.hp < derived.max_hp && (
-          <Hint label={t("rest.hint")}>
-            <Button type="button" size="xs" variant="outline" onClick={onRest}>
-              <BedDouble />
-              {t("rest.button")}
-            </Button>
-          </Hint>
-        )}
         {dead && (
           <Hint label={t("card.revive_hint")}>
             <Button type="button" size="xs" variant="outline" onClick={onRevive}>
@@ -279,8 +308,11 @@ export function CharacterCard({
           </Hint>
         )}
         <span className="ml-auto flex items-center gap-1.5">
-          {/* The popover is a portal: its clicks must not reach the card. */}
+          {/* Popovers and menus are portals: their clicks must not reach the card. */}
           <span onClick={stop}>{coverControl}</span>
+          <span onClick={stop}>
+            <MoreMenu entries={menu} alwaysVisible />
+          </span>
           {!dead && (
             <Hint label={t("combat.damage")}>
               <Button type="button" size="xs" onClick={onDamage}>

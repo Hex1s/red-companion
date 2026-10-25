@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { Character } from "@/bindings/Character";
 import type { CharacterKind } from "@/bindings/CharacterKind";
 import type { CharacterRecord } from "@/bindings/CharacterRecord";
+import type { DeletedCharacter } from "@/bindings/DeletedCharacter";
 import { api, hasBackend } from "@/lib/api";
 
 const KINDS: CharacterKind[] = ["pc", "npc"];
@@ -9,37 +10,32 @@ const KINDS: CharacterKind[] = ["pc", "npc"];
 export type CharacterEntry = CharacterRecord & { kind: CharacterKind };
 
 /**
- * Loads all characters from the Rust backend and wraps the CRUD commands. `members` are the ids
- * of the active session's characters; nothing is asked until a session is active (`sessionId`),
- * and everything is reloaded when it changes.
+ * Loads all characters from the Rust backend and wraps the CRUD commands. Nothing is asked until
+ * a session is active (`sessionId`), because the first command would otherwise create a default
+ * one. `refreshTree` reloads the explorer: a new character joins the active session, a deleted one
+ * leaves every container.
  */
-export function useCharacters(sessionId: number | null) {
+export function useCharacters(sessionId: number | null, refreshTree: () => Promise<void>) {
   const [entries, setEntries] = useState<CharacterEntry[]>([]);
-  const [members, setMembers] = useState<number[]>([]);
   const [error, setError] = useState<unknown>(null);
 
   const reload = useCallback(async () => {
     if (!hasBackend || sessionId === null) return;
     try {
-      const [lists, ids] = await Promise.all([
+      const [lists] = await Promise.all([
         Promise.all(KINDS.map((kind) => api.listCharacters(kind))),
-        api.sessionMembers(),
+        refreshTree(),
       ]);
       setEntries(lists.flatMap((records, i) => records.map((r) => ({ ...r, kind: KINDS[i] }))));
-      setMembers(ids);
       setError(null);
     } catch (e) {
       setError(e ?? "unknown");
     }
-  }, [sessionId]);
+  }, [sessionId, refreshTree]);
 
   useEffect(() => {
     void reload();
   }, [reload]);
-
-  const addToSession = useCallback(async (id: number) => {
-    setMembers(await api.addToSession(id));
-  }, []);
 
   const create = useCallback(
     async (kind: CharacterKind, name: string) => {
@@ -61,11 +57,20 @@ export function useCharacters(sessionId: number | null) {
 
   const remove = useCallback(
     async (id: number) => {
-      await api.deleteCharacter(id);
+      const deleted = await api.deleteCharacter(id);
+      await reload();
+      return deleted;
+    },
+    [reload],
+  );
+
+  const restore = useCallback(
+    async (deleted: DeletedCharacter) => {
+      await api.restoreCharacter(deleted);
       await reload();
     },
     [reload],
   );
 
-  return { entries, members, error, create, save, remove, reload, addToSession };
+  return { entries, error, create, save, remove, restore, reload };
 }

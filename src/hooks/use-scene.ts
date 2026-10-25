@@ -86,6 +86,7 @@ export function useScene(sessionId: number | null) {
     combatSetInitiative: (id: number, initiative: number) =>
       run(api.combatSetInitiative(id, initiative)),
     combatShift: (id: number, delta: number) => run(api.combatShift(id, delta)),
+    combatAdd: (id: number) => run(api.combatAdd(id)),
     combatRemove: (id: number) => run(api.combatRemove(id)),
     combatStart: () => run(api.combatStart()),
     combatNextTurn: () => run(api.combatNextTurn()),

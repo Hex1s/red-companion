@@ -176,14 +176,14 @@
     "new_npc": "New NPC",
     "default_name_pc": "New character",
     "default_name_npc": "New NPC",
-    "empty": "No characters yet. Create the first one with the button above.",
+    "empty": "No characters yet. Create the first one with \"+\" next to Library on the left.",
     "import": "Import from file",
     "export_selected": "Export selected",
     "export_all": "Export session",
     "imported": "Imported characters: {{count}}.",
     "import_error": "Import failed: {{error}}",
     "export_error": "Export failed: {{error}}",
-    "select_hint": "Pick a character in the list above or on a card on the right, or create a new one.",
+    "select_hint": "Pick a character in the explorer on the left or on a card on the right, or create a new one.",
     "kind": {
       "pc": "Player",
       "npc": "NPC"
@@ -193,8 +193,8 @@
     "save": "Save",
     "saved": "Saved",
     "delete": "Delete",
-    "delete_title": "Delete character?",
-    "delete_body": "“{{name}}” will be deleted permanently.",
+    "deleted": "“{{name}}” deleted",
+    "restored": "“{{name}}” restored",
     "cancel": "Cancel",
     "section": {
       "stats": "Stats",
@@ -450,6 +450,7 @@
     "die": "d10",
     "die_random": "random",
     "add": "Add to fight",
+    "remove_from_fight": "Remove from the fight",
     "total": "Initiative",
     "manual": "manual",
     "turn": "turn",
@@ -522,7 +523,8 @@
     "revive_hint": "Revive: 1 HP, no death save penalty, no injuries"
   },
   "rail": {
-    "start_hint": "Start the fight: anyone without initiative gets one rolled"
+    "start_hint": "Start the fight: with an empty column, everyone in the session fights",
+    "empty": "Nobody is in the fight yet. Drag characters here from the explorer or pick \"Add to fight\" in their menu. Start the fight with an empty column and the session takes part."
   },
   "crash": {
     "title": "Interface crashed",
@@ -613,6 +615,49 @@
     "full": "HP is already full."
   },
   "reference": {
+    "pick": "Pick an entry on the left.",
+    "global_title": "Reference search",
+    "global_hint": "Type part of a name or description: weapons, armor, injuries, skills, roles, NPCs.",
+    "global_placeholder": "Search every reference…",
+    "global_keys": "↑↓ choose · Enter open in section · Esc close",
+    "global_button": "Search Ctrl+K",
+    "open_in_section": "Open in section",
+    "detail": {
+      "dv": "DV",
+      "roll": "2d6",
+      "death_save_penalty": "Death save penalty +1",
+      "quick_fix": "Quick fix removes the injury",
+      "first_aid": "First aid",
+      "treatment": "Treatment",
+      "impossible": "Not possible",
+      "hp": "HP",
+      "hp_manual": "The GM enters the HP.",
+      "penalty": "Penalty to REF, DEX and MOVE",
+      "none": "None",
+      "damage": "Damage",
+      "price": "Price",
+      "skill": "Skill",
+      "kind": "Type",
+      "rof": "ROF",
+      "magazine": "Magazine",
+      "ammo": "Ammo",
+      "hands": "Hands",
+      "concealable": "Concealable",
+      "yes": "Yes",
+      "no": "No",
+      "stat": "Stat",
+      "cost": "Cost",
+      "specialty": "Taken separately for each specialty.",
+      "armor_sp": "SP head/body",
+      "armor": "Armor",
+      "weapons": "Weapons",
+      "skills": "Skills (total)",
+      "gear": "Gear",
+      "notes": "Notes",
+      "ranks": "Ranks",
+      "level": "Level",
+      "source": "Book, p. {{page}}"
+    },
     "title": "Reference",
     "search": "Search by name and description",
     "nothing_found": "Nothing found.",
@@ -646,6 +691,34 @@
       "head": "Head"
     }
   },
+  "explorer": {
+    "title": "Explorer",
+    "actions": "Actions",
+    "hide": "Hide explorer (Ctrl+B)",
+    "show": "Show explorer (Ctrl+B)",
+    "sessions": "Sessions",
+    "library": "Library",
+    "tools": "Sections",
+    "activate": "Make active",
+    "export_session": "Export session",
+    "open": "Open",
+    "to_active_session": "To the active session \"{{name}}\"",
+    "remove_from_folder": "Remove from folder",
+    "new_folder": "New folder",
+    "to_top_level": "Move to the top level",
+    "new_subfolder": "New subfolder",
+    "folder_default_name": "Folder {{n}}",
+    "folder_name": "Folder name",
+    "empty_container": "Empty. Drag a character here.",
+    "create_folder_title": "New folder",
+    "rename_folder_title": "Rename folder",
+    "delete_folder_title": "Delete the folder?",
+    "delete_folder_body": "The folder \"{{name}}\" goes away with its subfolders. The characters stay in the library.",
+    "kind": {
+      "pc": "PC",
+      "npc": "NPC"
+    }
+  },
   "sessions": {
     "current": "Session",
     "default_name": "Session {{n}}",
@@ -662,7 +735,6 @@
     "join": "Add to session",
     "leave": "Remove from session",
     "leave_short": "Remove",
-    "empty_rail": "Nobody is in this session yet. Add characters from the Characters tab.",
     "all_characters": "All characters"
   },
   "encounters": {
@@ -859,17 +931,24 @@
       "io": "Could not read or write the file. Check the free disk space and try again.",
       "open_folder": "Could not open the folder. Open it by hand: it lies in the app data folder."
     },
+    "already_exists": {
+      "character": "The character is already there, so it cannot be restored. Refresh the list."
+    },
     "not_found": {
       "character": "The character was not found (maybe it was already deleted). Refresh the list.",
       "template": "The template was not found (maybe it was already deleted). Refresh the list.",
       "npc_template": "The ready-made NPC is not in the reference. Pick another one.",
       "encounter": "The encounter was not found (maybe it was already deleted). Refresh the list.",
-      "session": "The session was not found (maybe it was already deleted). Pick another one in the header.",
+      "session": "The session was not found (maybe it was already deleted). Pick another one in the list on the left.",
+      "container": "The session or folder was not found (maybe it was already deleted). Refresh the list on the left.",
       "injury": "The injury is not in the reference. Pick it from the list again.",
       "cover_preset": "This cover is not in the reference. Pick another one."
     },
+    "folder": {
+      "invalid_parent": "Folders nest one level only: a folder cannot go inside a nested folder or a session. Pick a top-level folder."
+    },
     "session": {
-      "name_length": "The session name must be 1 to {{max}} characters.",
+      "name_length": "The name must be 1 to {{max}} characters.",
       "notes_too_long": "The notes are longer than {{max}} characters. Shorten the text."
     },
     "scene": {
