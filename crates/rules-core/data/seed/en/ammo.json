@@ -1,0 +1,162 @@
+{
+  "name": "ammo",
+  "version": 1,
+  "entries": [
+    {
+      "uuid": "1d78a3bf-7fd7-5f1c-a940-46e5df1f81ea",
+      "code": "standard",
+      "name": "Standard ammo",
+      "price": 10,
+      "usable_with": "All except grenades and rockets",
+      "summary": "Plain ammunition with no special properties.",
+      "pack": "core",
+      "source": {
+        "page": 345
+      }
+    },
+    {
+      "uuid": "b78830ec-3c7f-56fd-994f-9a4880687a7c",
+      "code": "armor_piercing",
+      "name": "Armor-piercing ammo",
+      "price": 100,
+      "usable_with": "All except shot",
+      "summary": "Armor that is penetrated loses 2 SP instead of 1. Standard for grenades and explosives.",
+      "pack": "core",
+      "source": {
+        "page": 345
+      }
+    },
+    {
+      "uuid": "c5030d32-79e7-5c64-9400-91a1fc9f5edf",
+      "code": "biotoxin",
+      "name": "Biotoxin ammo",
+      "price": 500,
+      "usable_with": "Arrows and grenades only",
+      "summary": "No damage: a fleshy target makes a Resist Torture/Drugs check (DV 15) and on a failure takes 3d6 ignoring armor (armor is not damaged).",
+      "pack": "core",
+      "source": {
+        "page": 345
+      }
+    },
+    {
+      "uuid": "066155bc-b1ee-526a-9f8e-aa1c05cb90b5",
+      "code": "emp",
+      "name": "EMP ammo",
+      "price": 500,
+      "usable_with": "Grenades only",
+      "summary": "No damage: the target makes a Cybertech check (DV 15); on a failure the GM picks two implants or electronic items and they shut down for 1 minute.",
+      "pack": "core",
+      "source": {
+        "page": 345
+      }
+    },
+    {
+      "uuid": "fbeed087-c391-55a5-81bb-02095014cb3b",
+      "code": "expansive",
+      "name": "Expansive ammo",
+      "price": 100,
+      "usable_with": "Arrows, bullets and slugs",
+      "summary": "A hit deals the Foreign Object critical injury. If the hit also caused a critical injury, the victim rolls the table again until they get one more different injury; the second and later ones deal no bonus damage.",
+      "pack": "core",
+      "source": {
+        "page": 345
+      }
+    },
+    {
+      "uuid": "0b9942e7-d87b-51d8-bd21-1f7dc37fb92e",
+      "code": "flashbang",
+      "name": "Flashbang ammo",
+      "price": 100,
+      "usable_with": "Grenades only",
+      "summary": "No damage: the target makes a Resist Torture/Drugs check (DV 15); on a failure they suffer Damaged Eye and Damaged Ear for a minute with no bonus damage.",
+      "pack": "core",
+      "source": {
+        "page": 346
+      }
+    },
+    {
+      "uuid": "7ce604a6-7375-5ac0-bc42-5818e0c622df",
+      "code": "incendiary",
+      "name": "Incendiary ammo",
+      "price": 100,
+      "usable_with": "Arrows, cartridges, grenades, slugs and shot",
+      "summary": "Penetrating armor sets the target on fire: 2 HP ignoring armor at the end of each of their turns until they spend an action putting it out. Does not stack.",
+      "pack": "core",
+      "source": {
+        "page": 346
+      }
+    },
+    {
+      "uuid": "d77a2089-1b99-59c0-9604-5c7242bf7738",
+      "code": "poison",
+      "name": "Poison ammo",
+      "price": 100,
+      "usable_with": "Arrows and grenades only",
+      "summary": "No damage: a fleshy target makes a Resist Torture/Drugs check (DV 13) and on a failure takes 2d6 ignoring armor (armor is not damaged).",
+      "pack": "core",
+      "source": {
+        "page": 346
+      }
+    },
+    {
+      "uuid": "256e5b00-413b-5cbe-8cb8-cfbab1feaa6f",
+      "code": "rubber",
+      "name": "Rubber ammo",
+      "price": 10,
+      "usable_with": "Arrows, bullets and slugs",
+      "summary": "Damage cannot cause critical injuries, does not damage armor and cannot take HP below 1. Standard for exotic weapons.",
+      "pack": "core",
+      "source": {
+        "page": 346
+      }
+    },
+    {
+      "uuid": "7df993f8-6058-57a5-8786-8ca8244e23df",
+      "code": "sleep",
+      "name": "Sleep ammo",
+      "price": 500,
+      "usable_with": "Arrows and grenades",
+      "summary": "No damage: a fleshy target makes a Resist Torture/Drugs check (DV 13); on a failure they fall unconscious for 1 minute (damage or another's action wakes them).",
+      "pack": "core",
+      "source": {
+        "page": 346
+      }
+    },
+    {
+      "uuid": "16518ad9-76e5-5aad-a45c-e5b70dbe183d",
+      "code": "smart",
+      "name": "Smart ammo",
+      "price": 500,
+      "usable_with": "Arrows, bullets, slugs and rockets",
+      "summary": "Needs the Tactical Sight implant. A single shot that misses by 4 or less gets a second chance: roll 1d10 + 10 instead of STAT + skill + 1d10 (Luck can be added, the target may still dodge).",
+      "pack": "core",
+      "source": {
+        "page": 346
+      }
+    },
+    {
+      "uuid": "7844a881-d933-5cda-9fcc-d09c1dd47c23",
+      "code": "smoke",
+      "name": "Smoke ammo",
+      "price": 50,
+      "usable_with": "Grenades only",
+      "summary": "No damage: on impact a 10×10 cloud of smoke for 1 minute, −4 to actions the smoke hinders.",
+      "pack": "core",
+      "source": {
+        "page": 347
+      }
+    },
+    {
+      "uuid": "00ea5df2-d162-5992-9304-668618a867d3",
+      "code": "tear_gas",
+      "name": "Tear gas",
+      "price": 50,
+      "usable_with": "Grenades only",
+      "summary": "No damage: a target with eyes makes a Resist Torture/Drugs check (DV 13); on a failure they suffer Damaged Eye for a minute with no bonus damage.",
+      "pack": "core",
+      "source": {
+        "page": 347
+      }
+    }
+  ]
+}

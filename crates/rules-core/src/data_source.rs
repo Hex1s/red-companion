@@ -6,8 +6,8 @@ use thiserror::Error;
 use ts_rs::TS;
 
 use crate::catalog::{
-    Armor, Article, Collection, CollectionVersion, CoverMaterial, CriticalInjury, MartialArt, NpcTemplate, RangeTable, Role, Shield,
-    Skill, Weapon,
+    Ammo, Armor, Article, ClothingStyle, Collection, CollectionVersion, CoverMaterial, CriticalInjury, GearItem, MagazineRow, MartialArt, NpcTemplate,
+    PriceCategory, RangeTable, Role, Shield, Skill, Specialty, StreetDrug, Weapon, WeaponMod,
 };
 
 #[derive(Debug, Error)]
@@ -32,6 +32,22 @@ pub trait DataSource {
     fn articles(&self) -> DataResult<Collection<Article>>;
     /// DV by distance and weapon class (collection `range_tables`, core).
     fn range_tables(&self) -> DataResult<Collection<RangeTable>>;
+    /// General gear (collection `gear`, p. 351-355).
+    fn gear(&self) -> DataResult<Collection<GearItem>>;
+    /// Ammunition types (collection `ammo`, p. 345-347).
+    fn ammo(&self) -> DataResult<Collection<Ammo>>;
+    /// Weapon modifications (collection `weapon_mods`, p. 343-344).
+    fn weapon_mods(&self) -> DataResult<Collection<WeaponMod>>;
+    /// Magazine sizes (collection `magazines`, core, p. 344).
+    fn magazines(&self) -> DataResult<Collection<MagazineRow>>;
+    /// Price categories (collection `price_categories`, core, p. 385).
+    fn price_categories(&self) -> DataResult<Collection<PriceCategory>>;
+    /// Suggested specialties of skills: languages and instruments (collection `specialties`).
+    fn specialties(&self) -> DataResult<Collection<Specialty>>;
+    /// Clothing styles with prices (collection `clothing`, p. 356).
+    fn clothing(&self) -> DataResult<Collection<ClothingStyle>>;
+    /// Street drugs (collection `street_drugs`, p. 357-358).
+    fn street_drugs(&self) -> DataResult<Collection<StreetDrug>>;
 
     /// Versions of every collection, the "manifest" compared during sync.
     fn versions(&self) -> DataResult<Vec<CollectionVersion>> {
@@ -47,6 +63,14 @@ pub trait DataSource {
             self.martial_arts()?.version_info(),
             self.articles()?.version_info(),
             self.range_tables()?.version_info(),
+            self.gear()?.version_info(),
+            self.ammo()?.version_info(),
+            self.weapon_mods()?.version_info(),
+            self.magazines()?.version_info(),
+            self.price_categories()?.version_info(),
+            self.specialties()?.version_info(),
+            self.clothing()?.version_info(),
+            self.street_drugs()?.version_info(),
         ])
     }
 }
@@ -137,6 +161,30 @@ impl DataSource for SeedDataSource {
     fn range_tables(&self) -> DataResult<Collection<RangeTable>> {
         parse("range_tables", include_str!("../data/seed/range_tables.json"))
     }
+    fn gear(&self) -> DataResult<Collection<GearItem>> {
+        content!(self.lang, "gear")
+    }
+    fn ammo(&self) -> DataResult<Collection<Ammo>> {
+        content!(self.lang, "ammo")
+    }
+    fn weapon_mods(&self) -> DataResult<Collection<WeaponMod>> {
+        content!(self.lang, "weapon_mods")
+    }
+    fn magazines(&self) -> DataResult<Collection<MagazineRow>> {
+        parse("magazines", include_str!("../data/seed/magazines.json"))
+    }
+    fn price_categories(&self) -> DataResult<Collection<PriceCategory>> {
+        parse("price_categories", include_str!("../data/seed/price_categories.json"))
+    }
+    fn specialties(&self) -> DataResult<Collection<Specialty>> {
+        content!(self.lang, "specialties")
+    }
+    fn clothing(&self) -> DataResult<Collection<ClothingStyle>> {
+        content!(self.lang, "clothing")
+    }
+    fn street_drugs(&self) -> DataResult<Collection<StreetDrug>> {
+        content!(self.lang, "street_drugs")
+    }
 }
 
 #[cfg(test)]
@@ -179,10 +227,132 @@ mod tests {
         assert_eq!(sum, 1339, "DV checksum");
     }
 
+    /// Equipment as printed on p. 342-355 and p. 385: counts, price categories (the whole price
+    /// column of the gear list agrees with the table of categories) and a few spot checks.
+    #[test]
+    fn equipment_matches_the_book() {
+        use crate::catalog::{price_category_of, MOD_SLOTS};
+        let ds = SeedDataSource::default();
+        let categories = ds.price_categories().unwrap().entries;
+        // p. 385: eight categories with these minimums.
+        let table: Vec<_> = categories.iter().map(|c| (c.id.as_str(), c.min_price)).collect();
+        assert_eq!(
+            table,
+            [("cheap", 10), ("everyday", 20), ("costly", 50), ("premium", 100), ("expensive", 500), ("very_expensive", 1000), ("luxury", 5000), ("super_luxury", 10000)]
+        );
+        let id = |price| price_category_of(&categories, price).unwrap().id.clone();
+        assert_eq!((id(10).as_str(), id(100).as_str(), id(1000).as_str(), id(25000).as_str()), ("cheap", "premium", "very_expensive", "super_luxury"));
+
+        let gear = ds.gear().unwrap().entries;
+        assert_eq!(gear.len(), 53, "the list on p. 351 has 27 + 26 rows");
+        let price = |code: &str| gear.iter().find(|g| g.code == code).unwrap().price;
+        assert_eq!((price("agent"), price("cryopump"), price("techscanner"), price("glowstick")), (100, 5000, 1000, 10));
+        // Prices only take the values of the categories.
+        assert!(gear.iter().all(|g| categories.iter().any(|c| c.min_price == g.price)));
+        // Checksum of the whole price column of the list (both readings of p. 351 agree on it).
+        assert_eq!(gear.iter().map(|g| g.price).sum::<u32>(), 28_640);
+
+        let ammo = ds.ammo().unwrap().entries;
+        assert_eq!(ammo.len(), 13);
+        assert_eq!(ammo.iter().find(|a| a.code == "standard").unwrap().price, 10);
+        assert_eq!(ammo.iter().find(|a| a.code == "smoke").unwrap().source.page, 347);
+
+        let mods = ds.weapon_mods().unwrap().entries;
+        assert_eq!(mods.len(), 8);
+        let two_slot: Vec<_> = mods.iter().filter(|m| m.slots == 2).map(|m| m.code.as_str()).collect();
+        assert_eq!(two_slot, ["underbarrel_grenade_launcher", "underbarrel_shotgun", "smartlink_connector"]);
+        assert!(mods.iter().all(|m| m.slots <= MOD_SLOTS));
+
+        // Armor and shield prices (p. 97 / p. 350): the bodyweight suit is the pricey one at 1000.
+        let armor = ds.armor().unwrap().entries;
+        let armor_price = |code: &str| armor.iter().find(|a| a.code == code).unwrap().price;
+        assert_eq!((armor_price("leather"), armor_price("bodyweight_suit"), armor_price("metalgear")), (20, 1000, 5000));
+        let shields = ds.shields().unwrap().entries;
+        assert_eq!(shields.iter().find(|s| s.code == "bulletproof_shield").unwrap().price, Some(100));
+        assert_eq!(shields.iter().find(|s| s.code == "corpse").unwrap().price, None);
+    }
+
+    /// Specialty suggestions: the 52 distinct languages of the 10 culture regions (p. 45) and the five
+    /// instruments of p. 137; the tables are the same in both languages.
+    #[test]
+    fn specialties_match_the_book() {
+        let list = |lang| SeedDataSource::new(lang).specialties().unwrap().entries;
+        let ru = list(Lang::Ru);
+        let of = |skill: &str| ru.iter().filter(|s| s.skill == skill).count();
+        assert_eq!((of("language"), of("play_instrument"), ru.len()), (52, 5, 57));
+        assert!(ru.iter().filter(|s| s.skill == "language").all(|s| s.source.page == 45));
+        assert!(ru.iter().filter(|s| s.skill == "play_instrument").all(|s| s.source.page == 137));
+        // The book prints truncated forms ("урд", "йоруб", "наваха"); the real names are stored.
+        for name in ["Урду", "Йоруба", "Навахо", "Непальский"] {
+            assert!(ru.iter().any(|s| s.name == name), "{name}");
+        }
+        let en = list(Lang::En);
+        assert_eq!(ru.iter().map(|s| &s.code).collect::<Vec<_>>(), en.iter().map(|s| &s.code).collect::<Vec<_>>());
+    }
+
+    /// Clothing (p. 356, printed again on p. 102) and street drugs (p. 357): shape, spot checks and a
+    /// checksum of the 90 prices (32 500 eb) that both printed copies and both readings agree on.
+    #[test]
+    fn clothing_and_drugs_match_the_book() {
+        use crate::catalog::CLOTHING_ITEMS;
+        let ds = SeedDataSource::default();
+        let clothing = ds.clothing().unwrap().entries;
+        assert_eq!(clothing.len(), 10);
+        let price = |style: &str, item: &str| {
+            let col = CLOTHING_ITEMS.iter().position(|i| *i == item).unwrap();
+            clothing.iter().find(|c| c.code == style).unwrap().prices[col]
+        };
+        assert_eq!((price("bag_lady_chic", "top"), price("businesswear", "jewelry"), price("high_fashion", "shoes")), (10, 5000, 5000));
+        assert_eq!(price("high_fashion", "top"), 500);
+        assert_eq!(clothing.iter().flat_map(|c| &c.prices).sum::<u32>(), 32_500);
+        // The cheapest and the dearest of every piece never swap order along the style ladder: High Fashion is never cheaper than Bag Lady Chic.
+        assert!(CLOTHING_ITEMS.iter().all(|i| price("high_fashion", i) > price("bag_lady_chic", i)));
+
+        let drugs = ds.street_drugs().unwrap().entries;
+        let row = |code: &str| drugs.iter().find(|d| d.code == code).unwrap();
+        assert_eq!(drugs.len(), 5);
+        assert_eq!((row("black_lace").price, row("black_lace").duration_hours, row("black_lace").secondary_dv), (50, 24, 17));
+        assert_eq!((row("blue_glass").price, row("blue_glass").duration_hours, row("blue_glass").secondary_dv), (20, 4, 15));
+        assert_eq!((row("boost").price, row("boost").duration_hours, row("boost").secondary_dv), (50, 24, 17));
+        assert_eq!((row("smash").price, row("smash").duration_hours, row("smash").secondary_dv), (10, 4, 15));
+        assert_eq!((row("syntococaine").price, row("syntococaine").duration_hours, row("syntococaine").secondary_dv), (20, 4, 15));
+    }
+
+    /// Hashes of every collection in every language, for the server's contract tests (it must compute
+    /// the same bytes). Written to `schemas/hash-vectors.json`; the canonical form is described at
+    /// `Collection::canonical_json`.
+    #[test]
+    fn export_hash_vectors() {
+        let mut out = serde_json::Map::new();
+        for (lang, name) in [(Lang::Ru, "ru"), (Lang::En, "en")] {
+            let versions = SeedDataSource::new(lang).versions().unwrap();
+            let map: serde_json::Map<String, serde_json::Value> =
+                versions.into_iter().map(|v| (v.name, serde_json::json!({ "version": v.version, "hash": v.hash }))).collect();
+            out.insert(name.to_string(), serde_json::Value::Object(map));
+        }
+        // A tiny hand-checkable vector: the keys come out sorted and the entries ordered by code.
+        let tiny = Collection {
+            name: "tiny".into(),
+            version: 1,
+            entries: vec![
+                serde_json::json!({ "code": "b", "price": 2, "name": "B" }),
+                serde_json::json!({ "name": "A", "price": 1, "code": "a" }),
+            ],
+        };
+        assert_eq!(
+            String::from_utf8(tiny.canonical_json()).unwrap(),
+            r#"[{"code":"a","name":"A","price":1},{"code":"b","name":"B","price":2}]"#
+        );
+        out.insert("tiny".into(), serde_json::json!({ "canonical": String::from_utf8(tiny.canonical_json()).unwrap(), "hash": tiny.content_hash() }));
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../schemas/hash-vectors.json");
+        std::fs::write(path, serde_json::to_string_pretty(&out).unwrap() + "
+").unwrap();
+    }
+
     #[test]
     fn manifest_lists_all_collections() {
         let names: Vec<_> = SeedDataSource::default().versions().unwrap().into_iter().map(|v| v.name).collect();
-        assert_eq!(names, ["critical_injuries", "cover_materials", "armor", "shields", "weapons", "skills", "npc_templates", "roles", "martial_arts", "rules", "range_tables"]);
+        assert_eq!(names, ["critical_injuries", "cover_materials", "armor", "shields", "weapons", "skills", "npc_templates", "roles", "martial_arts", "rules", "range_tables", "gear", "ammo", "weapon_mods", "magazines", "price_categories", "specialties", "clothing", "street_drugs"]);
     }
 
     #[test]
@@ -245,7 +415,7 @@ mod tests {
             match v {
                 serde_json::Value::Object(m) => {
                     for (k, x) in m.iter_mut() {
-                        if matches!(k.as_str(), "name" | "armor_name" | "gear" | "notes" | "examples" | "ammo" | "description" | "summary" | "ability_name") && x.is_string() {
+                        if matches!(k.as_str(), "name" | "armor_name" | "gear" | "notes" | "examples" | "ammo" | "description" | "summary" | "ability_name" | "usable_with" | "tags" | "primary" | "secondary") && x.is_string() {
                             assert!(!x.as_str().unwrap().is_empty(), "empty text {k}");
                             *x = "".into();
                         } else if k == "features" {
@@ -270,6 +440,12 @@ mod tests {
                 serde_json::to_value(ds.weapons().unwrap()).unwrap(),
                 serde_json::to_value(ds.npc_templates().unwrap()).unwrap(),
                 serde_json::to_value(ds.roles().unwrap()).unwrap(),
+                serde_json::to_value(ds.gear().unwrap()).unwrap(),
+                serde_json::to_value(ds.ammo().unwrap()).unwrap(),
+                serde_json::to_value(ds.weapon_mods().unwrap()).unwrap(),
+                serde_json::to_value(ds.specialties().unwrap()).unwrap(),
+                serde_json::to_value(ds.clothing().unwrap()).unwrap(),
+                serde_json::to_value(ds.street_drugs().unwrap()).unwrap(),
             ];
             all.iter_mut().for_each(blank);
             all
@@ -291,6 +467,12 @@ mod tests {
         ids.extend(ds.npc_templates().unwrap().entries.into_iter().map(|e| e.uuid));
         ids.extend(ds.roles().unwrap().entries.into_iter().map(|e| e.uuid));
         ids.extend(ds.martial_arts().unwrap().entries.into_iter().map(|e| e.uuid));
+        ids.extend(ds.gear().unwrap().entries.into_iter().map(|e| e.uuid));
+        ids.extend(ds.ammo().unwrap().entries.into_iter().map(|e| e.uuid));
+        ids.extend(ds.weapon_mods().unwrap().entries.into_iter().map(|e| e.uuid));
+        ids.extend(ds.specialties().unwrap().entries.into_iter().map(|e| e.uuid));
+        ids.extend(ds.clothing().unwrap().entries.into_iter().map(|e| e.uuid));
+        ids.extend(ds.street_drugs().unwrap().entries.into_iter().map(|e| e.uuid));
         let n = ids.len();
         ids.sort();
         ids.dedup();
@@ -308,6 +490,14 @@ mod tests {
         assert_eq!(validate_weapons(&ds.weapons().unwrap(), &ds.skills().unwrap()), Ok(()));
         assert_eq!(validate_skills(&ds.skills().unwrap()), Ok(()));
         assert_eq!(validate_roles(&ds.roles().unwrap()), Ok(()));
+        assert_eq!(validate_gear(&ds.gear().unwrap()), Ok(()));
+        assert_eq!(validate_ammo(&ds.ammo().unwrap()), Ok(()));
+        assert_eq!(validate_weapon_mods(&ds.weapon_mods().unwrap(), &ds.skills().unwrap(), &ds.weapons().unwrap()), Ok(()));
+        assert_eq!(validate_magazines(&ds.magazines().unwrap(), &ds.weapons().unwrap()), Ok(()));
+        assert_eq!(validate_price_categories(&ds.price_categories().unwrap()), Ok(()));
+        assert_eq!(validate_specialties(&ds.specialties().unwrap(), &ds.skills().unwrap()), Ok(()));
+        assert_eq!(validate_clothing(&ds.clothing().unwrap()), Ok(()));
+        assert_eq!(validate_street_drugs(&ds.street_drugs().unwrap()), Ok(()));
         assert_eq!(validate_articles(&ds.articles().unwrap()), Ok(()));
         assert_eq!(validate_martial_arts(&ds.martial_arts().unwrap(), &ds.critical_injuries().unwrap()), Ok(()));
         assert_eq!(

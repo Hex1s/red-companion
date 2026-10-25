@@ -13,10 +13,10 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { FieldBadge } from "@/components/ui/field-badge";
 import { Hint } from "@/components/ui/hint";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { NumberInput } from "@/components/ui/number-input";
 import { Label } from "@/components/ui/label";
 import { useMartialArts } from "@/hooks/use-martial-arts";
+import { useSpecialties } from "@/hooks/use-specialties";
 import { SKILL_MAX } from "@/lib/character-schema";
 import { STAT_ABBR } from "@/lib/stat-abbr";
 import { cn } from "@/lib/utils";
@@ -46,6 +46,12 @@ export function SkillsSection({ characterId, form, skills, onChange }: SkillsSec
   const values = (watch("skills") ?? {}) as Record<string, number>;
   const martialArts = useMartialArts();
   const styles = martialArts.filter((a) => a.kind !== "general");
+  const specialties = useSpecialties();
+  /** What the list offers for a skill: martial arts styles, languages, instruments. The field also takes any typed text. */
+  const suggestionsOf = (skillId: string) =>
+    skillId === "martial_arts"
+      ? styles.map((a) => ({ code: a.code, name: a.name }))
+      : specialties.filter((x) => x.skill === skillId).map((x) => ({ code: x.code, name: x.name }));
 
   const [query, setQuery] = useState("");
   const [onlyTrained, setOnlyTrained] = useState(false);
@@ -57,13 +63,10 @@ export function SkillsSection({ characterId, form, skills, onChange }: SkillsSec
     key.startsWith("martial_arts:") ? styles.find((a) => a.code === specialtyName(key)) : undefined;
   const specialtyLabel = (key: string) => {
     const name = specialtyName(key);
-    if (key.startsWith("martial_arts:")) {
-      const style = styleOf(key);
-      if (style) return style.name;
-      // A style that is gone from the data (pack off, content updated) stays on the sheet, marked.
-      return styles.length > 0 ? `${name} (${t("characters.skill_style_missing")})` : name;
-    }
-    return t(`skill.specialties.${name}`, { defaultValue: name });
+    // A code from the list shows the name in the interface language; typed text (a style or a
+    // language that is not in the list, which the GM may allow) shows as typed.
+    const known = suggestionsOf(key.slice(0, key.indexOf(":"))).find((x) => x.code === name);
+    return known ? known.name : t(`skill.specialties.${name}`, { defaultValue: name });
   };
   const rowsOf = (skill: Skill) =>
     Object.keys(values)
@@ -106,8 +109,11 @@ export function SkillsSection({ characterId, form, skills, onChange }: SkillsSec
 
   const addSpecialty = (skillId: string) => {
     // Dots and brackets would break the form's field paths, the colon the skill key.
-    const name = (specialtyDraft[skillId] ?? "").trim().replace(/[.:[\]]/g, "");
+    const typed = (specialtyDraft[skillId] ?? "").trim().replace(/[.:[\]]/g, "");
     setSpecialtyDraft((d) => ({ ...d, [skillId]: "" }));
+    // Text that names a suggestion is stored as its code (so it follows the interface language).
+    const picked = suggestionsOf(skillId).find((x) => x.name.toLowerCase() === typed.toLowerCase() || x.code === typed);
+    const name = picked ? picked.code : typed;
     if (!name || `${skillId}:${name}` in values) return;
     setValue(`skills.${skillId}:${name}` as Path<Character>, 1, { shouldDirty: true });
   };
@@ -122,11 +128,6 @@ export function SkillsSection({ characterId, form, skills, onChange }: SkillsSec
       ))}
     </span>
   );
-
-  const addStyle = (code: string) => {
-    if (`martial_arts:${code}` in values) return;
-    setValue(`skills.martial_arts:${code}` as Path<Character>, 1, { shouldDirty: true });
-  };
 
   const field = (key: string) => register(`skills.${key}` as Path<Character>, { valueAsNumber: true });
 
@@ -193,41 +194,31 @@ export function SkillsSection({ characterId, form, skills, onChange }: SkillsSec
         <div className="flex items-center gap-2">
           <span className="flex-1">{title}</span>
           {stat}
-          {skill.id === "martial_arts" && styles.length > 0 ? (
-            <Select value="" onValueChange={addStyle}>
-              <SelectTrigger size="sm" className="w-44" aria-label={t("characters.skill_style_pick")}>
-                <SelectValue placeholder={t("characters.skill_style_pick")} />
-              </SelectTrigger>
-              <SelectContent>
-                {styles
-                  .filter((a) => !(`martial_arts:${a.code}` in values))
-                  .map((a) => (
-                    <SelectItem key={a.code} value={a.code}>
-                      {a.name}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <>
-              <Input
-                aria-label={t("characters.skill_specialty")}
-                placeholder={t("characters.skill_specialty")}
-                className="h-7 w-40"
-                value={specialtyDraft[skill.id] ?? ""}
-                onChange={(e) => setSpecialtyDraft((d) => ({ ...d, [skill.id]: e.target.value }))}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addSpecialty(skill.id);
-                  }
-                }}
-              />
-              <Button type="button" size="xs" variant="outline" onClick={() => addSpecialty(skill.id)}>
-                {t("characters.skill_specialty_add")}
-              </Button>
-            </>
-          )}
+          <Input
+            aria-label={t("characters.skill_specialty")}
+            placeholder={t("characters.skill_specialty")}
+            className="h-7 w-44"
+            list={`specialties-${skill.id}`}
+            value={specialtyDraft[skill.id] ?? ""}
+            onChange={(e) => setSpecialtyDraft((d) => ({ ...d, [skill.id]: e.target.value }))}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addSpecialty(skill.id);
+              }
+            }}
+          />
+          {/* The list suggests, the field still takes any text. */}
+          <datalist id={`specialties-${skill.id}`}>
+            {suggestionsOf(skill.id)
+              .filter((x) => !(`${skill.id}:${x.code}` in values))
+              .map((x) => (
+                <option key={x.code} value={x.name} />
+              ))}
+          </datalist>
+          <Button type="button" size="xs" variant="outline" onClick={() => addSpecialty(skill.id)}>
+            {t("characters.skill_specialty_add")}
+          </Button>
         </div>
         {rowsOf(skill)
           .filter((key) => rowVisible(key, nameMatches))

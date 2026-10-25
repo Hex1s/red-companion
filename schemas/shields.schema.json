@@ -51,6 +51,15 @@
           "type": "string",
           "default": "core"
         },
+        "price": {
+          "description": "Price in eurobucks; `None` for a body or a living shield, which nobody sells.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
         "source": {
           "$ref": "#/$defs/Source"
         },

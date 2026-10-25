@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    favoterm_lib::run()
+    red_companion_lib::run()
 }

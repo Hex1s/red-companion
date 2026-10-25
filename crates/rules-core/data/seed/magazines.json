@@ -1,0 +1,106 @@
+{
+  "name": "magazines",
+  "version": 1,
+  "entries": [
+    {
+      "id": "medium_pistol",
+      "standard": 12,
+      "extended": 18,
+      "drum": 36,
+      "pack": "core",
+      "source": {
+        "page": 344
+      }
+    },
+    {
+      "id": "heavy_pistol",
+      "standard": 8,
+      "extended": 14,
+      "drum": 28,
+      "pack": "core",
+      "source": {
+        "page": 344
+      }
+    },
+    {
+      "id": "very_heavy_pistol",
+      "standard": 8,
+      "extended": 14,
+      "drum": 28,
+      "pack": "core",
+      "source": {
+        "page": 344
+      }
+    },
+    {
+      "id": "submachine_gun",
+      "standard": 30,
+      "extended": 40,
+      "drum": 50,
+      "pack": "core",
+      "source": {
+        "page": 344
+      }
+    },
+    {
+      "id": "heavy_submachine_gun",
+      "standard": 40,
+      "extended": 50,
+      "drum": 60,
+      "pack": "core",
+      "source": {
+        "page": 344
+      }
+    },
+    {
+      "id": "shotgun",
+      "standard": 4,
+      "extended": 8,
+      "drum": 16,
+      "pack": "core",
+      "source": {
+        "page": 344
+      }
+    },
+    {
+      "id": "assault_rifle",
+      "standard": 25,
+      "extended": 35,
+      "drum": 45,
+      "pack": "core",
+      "source": {
+        "page": 344
+      }
+    },
+    {
+      "id": "sniper_rifle",
+      "standard": 4,
+      "extended": 8,
+      "drum": 12,
+      "pack": "core",
+      "source": {
+        "page": 344
+      }
+    },
+    {
+      "id": "grenade_launcher",
+      "standard": 2,
+      "extended": 4,
+      "drum": 6,
+      "pack": "core",
+      "source": {
+        "page": 344
+      }
+    },
+    {
+      "id": "rocket_launcher",
+      "standard": 1,
+      "extended": 2,
+      "drum": 3,
+      "pack": "core",
+      "source": {
+        "page": 344
+      }
+    }
+  ]
+}

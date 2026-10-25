@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Collection",
+  "description": "A versioned set of entries of one type, the unit of sync with the future API.",
+  "type": "object",
+  "properties": {
+    "entries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ClothingStyle"
+      }
+    },
+    "name": {
+      "description": "Collection name, e.g. `critical_injuries`.",
+      "type": "string"
+    },
+    "version": {
+      "description": "Bumped by hand whenever the content changes.",
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "name",
+    "version",
+    "entries"
+  ],
+  "$defs": {
+    "ClothingStyle": {
+      "description": "A clothing style with the price of each piece (p. 356; the same table is printed on p. 102).",
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "name": {
+          "description": "The style's name as the book prints it (English even in the Russian edition).",
+          "type": "string"
+        },
+        "pack": {
+          "type": "string",
+          "default": "core"
+        },
+        "prices": {
+          "description": "Prices in eurobucks in `CLOTHING_ITEMS` order.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0
+          }
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "tags": {
+          "description": "The three or four words that describe the style, in the content language.",
+          "type": "string"
+        },
+        "uuid": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "uuid",
+        "code",
+        "name",
+        "tags",
+        "prices",
+        "source"
+      ]
+    },
+    "Source": {
+      "description": "Where a value comes from in the rulebook.",
+      "type": "object",
+      "properties": {
+        "page": {
+          "description": "Printed page number (PDF page minus one).",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "page"
+      ]
+    }
+  }
+}

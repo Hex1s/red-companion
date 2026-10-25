@@ -1,0 +1,70 @@
+{
+  "name": "price_categories",
+  "version": 1,
+  "entries": [
+    {
+      "id": "cheap",
+      "min_price": 10,
+      "pack": "core",
+      "source": {
+        "page": 385
+      }
+    },
+    {
+      "id": "everyday",
+      "min_price": 20,
+      "pack": "core",
+      "source": {
+        "page": 385
+      }
+    },
+    {
+      "id": "costly",
+      "min_price": 50,
+      "pack": "core",
+      "source": {
+        "page": 385
+      }
+    },
+    {
+      "id": "premium",
+      "min_price": 100,
+      "pack": "core",
+      "source": {
+        "page": 385
+      }
+    },
+    {
+      "id": "expensive",
+      "min_price": 500,
+      "pack": "core",
+      "source": {
+        "page": 385
+      }
+    },
+    {
+      "id": "very_expensive",
+      "min_price": 1000,
+      "pack": "core",
+      "source": {
+        "page": 385
+      }
+    },
+    {
+      "id": "luxury",
+      "min_price": 5000,
+      "pack": "core",
+      "source": {
+        "page": 385
+      }
+    },
+    {
+      "id": "super_luxury",
+      "min_price": 10000,
+      "pack": "core",
+      "source": {
+        "page": 385
+      }
+    }
+  ]
+}

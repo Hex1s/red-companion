@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { Ammo } from "@/bindings/Ammo";
 import type { Armor } from "@/bindings/Armor";
+import type { ClothingStyle } from "@/bindings/ClothingStyle";
+import type { GearItem } from "@/bindings/GearItem";
+import type { StreetDrug } from "@/bindings/StreetDrug";
+import type { MagazineRow } from "@/bindings/MagazineRow";
+import type { PriceCategory } from "@/bindings/PriceCategory";
+import type { WeaponMod } from "@/bindings/WeaponMod";
 import type { Article } from "@/bindings/Article";
 import type { MartialArt } from "@/bindings/MartialArt";
 import type { CoverPreset } from "@/bindings/CoverPreset";
@@ -19,9 +26,19 @@ export type ReferenceData = {
   weapons: Weapon[];
   skills: Skill[];
   roles: Role[];
+  gear: GearItem[];
+  ammo: Ammo[];
+  weaponMods: WeaponMod[];
+  magazines: MagazineRow[];
+  priceCategories: PriceCategory[];
+  clothing: ClothingStyle[];
+  streetDrugs: StreetDrug[];
 };
 
-const EMPTY: ReferenceData = { articles: [], martialArts: [], injuries: [], cover: [], armor: [], weapons: [], skills: [], roles: [] };
+const EMPTY: ReferenceData = { articles: [], martialArts: [], injuries: [], cover: [], armor: [], weapons: [], skills: [], roles: [],
+  gear: [], ammo: [], weaponMods: [], magazines: [], priceCategories: [],
+  clothing: [], streetDrugs: [],
+};
 
 /** Loads every reference collection (in the interface language) once `enabled` becomes true. */
 export function useReferenceData(enabled = true): ReferenceData {
@@ -40,9 +57,17 @@ export function useReferenceData(enabled = true): ReferenceData {
       api.listSkills(),
       api.listMartialArts(i18n.language),
       api.listRoles(i18n.language),
+      api.listGear(i18n.language),
+      api.listAmmo(i18n.language),
+      api.listWeaponMods(i18n.language),
+      api.listMagazines(),
+      api.listPriceCategories(),
+      api.listClothing(i18n.language),
+      api.listStreetDrugs(i18n.language),
     ]).then(
-      ([articles, injuries, cover, armor, weapons, skills, martialArts, roles]) => {
-        if (!cancelled) setData({ articles, injuries, cover, armor, weapons, skills, martialArts, roles });
+      ([articles, injuries, cover, armor, weapons, skills, martialArts, roles, gear, ammo, weaponMods, magazines, priceCategories, clothing, streetDrugs]) => {
+        if (!cancelled)
+          setData({ articles, injuries, cover, armor, weapons, skills, martialArts, roles, gear, ammo, weaponMods, magazines, priceCategories, clothing, streetDrugs });
       },
       () => {
         if (!cancelled) setData(EMPTY);

@@ -1,0 +1,216 @@
+{
+  "name": "clothing",
+  "version": 1,
+  "entries": [
+    {
+      "uuid": "e3ee1523-df80-5bdf-a424-135043cb1371",
+      "code": "bag_lady_chic",
+      "name": "Bag Lady Chic",
+      "tags": "Бездомный, оборванный, бродяга, анти-фешн",
+      "prices": [
+        20,
+        10,
+        20,
+        20,
+        20,
+        20,
+        10,
+        10,
+        10
+      ],
+      "pack": "core",
+      "source": {
+        "page": 356
+      }
+    },
+    {
+      "uuid": "ec64b26f-cf55-5845-a648-8c83a02710f5",
+      "code": "gang_colors",
+      "name": "Gang Colors",
+      "tags": "Опасный, жестокий, бунтарь",
+      "prices": [
+        50,
+        20,
+        50,
+        20,
+        50,
+        20,
+        20,
+        10,
+        10
+      ],
+      "pack": "core",
+      "source": {
+        "page": 356
+      }
+    },
+    {
+      "uuid": "ea5cfd6b-9b70-5c9a-b371-f2f1bf718576",
+      "code": "generic_chic",
+      "name": "Generic Chic",
+      "tags": "Стандартный, цветной, модульный",
+      "prices": [
+        50,
+        20,
+        50,
+        20,
+        50,
+        20,
+        20,
+        10,
+        10
+      ],
+      "pack": "core",
+      "source": {
+        "page": 356
+      }
+    },
+    {
+      "uuid": "a0f9fc33-84f9-5d43-a196-ea3c17dc902d",
+      "code": "bohemian",
+      "name": "Bohemian",
+      "tags": "Народное, ретро, фристайл",
+      "prices": [
+        50,
+        20,
+        50,
+        50,
+        100,
+        50,
+        50,
+        10,
+        10
+      ],
+      "pack": "core",
+      "source": {
+        "page": 356
+      }
+    },
+    {
+      "uuid": "38d5d604-5c88-5375-bb4e-c5ba94ff0151",
+      "code": "leisurewear",
+      "name": "Leisurewear",
+      "tags": "Комфорт, ловкость, атлетизм",
+      "prices": [
+        100,
+        20,
+        100,
+        50,
+        100,
+        50,
+        50,
+        20,
+        50
+      ],
+      "pack": "core",
+      "source": {
+        "page": 356
+      }
+    },
+    {
+      "uuid": "fb80706c-a45c-548a-b45e-e5ba5414ecb2",
+      "code": "nomad_leathers",
+      "name": "Nomad Leathers",
+      "tags": "Вестерн, грубый, племенной",
+      "prices": [
+        100,
+        20,
+        100,
+        100,
+        100,
+        50,
+        50,
+        20,
+        100
+      ],
+      "pack": "core",
+      "source": {
+        "page": 356
+      }
+    },
+    {
+      "uuid": "eb02681d-20ad-5a89-905a-338feb24e155",
+      "code": "asia_pop",
+      "name": "Asia Pop",
+      "tags": "Яркий, костюмированный, молодёжный",
+      "prices": [
+        100,
+        20,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100
+      ],
+      "pack": "core",
+      "source": {
+        "page": 356
+      }
+    },
+    {
+      "uuid": "f58a07c4-748c-5add-9220-abcf4ece4481",
+      "code": "urban_flash",
+      "name": "Urban Flash",
+      "tags": "Яркий, технологичный, уличный",
+      "prices": [
+        100,
+        20,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100,
+        100
+      ],
+      "pack": "core",
+      "source": {
+        "page": 356
+      }
+    },
+    {
+      "uuid": "d7cc006b-8563-57e4-82aa-1b7f6e617349",
+      "code": "businesswear",
+      "name": "Businesswear",
+      "tags": "Лидерство, осанка, авторитет",
+      "prices": [
+        500,
+        50,
+        500,
+        500,
+        5000,
+        500,
+        500,
+        100,
+        500
+      ],
+      "pack": "core",
+      "source": {
+        "page": 356
+      }
+    },
+    {
+      "uuid": "689ef2fc-36fc-5e83-bc25-6374b6db287a",
+      "code": "high_fashion",
+      "name": "High Fashion",
+      "tags": "Эксклюзив, дизайнерская, кутюр",
+      "prices": [
+        1000,
+        500,
+        1000,
+        5000,
+        5000,
+        1000,
+        1000,
+        1000,
+        5000
+      ],
+      "pack": "core",
+      "source": {
+        "page": 356
+      }
+    }
+  ]
+}

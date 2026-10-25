@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Collection",
+  "description": "A versioned set of entries of one type, the unit of sync with the future API.",
+  "type": "object",
+  "properties": {
+    "entries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Specialty"
+      }
+    },
+    "name": {
+      "description": "Collection name, e.g. `critical_injuries`.",
+      "type": "string"
+    },
+    "version": {
+      "description": "Bumped by hand whenever the content changes.",
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "name",
+    "version",
+    "entries"
+  ],
+  "$defs": {
+    "Source": {
+      "description": "Where a value comes from in the rulebook.",
+      "type": "object",
+      "properties": {
+        "page": {
+          "description": "Printed page number (PDF page minus one).",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "page"
+      ]
+    },
+    "Specialty": {
+      "description": "A suggested specialty of a skill taken per specialty (a language, an instrument). Only a\nsuggestion: the sheet also accepts any text the GM types (p. 45 allows a language that is not\nin the list). The sheet stores `skill:code`, or `skill:text` for a typed one.",
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "pack": {
+          "type": "string",
+          "default": "core"
+        },
+        "skill": {
+          "description": "Skill `id` it belongs to (a skill with `specialty: true`).",
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "uuid": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "uuid",
+        "code",
+        "skill",
+        "name",
+        "source"
+      ]
+    }
+  }
+}

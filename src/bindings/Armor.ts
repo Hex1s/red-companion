@@ -12,6 +12,10 @@ export type Armor = { uuid: string, code: string, name: string, sp: number,
  */
 penalty: number, 
 /**
+ * Price in eurobucks (p. 97 and p. 350 print the same table).
+ */
+price: number, 
+/**
  * Content pack the entry belongs to: `core` (the main book) or `dlc:<code>`.
  */
 pack: string, source: Source, };

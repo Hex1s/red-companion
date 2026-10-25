@@ -124,6 +124,8 @@ pub struct Armor {
     /// Penalty to REF, DEX and MOVE (0, 2 or 4); applied once, the highest
     /// of the worn armor.
     pub penalty: u8,
+    /// Price in eurobucks (p. 97 and p. 350 print the same table).
+    pub price: u32,
     /// Content pack the entry belongs to: `core` (the main book) or `dlc:<code>`.
     #[serde(default = "default_pack")]
     pub pack: String,
@@ -140,6 +142,8 @@ pub struct Shield {
     /// `None` for a body used as a shield: its HP equal the BODY stat the
     /// person had while alive.
     pub hp: Option<u32>,
+    /// Price in eurobucks; `None` for a body or a living shield, which nobody sells.
+    pub price: Option<u32>,
     /// Content pack the entry belongs to: `core` (the main book) or `dlc:<code>`.
     #[serde(default = "default_pack")]
     pub pack: String,
@@ -508,6 +512,151 @@ pub struct RangeTable {
     pub source: Source,
 }
 
+/// One line of the gear list (p. 351) with its description (p. 352-355). The text is a short
+/// summary in the content language, not the book's wording.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+pub struct GearItem {
+    pub uuid: String,
+    pub code: String,
+    pub name: String,
+    /// Price in eurobucks; the price category is derived from it (see `price_category_of`).
+    pub price: u32,
+    pub summary: String,
+    #[serde(default = "default_pack")]
+    pub pack: String,
+    /// Page of the description.
+    pub source: Source,
+}
+
+/// An ammunition type (p. 345-347). Ammo is sold by 10; grenades and rockets one by one (p. 344).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+pub struct Ammo {
+    pub uuid: String,
+    pub code: String,
+    pub name: String,
+    pub price: u32,
+    /// Which weapons take it, as printed, in the content language.
+    pub usable_with: String,
+    pub summary: String,
+    #[serde(default = "default_pack")]
+    pub pack: String,
+    pub source: Source,
+}
+
+/// A weapon modification (p. 343-344). Every non-exotic ranged weapon has `MOD_SLOTS` slots.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+pub struct WeaponMod {
+    pub uuid: String,
+    pub code: String,
+    pub name: String,
+    pub price: u32,
+    /// Slots it takes: 1, or 2 where the book says so.
+    pub slots: u8,
+    /// Skill ids of the weapons it fits (ranged, never exotic).
+    pub skills: Vec<String>,
+    pub summary: String,
+    #[serde(default = "default_pack")]
+    pub pack: String,
+    pub source: Source,
+}
+
+/// Magazine sizes of a weapon class (p. 344): standard, extended and drum.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+pub struct MagazineRow {
+    /// `code` of the weapon in the catalog.
+    pub id: String,
+    pub standard: u8,
+    pub extended: u8,
+    pub drum: u8,
+    #[serde(default = "default_pack")]
+    pub pack: String,
+    pub source: Source,
+}
+
+/// A price category (p. 385): the lowest market price that belongs to it. The name is the locale
+/// key `price.category.<id>`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+pub struct PriceCategory {
+    pub id: String,
+    pub min_price: u32,
+    #[serde(default = "default_pack")]
+    pub pack: String,
+    pub source: Source,
+}
+
+/// A suggested specialty of a skill taken per specialty (a language, an instrument). Only a
+/// suggestion: the sheet also accepts any text the GM types (p. 45 allows a language that is not
+/// in the list). The sheet stores `skill:code`, or `skill:text` for a typed one.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+pub struct Specialty {
+    pub uuid: String,
+    pub code: String,
+    /// Skill `id` it belongs to (a skill with `specialty: true`).
+    pub skill: String,
+    pub name: String,
+    #[serde(default = "default_pack")]
+    pub pack: String,
+    pub source: Source,
+}
+
+/// Columns of the clothing price matrix in book order (p. 102, p. 356); the locale keys
+/// `clothing.item.<id>` name them.
+pub const CLOTHING_ITEMS: [&str; 9] =
+    ["pants", "top", "jacket", "shoes", "jewelry", "mirrorshades", "glasses", "contacts", "hats"];
+
+/// A clothing style with the price of each piece (p. 356; the same table is printed on p. 102).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+pub struct ClothingStyle {
+    pub uuid: String,
+    pub code: String,
+    /// The style's name as the book prints it (English even in the Russian edition).
+    pub name: String,
+    /// The three or four words that describe the style, in the content language.
+    pub tags: String,
+    /// Prices in eurobucks in `CLOTHING_ITEMS` order.
+    pub prices: Vec<u32>,
+    #[serde(default = "default_pack")]
+    pub pack: String,
+    pub source: Source,
+}
+
+/// A street drug (p. 357-358): what one dose does, and what the addiction does.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[ts(export)]
+pub struct StreetDrug {
+    pub uuid: String,
+    pub code: String,
+    pub name: String,
+    /// Price of one dose in eurobucks.
+    pub price: u32,
+    /// How long the primary effect lasts, hours.
+    pub duration_hours: u32,
+    /// DV of the check against the secondary effect (addiction).
+    pub secondary_dv: u8,
+    /// The primary effect, a short summary in the content language.
+    pub primary: String,
+    /// The secondary effect (addiction), a short summary.
+    pub secondary: String,
+    #[serde(default = "default_pack")]
+    pub pack: String,
+    pub source: Source,
+}
+
+/// Slots for modifications on a ranged weapon (p. 342).
+pub const MOD_SLOTS: u8 = 3;
+
+/// The category a price belongs to: the highest one whose minimum it reaches; below the first, the first.
+pub fn price_category_of(categories: &[PriceCategory], price: u32) -> Option<&PriceCategory> {
+    categories.iter().rev().find(|c| price >= c.min_price).or(categories.first())
+}
+
 /// A versioned set of entries of one type, the unit of sync with the future API.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct Collection<T> {
@@ -529,9 +678,28 @@ pub struct CollectionVersion {
 }
 
 impl<T: Serialize> Collection<T> {
+    /// The entries as canonical JSON: object keys sorted, entries ordered by `code` (else `id`,
+    /// else `uuid`), no spaces. The server computes the same bytes, so equal data gives an equal
+    /// hash whatever the field or file order is. (Keys are ASCII, so sorting by bytes and by
+    /// UTF-16 units agree and the form is compatible with RFC 8785.)
+    pub fn canonical_json(&self) -> Vec<u8> {
+        let mut items: Vec<serde_json::Value> =
+            self.entries.iter().map(|e| serde_json::to_value(e).expect("entries are serializable")).collect();
+        let key = |v: &serde_json::Value| {
+            ["code", "id", "uuid"]
+                .iter()
+                .find_map(|k| v.get(*k).and_then(|x| x.as_str()))
+                .unwrap_or_default()
+                .to_string()
+        };
+        items.sort_by_key(key);
+        // `serde_json::Value` objects are sorted maps (no `preserve_order` feature).
+        serde_json::to_vec(&items).expect("values are serializable")
+    }
+
+    /// SHA-256 of the canonical JSON, lowercase hex.
     pub fn content_hash(&self) -> String {
-        let json = serde_json::to_vec(&self.entries).expect("entries are serializable");
-        Sha256::digest(&json).iter().map(|b| format!("{b:02x}")).collect()
+        Sha256::digest(self.canonical_json()).iter().map(|b| format!("{b:02x}")).collect()
     }
 
     pub fn version_info(&self) -> CollectionVersion {
@@ -613,7 +781,7 @@ pub fn validate_cover_materials(c: &Collection<CoverMaterial>) -> Result<(), Cat
 
 pub fn validate_armor(c: &Collection<Armor>) -> Result<(), CatalogError> {
     check_ids(c.entries.iter().map(|e| (e.code.as_str(), e.name.as_str(), e.source.page)))?;
-    match c.entries.iter().find(|e| e.sp == 0 || e.sp > 30 || e.penalty > 4) {
+    match c.entries.iter().find(|e| e.sp == 0 || e.sp > 30 || e.penalty > 4 || e.price == 0) {
         Some(e) => Err(CatalogError::OutOfRange(e.code.clone())),
         None => Ok(()),
     }
@@ -621,9 +789,139 @@ pub fn validate_armor(c: &Collection<Armor>) -> Result<(), CatalogError> {
 
 pub fn validate_shields(c: &Collection<Shield>) -> Result<(), CatalogError> {
     check_ids(c.entries.iter().map(|e| (e.code.as_str(), e.name.as_str(), e.source.page)))?;
-    match c.entries.iter().find(|e| e.hp == Some(0)) {
+    match c.entries.iter().find(|e| e.hp == Some(0) || e.price == Some(0)) {
         Some(e) => Err(CatalogError::OutOfRange(e.code.clone())),
         None => Ok(()),
+    }
+}
+
+/// Gear list descriptions are on p. 352-355.
+pub const GEAR_PAGES: std::ops::RangeInclusive<u32> = 352..=355;
+/// Ammunition descriptions are on p. 345-347.
+pub const AMMO_PAGES: std::ops::RangeInclusive<u32> = 345..=347;
+/// Weapon modification descriptions are on p. 343-344.
+pub const MOD_PAGES: std::ops::RangeInclusive<u32> = 343..=344;
+
+pub fn validate_gear(c: &Collection<GearItem>) -> Result<(), CatalogError> {
+    check_ids(c.entries.iter().map(|e| (e.code.as_str(), e.name.as_str(), e.source.page)))?;
+    match c.entries.iter().find(|e| e.price == 0 || e.summary.is_empty() || !GEAR_PAGES.contains(&e.source.page)) {
+        Some(e) => Err(CatalogError::OutOfRange(e.code.clone())),
+        None => Ok(()),
+    }
+}
+
+pub fn validate_ammo(c: &Collection<Ammo>) -> Result<(), CatalogError> {
+    check_ids(c.entries.iter().map(|e| (e.code.as_str(), e.name.as_str(), e.source.page)))?;
+    let bad = |e: &&Ammo| {
+        e.price == 0 || e.summary.is_empty() || e.usable_with.is_empty() || !AMMO_PAGES.contains(&e.source.page)
+    };
+    match c.entries.iter().find(bad) {
+        Some(e) => Err(CatalogError::OutOfRange(e.code.clone())),
+        None => Ok(()),
+    }
+}
+
+/// Modifications: slots 1..=3, only ranged non-exotic skills that exist.
+pub fn validate_weapon_mods(c: &Collection<WeaponMod>, skills: &Collection<Skill>, weapons: &Collection<Weapon>) -> Result<(), CatalogError> {
+    check_ids(c.entries.iter().map(|e| (e.code.as_str(), e.name.as_str(), e.source.page)))?;
+    for e in &c.entries {
+        let bad = |why: &str| CatalogError::OutOfRange(format!("{} ({why})", e.code));
+        if e.price == 0 || e.summary.is_empty() || !MOD_PAGES.contains(&e.source.page) {
+            return Err(bad("price, summary or page"));
+        }
+        if !(1..=MOD_SLOTS).contains(&e.slots) {
+            return Err(bad("slots"));
+        }
+        if e.skills.is_empty() {
+            return Err(bad("skills"));
+        }
+        for skill in &e.skills {
+            let ranged = weapons.entries.iter().any(|w| w.kind == WeaponKind::Ranged && w.skill.as_deref() == Some(skill));
+            if !skills.entries.iter().any(|s| &s.id == skill) || !ranged {
+                return Err(bad("skill"));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Magazines: one row per ranged weapon class that has a magazine, growing sizes, and the standard
+/// size is the one the weapon catalog prints (p. 94).
+pub fn validate_magazines(c: &Collection<MagazineRow>, weapons: &Collection<Weapon>) -> Result<(), CatalogError> {
+    check_ids(c.entries.iter().map(|e| (e.id.as_str(), e.id.as_str(), e.source.page)))?;
+    for e in &c.entries {
+        let bad = |why: &str| CatalogError::OutOfRange(format!("{} ({why})", e.id));
+        let w = weapons.entries.iter().find(|w| w.code == e.id).ok_or_else(|| bad("unknown weapon"))?;
+        if w.magazine != Some(u32::from(e.standard)) {
+            return Err(bad("standard size differs from the weapon catalog"));
+        }
+        if !(e.standard < e.extended && e.extended < e.drum) {
+            return Err(bad("sizes must grow"));
+        }
+    }
+    Ok(())
+}
+
+/// Clothing: one price per column of the matrix, all positive; the book prints the table on p. 102 and p. 356.
+pub fn validate_clothing(c: &Collection<ClothingStyle>) -> Result<(), CatalogError> {
+    check_ids(c.entries.iter().map(|e| (e.code.as_str(), e.name.as_str(), e.source.page)))?;
+    let bad = |e: &&ClothingStyle| {
+        e.prices.len() != CLOTHING_ITEMS.len()
+            || e.prices.contains(&0)
+            || e.tags.is_empty()
+            || ![102, 356].contains(&e.source.page)
+    };
+    match c.entries.iter().find(bad) {
+        Some(e) => Err(CatalogError::OutOfRange(e.code.clone())),
+        None => Ok(()),
+    }
+}
+
+/// Street drugs: description on p. 357-358, a sane DV and duration, both effects described.
+pub fn validate_street_drugs(c: &Collection<StreetDrug>) -> Result<(), CatalogError> {
+    check_ids(c.entries.iter().map(|e| (e.code.as_str(), e.name.as_str(), e.source.page)))?;
+    let bad = |e: &&StreetDrug| {
+        e.price == 0
+            || e.duration_hours == 0
+            || !(1..=30).contains(&e.secondary_dv)
+            || e.primary.is_empty()
+            || e.secondary.is_empty()
+            || !(357..=358).contains(&e.source.page)
+    };
+    match c.entries.iter().find(bad) {
+        Some(e) => Err(CatalogError::OutOfRange(e.code.clone())),
+        None => Ok(()),
+    }
+}
+
+/// Specialties: unique per skill, only for skills that are taken per specialty, never for martial
+/// arts (they have their own collection), and a code must not contain the key separator.
+pub fn validate_specialties(c: &Collection<Specialty>, skills: &Collection<Skill>) -> Result<(), CatalogError> {
+    check_ids(c.entries.iter().map(|e| (e.uuid.as_str(), e.name.as_str(), e.source.page)))?;
+    let mut seen = std::collections::HashSet::new();
+    for e in &c.entries {
+        let bad = |why: &str| CatalogError::OutOfRange(format!("{}:{} ({why})", e.skill, e.code));
+        let skill = skills.entries.iter().find(|s| s.id == e.skill).ok_or_else(|| bad("unknown skill"))?;
+        if !skill.specialty || skill.id == "martial_arts" {
+            return Err(bad("skill is not taken per specialty or has its own collection"));
+        }
+        if e.code.is_empty() || e.code.contains([':', '.', '[', ']']) || e.pack.is_empty() {
+            return Err(bad("code"));
+        }
+        if !seen.insert((e.skill.as_str(), e.code.as_str())) {
+            return Err(CatalogError::DuplicateId(format!("{}:{}", e.skill, e.code)));
+        }
+    }
+    Ok(())
+}
+
+/// Price categories: ascending minimums, one id each.
+pub fn validate_price_categories(c: &Collection<PriceCategory>) -> Result<(), CatalogError> {
+    check_ids(c.entries.iter().map(|e| (e.id.as_str(), e.id.as_str(), e.source.page)))?;
+    let ascending = c.entries.windows(2).all(|w| w[0].min_price < w[1].min_price);
+    match c.entries.first() {
+        Some(first) if ascending && first.min_price > 0 => Ok(()),
+        _ => Err(CatalogError::OutOfRange("price_categories".into())),
     }
 }
 
@@ -887,6 +1185,14 @@ pub fn json_schemas() -> Vec<(&'static str, schemars::Schema)> {
         ("rules", schema_for!(Collection<Article>)),
         ("martial_arts", schema_for!(Collection<MartialArt>)),
         ("range_tables", schema_for!(Collection<RangeTable>)),
+        ("gear", schema_for!(Collection<GearItem>)),
+        ("ammo", schema_for!(Collection<Ammo>)),
+        ("weapon_mods", schema_for!(Collection<WeaponMod>)),
+        ("magazines", schema_for!(Collection<MagazineRow>)),
+        ("price_categories", schema_for!(Collection<PriceCategory>)),
+        ("specialties", schema_for!(Collection<Specialty>)),
+        ("clothing", schema_for!(Collection<ClothingStyle>)),
+        ("street_drugs", schema_for!(Collection<StreetDrug>)),
         ("collection_version", schema_for!(CollectionVersion)),
     ]
 }
@@ -992,6 +1298,7 @@ mod tests {
                 name: "Kevlar".into(),
                 sp: 7,
                 penalty: 0,
+                price: 50,
                 pack: default_pack(),
                 source: src,
             }],

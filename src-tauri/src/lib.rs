@@ -6,7 +6,10 @@ mod portrait;
 
 use error::CmdError;
 use rules_core::RulesInfo;
-use rules_core::catalog::{Armor, Article, BodyArea, CriticalInjury, MartialArt, NpcTemplate, NpcTier, RangeTable, Role, Skill, Weapon};
+use rules_core::catalog::{
+    Ammo, Armor, Article, BodyArea, ClothingStyle, CriticalInjury, GearItem, MagazineRow, MartialArt, NpcTemplate, NpcTier, PriceCategory, RangeTable, Role,
+    Skill, Specialty, StreetDrug, Weapon, WeaponMod,
+};
 use rules_core::character::{Character, CharacterKind, CharacterRecord, Derived};
 use rules_core::damage::DamageOutcome;
 use rules_core::damage::WoundState;
@@ -97,6 +100,49 @@ fn list_armor(lang: State<'_, ContentLang>) -> Result<Vec<Armor>, CmdError> {
 #[tauri::command]
 fn list_weapons(lang: State<'_, ContentLang>) -> Result<Vec<Weapon>, CmdError> {
     content(&lang)?.weapons().map(|c| c.entries).map_err(CmdError::from)
+}
+
+#[tauri::command]
+fn list_gear(lang: State<'_, ContentLang>) -> Result<Vec<GearItem>, CmdError> {
+    content(&lang)?.gear().map(|c| c.entries).map_err(CmdError::from)
+}
+
+#[tauri::command]
+fn list_ammo(lang: State<'_, ContentLang>) -> Result<Vec<Ammo>, CmdError> {
+    content(&lang)?.ammo().map(|c| c.entries).map_err(CmdError::from)
+}
+
+#[tauri::command]
+fn list_weapon_mods(lang: State<'_, ContentLang>) -> Result<Vec<WeaponMod>, CmdError> {
+    content(&lang)?.weapon_mods().map(|c| c.entries).map_err(CmdError::from)
+}
+
+/// Magazine sizes by weapon class (core table, the same in every language).
+#[tauri::command]
+fn list_magazines() -> Result<Vec<MagazineRow>, CmdError> {
+    SeedDataSource::default().magazines().map(|c| c.entries).map_err(CmdError::from)
+}
+
+/// Suggested specialties of skills (languages, instruments); the sheet also accepts typed text.
+#[tauri::command]
+fn list_specialties(lang: State<'_, ContentLang>) -> Result<Vec<Specialty>, CmdError> {
+    content(&lang)?.specialties().map(|c| c.entries).map_err(CmdError::from)
+}
+
+#[tauri::command]
+fn list_clothing(lang: State<'_, ContentLang>) -> Result<Vec<ClothingStyle>, CmdError> {
+    content(&lang)?.clothing().map(|c| c.entries).map_err(CmdError::from)
+}
+
+#[tauri::command]
+fn list_street_drugs(lang: State<'_, ContentLang>) -> Result<Vec<StreetDrug>, CmdError> {
+    content(&lang)?.street_drugs().map(|c| c.entries).map_err(CmdError::from)
+}
+
+/// Price categories with their minimum prices (core table); the UI derives a price's category from it.
+#[tauri::command]
+fn list_price_categories() -> Result<Vec<PriceCategory>, CmdError> {
+    SeedDataSource::default().price_categories().map(|c| c.entries).map_err(CmdError::from)
 }
 
 #[tauri::command]
@@ -537,7 +583,7 @@ fn resolve_export(root: &std::path::Path, kind: ExportKind, name: &str) -> Optio
     }
 }
 
-/// `name.character.favoterm.json`, or `name-2.character.favoterm.json` and so on when it
+/// `name.character.redcompanion.json`, or `name-2.character.redcompanion.json` and so on when it
 /// already exists in `dir`.
 fn free_export_name(dir: &std::path::Path, name: String, suffix: &str) -> String {
     if !dir.join(&name).exists() {
@@ -1853,19 +1899,18 @@ fn undo_damage(state: State<'_, AppStorage>) -> Result<DamageApplied, CmdError> 
 }
 
 /// The database file of the app.
-const DB_FILE: &str = "favoterm.db";
-/// The data folder and database name of the app before it was renamed to Favoterm (it was Red
-/// Companion; the folder is named after the app identifier).
-const LEGACY_APP_DIR: &str = "com.user.red-companion";
-const LEGACY_DB_FILE: &str = "red-companion.db";
+const DB_FILE: &str = "red-companion.db";
+/// Data folders (named after the app identifier) and database names of the app under its earlier
+/// identifiers, newest first: the Favoterm build, then the first Red Companion build.
+const LEGACY_DATA: [(&str, &str); 2] = [("app.favoterm", "favoterm.db"), ("com.user.red-companion", "red-companion.db")];
 
-/// Copies the data of the app under its old name (database and exports) into the new data folder,
-/// once: nothing is done when the new database already exists or there is no old one. The old
-/// folder stays untouched. The database goes last, under a temporary name, so that an interrupted
-/// copy is simply done again on the next start. True when something was copied.
-fn migrate_legacy_data(dir: &std::path::Path, legacy_dir: &std::path::Path) -> std::io::Result<bool> {
+/// Copies the data of the app under an earlier identifier (database and exports) into the new data
+/// folder, once: nothing is done when the new database already exists or there is no old one. The
+/// old folder stays untouched. The database goes last, under a temporary name, so that an
+/// interrupted copy is simply done again on the next start. True when something was copied.
+fn migrate_legacy_data(dir: &std::path::Path, legacy_dir: &std::path::Path, legacy_db: &str) -> std::io::Result<bool> {
     let target = dir.join(DB_FILE);
-    let source = legacy_dir.join(LEGACY_DB_FILE);
+    let source = legacy_dir.join(legacy_db);
     if target.exists() || !source.is_file() {
         return Ok(false);
     }
@@ -1875,7 +1920,7 @@ fn migrate_legacy_data(dir: &std::path::Path, legacy_dir: &std::path::Path) -> s
     }
     // A journal left by an interrupted run belongs to the database: it goes along, renamed.
     for extra in ["-journal", "-wal", "-shm"] {
-        let from = legacy_dir.join(format!("{LEGACY_DB_FILE}{extra}"));
+        let from = legacy_dir.join(format!("{legacy_db}{extra}"));
         if from.is_file() {
             std::fs::copy(&from, dir.join(format!("{DB_FILE}{extra}")))?;
         }
@@ -1908,8 +1953,13 @@ pub fn run() {
         .setup(|app| {
             let dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&dir)?;
-            if let Some(legacy) = dir.parent().map(|parent| parent.join(LEGACY_APP_DIR)) {
-                migrate_legacy_data(&dir, &legacy)?;
+            if let Some(parent) = dir.parent() {
+                // The newest earlier folder that has a database wins; the rest stay untouched.
+                for (folder, db) in LEGACY_DATA {
+                    if migrate_legacy_data(&dir, &parent.join(folder), db)? {
+                        break;
+                    }
+                }
             }
             let storage = Storage::open(&dir.join(DB_FILE))?;
             let exports = dir.join("exports");
@@ -1932,6 +1982,14 @@ pub fn run() {
             skill_check,
             list_armor,
             list_weapons,
+            list_gear,
+            list_ammo,
+            list_weapon_mods,
+            list_magazines,
+            list_price_categories,
+            list_specialties,
+            list_clothing,
+            list_street_drugs,
             list_npc_templates,
             create_npc_from_template,
             list_user_templates,
@@ -2017,30 +2075,31 @@ mod tests {
     /// A fresh folder under the system temp dir, removed by the test at the end.
     fn temp_dir(tag: &str) -> std::path::PathBuf {
         let nanos = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
-        let dir = std::env::temp_dir().join(format!("favoterm-test-{tag}-{}-{nanos}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("red-companion-test-{tag}-{}-{nanos}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         dir
     }
 
     #[test]
     fn the_data_of_the_old_app_name_is_copied_once_and_left_in_place() {
+        const OLD_DB: &str = "favoterm.db";
         let root = temp_dir("migrate");
-        let (old, new) = (root.join(LEGACY_APP_DIR), root.join("app.favoterm"));
+        let (old, new) = (root.join("app.favoterm"), root.join("app.red-companion"));
         std::fs::create_dir_all(old.join("exports").join("characters")).unwrap();
         std::fs::create_dir_all(&new).unwrap();
-        std::fs::write(old.join(LEGACY_DB_FILE), b"old database").unwrap();
+        std::fs::write(old.join(OLD_DB), b"old database").unwrap();
         std::fs::write(old.join("exports").join("characters").join("v.character.redcompanion.json"), b"{}").unwrap();
 
-        assert!(migrate_legacy_data(&new, &old).unwrap());
+        assert!(migrate_legacy_data(&new, &old, OLD_DB).unwrap());
         assert_eq!(std::fs::read(new.join(DB_FILE)).unwrap(), b"old database");
         assert!(new.join("exports").join("characters").join("v.character.redcompanion.json").is_file());
         assert!(!new.join(format!("{DB_FILE}.migrating")).exists());
         // The old folder is untouched.
-        assert!(old.join(LEGACY_DB_FILE).is_file());
+        assert!(old.join(OLD_DB).is_file());
 
         // A second start changes nothing, even when the old data changed since.
-        std::fs::write(old.join(LEGACY_DB_FILE), b"changed").unwrap();
-        assert!(!migrate_legacy_data(&new, &old).unwrap());
+        std::fs::write(old.join(OLD_DB), b"changed").unwrap();
+        assert!(!migrate_legacy_data(&new, &old, OLD_DB).unwrap());
         assert_eq!(std::fs::read(new.join(DB_FILE)).unwrap(), b"old database");
         std::fs::remove_dir_all(&root).unwrap();
     }
@@ -2048,9 +2107,9 @@ mod tests {
     #[test]
     fn nothing_is_migrated_without_an_old_database() {
         let root = temp_dir("fresh");
-        let (old, new) = (root.join(LEGACY_APP_DIR), root.join("app.favoterm"));
+        let (old, new) = (root.join("app.favoterm"), root.join("app.red-companion"));
         std::fs::create_dir_all(&new).unwrap();
-        assert!(!migrate_legacy_data(&new, &old).unwrap());
+        assert!(!migrate_legacy_data(&new, &old, "favoterm.db").unwrap());
         assert!(!new.join(DB_FILE).exists());
         std::fs::remove_dir_all(&root).unwrap();
     }

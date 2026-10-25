@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Favoterm",
+    "title": "Red Companion",
     "subtitle": "Cyberpunk RED GM companion"
   },
   "nav": {
@@ -239,9 +239,7 @@
     "skill_specialty_remove": "Remove specialty",
     "saving": "Saving…",
     "skills_search": "Find a skill",
-    "skills_trained_only": "Trained only",
-    "skill_style_pick": "Add a style",
-    "skill_style_missing": "not in the database"
+    "skills_trained_only": "Trained only"
   },
   "skill": {
     "category": {
@@ -749,7 +747,20 @@
       "ranks": "Ranks",
       "level": "Level",
       "source": "Book, p. {{page}}",
-      "condition": "Condition"
+      "condition": "Condition",
+      "slots": "Modification slots",
+      "fits": "Fits weapons",
+      "magazines": "Magazine table",
+      "mag_standard": "Std.",
+      "mag_extended": "Ext.",
+      "mag_drum": "Drum",
+      "category": "Price category",
+      "usable": "Usable with",
+      "armor_price": "Price",
+      "duration": "Duration",
+      "secondary_dv": "Secondary effect DV",
+      "primary": "Primary effect",
+      "secondary": "Secondary effect"
     },
     "title": "Reference",
     "search": "Search by name and description",
@@ -764,7 +775,12 @@
       "reputation": "Reputation",
       "roles": "Roles",
       "articles": "Rules",
-      "martial_arts": "Martial arts"
+      "martial_arts": "Martial arts",
+      "gear": "Gear",
+      "ammo": "Ammunition",
+      "weapon_mods": "Weapon modifications",
+      "clothing": "Clothing",
+      "street_drugs": "Street drugs"
     },
     "eb": "eb",
     "filter": {
@@ -807,11 +823,17 @@
       "kind": "Kind",
       "techniques": "Techniques",
       "ability": "Ability",
-      "summary": "Summary"
+      "summary": "Summary",
+      "slots": "Slots",
+      "usable": "Fits",
+      "tags": "Description",
+      "hours": "Duration",
+      "secondary_dv": "Sec. DV"
     },
     "sort_by": "Sort by {{column}}",
     "close": "Close card",
-    "pick": "Pick an entry on the left."
+    "pick": "Pick an entry on the left.",
+    "hours": "{{count}} h"
   },
   "textmenu": {
     "cut": "Cut",
@@ -1229,8 +1251,8 @@
       "bad_template_id": "Custom template “{{id}}” is invalid. Pick the template again."
     },
     "transfer": {
-      "json": "The file does not read as JSON. Pick a file exported from Favoterm.",
-      "wrong_format": "This is not a Favoterm characters file. Pick a file exported from the app.",
+      "json": "The file does not read as JSON. Pick a file exported from Red Companion.",
+      "wrong_format": "This is not a Red Companion characters file. Pick a file exported from the app.",
       "unsupported_version": "The file was made by another version of the app (format {{version}}). Update the app or export the file again.",
       "empty": "The file has no characters.",
       "invalid": "Character #{{index}} (“{{name}}”): {{cause}}",
@@ -1240,8 +1262,8 @@
       "wrong_file_kind": "The file “{{name}}” does not fit this import. Pick a file of the right type from the list."
     },
     "encounter_transfer": {
-      "json": "The file does not read as JSON. Pick a file exported from Favoterm.",
-      "wrong_format": "This is not a Favoterm encounters file. Pick a file exported from the app.",
+      "json": "The file does not read as JSON. Pick a file exported from Red Companion.",
+      "wrong_format": "This is not a Red Companion encounters file. Pick a file exported from the app.",
       "unsupported_version": "The file was made by another version of the app (format {{version}}). Update the app or export the file again.",
       "empty": "The file has no templates and no encounters.",
       "too_many": "The file has more than {{max}} templates and encounters. Split it into parts.",
@@ -1473,6 +1495,26 @@
       "name": "Distance, time and speed",
       "summary": "Meters and yards are equal; a square is 2 m; reach is 2 m; a turn is ≈ 3 seconds; walking 4 km/h, running 11 km/h.",
       "details": "All distances are measured in meters and yards (treated as equal). On a grid one square is 2 meters. Reach is 2 m: you can touch what is within arm's length and need a tool or weapon for the rest. You can interact with what you can see with the naked eye or through a scope. There are three scales of movement: narrative (speed in km/h), figurative (comparing the MOVE of two moving bodies) and literal (meters in combat: MOVE × 2 m or MOVE squares). Human speed per the book: walking 2.5 mph (4 km/h), running 5 mph (11 km/h, as printed). Time: roleplay time runs as in life; combat time is divided into turns of ≈ 3 seconds, and a round is a turn of every participant."
+    },
+    "weapon_quality": {
+      "name": "Weapon quality",
+      "summary": "Poor quality jams on a critical failure, excellent quality gives +1 to attack; the price depends on the base one.",
+      "details": "Melee and ranged weapons come in three qualities: poor, standard and excellent. Exotic weapons are always standard quality unless stated otherwise.\nPoor: on a critical failure of the attack (a 1 on the die) the weapon breaks down and you must spend an action to clear the fault (no check needed).\nExcellent: +1 to the attack check.\nPrice: standard 50 eb — poor 20, excellent 100; standard 100 eb — poor 50, excellent 500; standard 500 eb — poor 100, excellent 1000."
+    },
+    "weapon_mods_rules": {
+      "name": "Weapon modifications",
+      "summary": "A non-exotic ranged weapon has 3 modification slots; the same modification twice does not stack.",
+      "details": "Every non-exotic ranged weapon has 3 modification slots. You can fit several different modifications while slots last. The same modification installed twice does not add its effect twice. A modification is made for a certain type of weapon and cannot simply be moved to a weapon of another type.\nThe list of modifications and the magazine table are in the reference."
+    },
+    "ammo_rules": {
+      "name": "Ammunition",
+      "summary": "Each weapon type needs its own ammunition; grenades and rockets are sold one by one, the rest by 10.",
+      "details": "Ammunition comes in several kinds: cartridges (for pistols, the shotgun and rifles), shot, arrows, grenades and rockets. Each type of weapon needs its own kind.\nGrenades and rockets are sold one by one, other ammunition by 10. A grenade can be thrown or loaded into a grenade launcher.\nSpecial ammunition types (armor-piercing, incendiary and so on) are in the reference."
+    },
+    "price_categories": {
+      "name": "Prices and price categories",
+      "summary": "Eight categories from Cheap (10 eb) to Super Luxury (10,000 eb and up); without a Fixer you can buy nothing above Premium.",
+      "details": "Everything bought in the game belongs to one of eight price categories that set the market price: Cheap 10 eb, Everyday 20, Costly 50, Premium 100, Expensive 500, Very expensive 1000, Luxury 5000, Super luxury from 10,000 eb.\nWithout an experienced Fixer or their Night Markets you can only buy items up to Premium. Without a Fixer you can forget about a discount, and an Expensive item cannot be bought at all."
     }
   },
   "stat_info": {
@@ -1544,5 +1586,30 @@
     "note": "Reference only: the GM decides hits.",
     "pickHint": "Pick a weapon or a mode",
     "page": "p. {{page}}"
+  },
+  "price": {
+    "category": {
+      "cheap": "Cheap",
+      "everyday": "Everyday",
+      "costly": "Costly",
+      "premium": "Premium",
+      "expensive": "Expensive",
+      "very_expensive": "Very expensive",
+      "luxury": "Luxury",
+      "super_luxury": "Super luxury"
+    }
+  },
+  "clothing": {
+    "item": {
+      "pants": "Pants",
+      "top": "Top",
+      "jacket": "Jacket",
+      "shoes": "Shoes",
+      "jewelry": "Jewelry",
+      "mirrorshades": "Mirrorshades",
+      "glasses": "Glasses",
+      "contacts": "Contact lenses",
+      "hats": "Hats"
+    }
   }
 }

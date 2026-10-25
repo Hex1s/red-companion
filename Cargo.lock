@@ -1035,22 +1035,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
 
 [[package]]
-name = "favoterm"
-version = "0.1.0"
-dependencies = [
- "base64 0.22.1",
- "image",
- "rules-core",
- "serde",
- "serde_json",
- "storage",
- "tauri",
- "tauri-build",
- "tauri-plugin-opener",
- "webp",
-]
-
-[[package]]
 name = "fdeflate"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2932,6 +2916,22 @@ name = "raw-window-handle"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "20675572f6f24e9e76ef639bc5552774ed45f1c30e2951e1e99c59888861c539"
+
+[[package]]
+name = "red-companion"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "image",
+ "rules-core",
+ "serde",
+ "serde_json",
+ "storage",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-opener",
+ "webp",
+]
 
 [[package]]
 name = "redox_syscall"

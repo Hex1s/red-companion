@@ -1,0 +1,134 @@
+{
+  "name": "weapon_mods",
+  "version": 1,
+  "entries": [
+    {
+      "uuid": "1dc50e9a-af8d-5d07-8f49-e2dbe2f28811",
+      "code": "bayonet",
+      "name": "Штык",
+      "price": 100,
+      "slots": 1,
+      "skills": [
+        "shoulder_arms"
+      ],
+      "summary": "Оружие можно использовать в рукопашной как лёгкое оружие ближнего боя. С ним нельзя спрятать оружие под одеждой.",
+      "pack": "core",
+      "source": {
+        "page": 343
+      }
+    },
+    {
+      "uuid": "4e4d4f15-b7f8-55ed-96d3-2e2af7986797",
+      "code": "drum_magazine",
+      "name": "Барабанный магазин",
+      "price": 500,
+      "slots": 1,
+      "skills": [
+        "handgun",
+        "shoulder_arms",
+        "heavy_weapons"
+      ],
+      "summary": "Вмещает больше патронов (таблица магазинов); на оружие ставится один магазин. Спрятать оружие нельзя.",
+      "pack": "core",
+      "source": {
+        "page": 343
+      }
+    },
+    {
+      "uuid": "f0507eb0-21d8-55bc-be55-c4a284bf2e52",
+      "code": "extended_magazine",
+      "name": "Увеличенный магазин",
+      "price": 100,
+      "slots": 1,
+      "skills": [
+        "handgun",
+        "shoulder_arms",
+        "heavy_weapons"
+      ],
+      "summary": "Вмещает больше патронов (таблица магазинов); на оружие ставится один магазин. Спрятать оружие нельзя.",
+      "pack": "core",
+      "source": {
+        "page": 343
+      }
+    },
+    {
+      "uuid": "94dc8f4b-431c-5f04-b645-51d149037ee9",
+      "code": "underbarrel_grenade_launcher",
+      "name": "Подствольный гранатомёт",
+      "price": 500,
+      "slots": 2,
+      "skills": [
+        "shoulder_arms"
+      ],
+      "summary": "Если держать оружие двумя руками, из него можно стрелять как из гранатомёта, одна граната в подствольнике. Спрятать нельзя. Занимает 2 слота.",
+      "pack": "core",
+      "source": {
+        "page": 343
+      }
+    },
+    {
+      "uuid": "491c2e31-2da1-5738-9436-2dc951053a5f",
+      "code": "infrared_night_scope",
+      "name": "Инфракрасный прицел ночного видения",
+      "price": 500,
+      "slots": 1,
+      "skills": [
+        "shoulder_arms"
+      ],
+      "summary": "Убирает штрафы за темноту, дым, туман и т. п.; видно тепло тела, но не то, какой именно киберимплант у цели.",
+      "pack": "core",
+      "source": {
+        "page": 343
+      }
+    },
+    {
+      "uuid": "ff7a83ba-e949-5843-8c00-fff75b59c18d",
+      "code": "underbarrel_shotgun",
+      "name": "Подствольный дробовик",
+      "price": 500,
+      "slots": 2,
+      "skills": [
+        "shoulder_arms"
+      ],
+      "summary": "Если держать оружие двумя руками, из него можно стрелять как из дробовика, магазин на 2 боеприпаса. Спрятать нельзя. Занимает 2 слота.",
+      "pack": "core",
+      "source": {
+        "page": 343
+      }
+    },
+    {
+      "uuid": "deeadd59-22b4-5c09-95f0-594ae5eef376",
+      "code": "smartlink_connector",
+      "name": "Коннектор смартлинка",
+      "price": 500,
+      "slots": 2,
+      "skills": [
+        "handgun",
+        "shoulder_arms",
+        "heavy_weapons"
+      ],
+      "summary": "Делает оружие умным: +1 к попаданию при дальней атаке. Нужны специальные импланты (личный порт или подкожный смартлинк плюс нейролинк); установка и снятие — час. Занимает 2 слота.",
+      "pack": "core",
+      "source": {
+        "page": 344
+      }
+    },
+    {
+      "uuid": "4afee56e-d54b-534d-9a70-ff58cfcbee59",
+      "code": "sniper_scope",
+      "name": "Снайперский прицел",
+      "price": 100,
+      "slots": 1,
+      "skills": [
+        "handgun",
+        "shoulder_arms",
+        "heavy_weapons"
+      ],
+      "summary": "Позволяет разглядеть детали до 800 м; при одиночном или прицельном выстреле на 51 м и дальше +1 к проверке. Не складывается с имплантом ТелеОптика.",
+      "pack": "core",
+      "source": {
+        "page": 344
+      }
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 {
   "name": "armor",
-  "version": 1,
+  "version": 2,
   "entries": [
     {
       "uuid": "c5acb6b7-b497-5e68-9c6a-0eb90d11b3f7",
@@ -8,6 +8,7 @@
       "name": "Кожа",
       "sp": 4,
       "penalty": 0,
+      "price": 20,
       "source": {
         "page": 185
       }
@@ -18,6 +19,7 @@
       "name": "Кевлар",
       "sp": 7,
       "penalty": 0,
+      "price": 50,
       "source": {
         "page": 185
       }
@@ -28,6 +30,7 @@
       "name": "Лёгкий бронекостюм",
       "sp": 11,
       "penalty": 0,
+      "price": 100,
       "source": {
         "page": 185
       }
@@ -38,6 +41,7 @@
       "name": "Комбинезон «Бодивейт»",
       "sp": 11,
       "penalty": 0,
+      "price": 1000,
       "source": {
         "page": 185
       }
@@ -48,6 +52,7 @@
       "name": "Средний бронекостюм",
       "sp": 12,
       "penalty": 2,
+      "price": 100,
       "source": {
         "page": 185
       }
@@ -58,6 +63,7 @@
       "name": "Тяжёлый бронекостюм",
       "sp": 13,
       "penalty": 2,
+      "price": 500,
       "source": {
         "page": 185
       }
@@ -68,6 +74,7 @@
       "name": "Взрывозащищённая броня",
       "sp": 15,
       "penalty": 4,
+      "price": 500,
       "source": {
         "page": 185
       }
@@ -78,6 +85,7 @@
       "name": "Металгир",
       "sp": 18,
       "penalty": 4,
+      "price": 5000,
       "source": {
         "page": 185
       }

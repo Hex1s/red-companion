@@ -1,5 +1,10 @@
 import type { TFunction } from "i18next";
+import type { Ammo } from "@/bindings/Ammo";
 import type { Armor } from "@/bindings/Armor";
+import type { ClothingStyle } from "@/bindings/ClothingStyle";
+import type { GearItem } from "@/bindings/GearItem";
+import type { StreetDrug } from "@/bindings/StreetDrug";
+import type { WeaponMod } from "@/bindings/WeaponMod";
 import type { Article } from "@/bindings/Article";
 import type { MartialArt } from "@/bindings/MartialArt";
 import type { CoverPreset } from "@/bindings/CoverPreset";
@@ -8,6 +13,7 @@ import type { Role } from "@/bindings/Role";
 import type { Skill } from "@/bindings/Skill";
 import type { Weapon } from "@/bindings/Weapon";
 import type { ReferenceData } from "@/hooks/use-reference-data";
+import { priceCategoryName } from "@/lib/price";
 import { STAT_ABBR } from "@/lib/stat-abbr";
 import type { ReferenceSection } from "@/store/ui-store";
 
@@ -17,6 +23,11 @@ export const REFERENCE_SECTIONS: ReferenceSection[] = [
   "cover",
   "armor",
   "weapons",
+  "gear",
+  "ammo",
+  "weapon_mods",
+  "clothing",
+  "street_drugs",
   "skills",
   "martial_arts",
   "roles",
@@ -45,6 +56,11 @@ export type RefEntry =
   | (Base & { section: "cover"; item: CoverPreset })
   | (Base & { section: "armor"; item: Armor })
   | (Base & { section: "weapons"; item: Weapon })
+  | (Base & { section: "gear"; item: GearItem })
+  | (Base & { section: "ammo"; item: Ammo })
+  | (Base & { section: "weapon_mods"; item: WeaponMod })
+  | (Base & { section: "clothing"; item: ClothingStyle })
+  | (Base & { section: "street_drugs"; item: StreetDrug })
   | (Base & { section: "skills"; item: Skill })
   | (Base & { section: "martial_arts"; item: MartialArt })
   | (Base & { section: "roles"; item: Role })
@@ -130,7 +146,7 @@ export function entriesOf(section: ReferenceSection, data: ReferenceData, t: TFu
           name: item.name,
           subtitle: item.penalty > 0 ? t("reference.penalty", { value: item.penalty }) : "",
           value: String(item.sp),
-          search: item.name,
+          search: join([item.name, priceCategoryName(data.priceCategories, item.price, t)]),
         }),
       );
     case "weapons":
@@ -144,6 +160,70 @@ export function entriesOf(section: ReferenceSection, data: ReferenceData, t: TFu
           subtitle: skill,
           value: item.damage ?? `${item.price} ${t("reference.eb")}`,
           search: join([item.name, skill, item.examples, item.ammo, ...item.features, item.description], "\n"),
+        });
+      });
+    case "gear":
+      return data.gear.map((item) => {
+        const category = priceCategoryName(data.priceCategories, item.price, t);
+        return make({
+          section,
+          item,
+          id: item.code,
+          name: item.name,
+          subtitle: category,
+          value: `${item.price} ${t("reference.eb")}`,
+          search: join([item.name, item.summary, category], "\n"),
+        });
+      });
+    case "ammo":
+      return data.ammo.map((item) => {
+        const category = priceCategoryName(data.priceCategories, item.price, t);
+        return make({
+          section,
+          item,
+          id: item.code,
+          name: item.name,
+          subtitle: category,
+          value: `${item.price} ${t("reference.eb")}`,
+          search: join([item.name, item.usable_with, item.summary, category], "\n"),
+        });
+      });
+    case "weapon_mods":
+      return data.weaponMods.map((item) => {
+        const category = priceCategoryName(data.priceCategories, item.price, t);
+        return make({
+          section,
+          item,
+          id: item.code,
+          name: item.name,
+          subtitle: category,
+          value: `${item.price} ${t("reference.eb")}`,
+          search: join([item.name, item.summary, category], "\n"),
+        });
+      });
+    case "clothing":
+      return data.clothing.map((item) =>
+        make({
+          section,
+          item,
+          id: item.code,
+          name: item.name,
+          subtitle: item.tags,
+          value: `${Math.min(...item.prices)}–${Math.max(...item.prices)} ${t("reference.eb")}`,
+          search: join([item.name, item.tags]),
+        }),
+      );
+    case "street_drugs":
+      return data.streetDrugs.map((item) => {
+        const category = priceCategoryName(data.priceCategories, item.price, t);
+        return make({
+          section,
+          item,
+          id: item.code,
+          name: item.name,
+          subtitle: category,
+          value: `${item.price} ${t("reference.eb")}`,
+          search: join([item.name, item.primary, item.secondary, category], "\n"),
         });
       });
     case "skills":

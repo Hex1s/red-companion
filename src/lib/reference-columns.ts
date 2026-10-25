@@ -1,5 +1,6 @@
 import type { TFunction } from "i18next";
 import { STAT_ABBR } from "@/lib/stat-abbr";
+
 import { weaponSkillName, type RefEntry } from "@/lib/reference-entries";
 import type { ReferenceSection } from "@/store/ui-store";
 
@@ -21,6 +22,28 @@ export function averageDamage(dice: string | null): number | null {
   if (!m) return null;
   const sign = m[3] === "-" ? -1 : 1;
   return Number(m[1]) * (Number(m[2]) + 1) / 2 + sign * Number(m[4] ?? 0);
+}
+
+/** Columns of the clothing matrix, as in `catalog::CLOTHING_ITEMS`. */
+const CLOTHING_COLUMNS = ["pants", "top", "jacket", "shoes", "jewelry", "mirrorshades", "glasses", "contacts", "hats"];
+
+/** The price in eurobucks, sorted as a number. */
+function priceColumn(t: TFunction, price: (e: RefEntry) => number | null): RefColumn {
+  return {
+    id: "price",
+    label: t("reference.col.price"),
+    numeric: true,
+    text: (e) => {
+      const p = price(e);
+      return p === null ? "—" : `${p} ${t("reference.eb")}`;
+    },
+    sort: price,
+  };
+}
+
+/** The price category (derived from the price) is the row's subtitle; it sorts by the price. */
+function categoryColumn(t: TFunction, price: (e: RefEntry) => number | null): RefColumn {
+  return { id: "category", label: t("reference.col.category"), text: (e) => e.subtitle, sort: price };
 }
 
 /** Columns per section. The first one is the name; prose sections show a one-line summary. */
@@ -70,6 +93,60 @@ export function columnsOf(section: ReferenceSection, t: TFunction): RefColumn[] 
           text: (e) => (e.section === "armor" && e.item.penalty > 0 ? `−${e.item.penalty}` : "—"),
           sort: (e) => (e.section === "armor" ? e.item.penalty : null),
         },
+        priceColumn(t, (e) => (e.section === "armor" ? e.item.price : null)),
+      ];
+    case "clothing":
+      return [
+        name,
+        sub(t("reference.col.tags")),
+        ...CLOTHING_COLUMNS.map((item, i) => ({
+          id: item,
+          label: t(`clothing.item.${item}`),
+          numeric: true,
+          text: (e: RefEntry) => (e.section === "clothing" ? String(e.item.prices[i]) : ""),
+          sort: (e: RefEntry) => (e.section === "clothing" ? e.item.prices[i] : null),
+        })),
+      ];
+    case "street_drugs":
+      return [
+        name,
+        priceColumn(t, (e) => (e.section === "street_drugs" ? e.item.price : null)),
+        {
+          id: "hours",
+          label: t("reference.col.hours"),
+          numeric: true,
+          text: (e) => (e.section === "street_drugs" ? t("reference.hours", { count: e.item.duration_hours }) : ""),
+          sort: (e) => (e.section === "street_drugs" ? e.item.duration_hours : null),
+        },
+        {
+          id: "secondary_dv",
+          label: t("reference.col.secondary_dv"),
+          numeric: true,
+          text: (e) => (e.section === "street_drugs" ? String(e.item.secondary_dv) : ""),
+          sort: (e) => (e.section === "street_drugs" ? e.item.secondary_dv : null),
+        },
+      ];
+    case "gear":
+      return [name, priceColumn(t, (e) => (e.section === "gear" ? e.item.price : null)), categoryColumn(t, (e) => (e.section === "gear" ? e.item.price : null))];
+    case "ammo":
+      return [
+        name,
+        priceColumn(t, (e) => (e.section === "ammo" ? e.item.price : null)),
+        categoryColumn(t, (e) => (e.section === "ammo" ? e.item.price : null)),
+        { id: "usable", label: t("reference.col.usable"), text: (e) => (e.section === "ammo" ? e.item.usable_with : "") },
+      ];
+    case "weapon_mods":
+      return [
+        name,
+        priceColumn(t, (e) => (e.section === "weapon_mods" ? e.item.price : null)),
+        {
+          id: "slots",
+          label: t("reference.col.slots"),
+          numeric: true,
+          text: (e) => (e.section === "weapon_mods" ? String(e.item.slots) : ""),
+          sort: (e) => (e.section === "weapon_mods" ? e.item.slots : null),
+        },
+        categoryColumn(t, (e) => (e.section === "weapon_mods" ? e.item.price : null)),
       ];
     case "weapons":
       return [

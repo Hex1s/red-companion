@@ -113,7 +113,7 @@ export function ReferenceSearch({ open, onOpenChange }: ReferenceSearchProps) {
           </ul>
           <div className="min-h-0 overflow-y-auto border p-4">
             {current ? (
-              <ReferenceDetail entry={current} />
+              <ReferenceDetail entry={current} data={data} />
             ) : (
               <p className="text-sm text-muted-foreground">{t("reference.pick")}</p>
             )}

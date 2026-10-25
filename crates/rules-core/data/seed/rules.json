@@ -1,6 +1,6 @@
 {
   "name": "rules",
-  "version": 8,
+  "version": 9,
   "entries": [
     {
       "id": "combat_turn",
@@ -561,6 +561,58 @@
       "pack": "core",
       "source": {
         "page": 126
+      }
+    },
+    {
+      "id": "weapon_quality",
+      "name_key": "article.weapon_quality.name",
+      "summary_key": "article.weapon_quality.summary",
+      "details_key": "article.weapon_quality.details",
+      "tags": [
+        "gear"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 342
+      }
+    },
+    {
+      "id": "weapon_mods_rules",
+      "name_key": "article.weapon_mods_rules.name",
+      "summary_key": "article.weapon_mods_rules.summary",
+      "details_key": "article.weapon_mods_rules.details",
+      "tags": [
+        "gear"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 342
+      }
+    },
+    {
+      "id": "ammo_rules",
+      "name_key": "article.ammo_rules.name",
+      "summary_key": "article.ammo_rules.summary",
+      "details_key": "article.ammo_rules.details",
+      "tags": [
+        "gear"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 344
+      }
+    },
+    {
+      "id": "price_categories",
+      "name_key": "article.price_categories.name",
+      "summary_key": "article.price_categories.summary",
+      "details_key": "article.price_categories.details",
+      "tags": [
+        "gear"
+      ],
+      "pack": "core",
+      "source": {
+        "page": 385
       }
     }
   ]

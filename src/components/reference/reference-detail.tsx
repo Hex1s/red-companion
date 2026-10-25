@@ -3,7 +3,13 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { CriticalInjury } from "@/bindings/CriticalInjury";
 import type { TreatmentOption } from "@/bindings/TreatmentOption";
+import type { ReferenceData } from "@/hooks/use-reference-data";
 import { weaponSkillName, type RefEntry } from "@/lib/reference-entries";
+import { priceCategoryName } from "@/lib/price";
+import { cn } from "@/lib/utils";
+
+/** Pieces of clothing in the order of the price columns (`catalog::CLOTHING_ITEMS`). */
+const CLOTHING_ITEMS = ["pants", "top", "jacket", "shoes", "jewelry", "mirrorshades", "glasses", "contacts", "hats"];
 import { STAT_ABBR } from "@/lib/stat-abbr";
 
 type FieldProps = { label: string; children: ReactNode };
@@ -97,6 +103,38 @@ function InjuryCard({ injury }: { injury: CriticalInjury }) {
   );
 }
 
+/** Magazine sizes by weapon class (p. 344); the column of the chosen modification is marked. */
+function MagazineTable({ which, data }: { which: "extended" | "drum"; data: ReferenceData }) {
+  const { t } = useTranslation();
+  const { magazines, weapons } = data;
+  if (magazines.length === 0) return null;
+  const name = (id: string) => weapons.find((w) => w.code === id)?.name ?? id;
+  return (
+    <Block title={t("reference.detail.magazines")}>
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-xs text-muted-foreground uppercase">
+            <th className="py-1 text-left font-normal" />
+            <th className="py-1 text-right font-normal">{t("reference.detail.mag_standard")}</th>
+            <th className="py-1 text-right font-normal">{t("reference.detail.mag_extended")}</th>
+            <th className="py-1 text-right font-normal">{t("reference.detail.mag_drum")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {magazines.map((r) => (
+            <tr key={r.id} className="border-t">
+              <td className="py-1">{name(r.id)}</td>
+              <td className="num py-1 text-right text-muted-foreground">{r.standard}</td>
+              <td className={cn("num py-1 text-right", which === "extended" ? "font-bold" : "text-muted-foreground")}>{r.extended}</td>
+              <td className={cn("num py-1 text-right", which === "drum" ? "font-bold" : "text-muted-foreground")}>{r.drum}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Block>
+  );
+}
+
 function SkillText({ id }: { id: string }) {
   const { summary, details } = useSkillText(id);
   return (
@@ -108,7 +146,7 @@ function SkillText({ id }: { id: string }) {
 }
 
 /** The detail card of one reference entry: a layout per section, not a generic text blob. */
-export function ReferenceDetail({ entry }: { entry: RefEntry }) {
+export function ReferenceDetail({ entry, data }: { entry: RefEntry; data: ReferenceData }) {
   const { t } = useTranslation();
 
   const body = (() => {
@@ -142,9 +180,122 @@ export function ReferenceDetail({ entry }: { entry: RefEntry }) {
         return (
           <>
             <Header name={a.name} big={<Big label={t("glossary.sp")}>{a.sp}</Big>} />
-            <Field label={t("reference.detail.penalty")}>
-              {a.penalty > 0 ? t("reference.penalty", { value: a.penalty }) : t("reference.detail.none")}
-            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label={t("reference.detail.penalty")}>
+                {a.penalty > 0 ? t("reference.penalty", { value: a.penalty }) : t("reference.detail.none")}
+              </Field>
+              <Field label={t("reference.detail.price")}>
+                {a.price} {t("reference.eb")}
+              </Field>
+            </div>
+          </>
+        );
+      }
+      case "clothing": {
+        const c = entry.item;
+        return (
+          <>
+            <Header name={c.name} subtitle={c.tags} />
+            <ul className="divide-y border">
+              {c.prices.map((price, i) => (
+                <li key={CLOTHING_ITEMS[i]} className="flex items-baseline justify-between gap-3 px-3 py-1.5 text-sm">
+                  <span>{t(`clothing.item.${CLOTHING_ITEMS[i]}`)}</span>
+                  <span className="num">
+                    {price} {t("reference.eb")}
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      {priceCategoryName(data.priceCategories, price, t)}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </>
+        );
+      }
+      case "street_drugs": {
+        const d = entry.item;
+        return (
+          <>
+            <Header
+              name={d.name}
+              subtitle={entry.subtitle}
+              big={
+                <Big label={t("reference.detail.price")}>
+                  {d.price} {t("reference.eb")}
+                </Big>
+              }
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <Field label={t("reference.detail.duration")}>{t("reference.hours", { count: d.duration_hours })}</Field>
+              <Field label={t("reference.detail.secondary_dv")}>{d.secondary_dv}</Field>
+            </div>
+            <Block title={t("reference.detail.primary")}>
+              <p className="text-sm">{d.primary}</p>
+            </Block>
+            <Block title={t("reference.detail.secondary")}>
+              <p className="text-sm">{d.secondary}</p>
+            </Block>
+          </>
+        );
+      }
+      case "gear": {
+        const g = entry.item;
+        return (
+          <>
+            <Header
+              name={g.name}
+              subtitle={entry.subtitle}
+              big={
+                <Big label={t("reference.detail.price")}>
+                  {g.price} {t("reference.eb")}
+                </Big>
+              }
+            />
+            <p className="text-sm">{g.summary}</p>
+          </>
+        );
+      }
+      case "ammo": {
+        const a = entry.item;
+        return (
+          <>
+            <Header
+              name={a.name}
+              subtitle={entry.subtitle}
+              big={
+                <Big label={t("reference.detail.price")}>
+                  {a.price} {t("reference.eb")}
+                </Big>
+              }
+            />
+            <p className="text-sm">{a.summary}</p>
+            <Field label={t("reference.detail.usable")}>{a.usable_with}</Field>
+          </>
+        );
+      }
+      case "weapon_mods": {
+        const m = entry.item;
+        return (
+          <>
+            <Header
+              name={m.name}
+              subtitle={entry.subtitle}
+              big={
+                <Big label={t("reference.detail.price")}>
+                  {m.price} {t("reference.eb")}
+                </Big>
+              }
+            />
+            <p className="text-sm">{m.summary}</p>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label={t("reference.detail.slots")}>{m.slots}</Field>
+              <Field label={t("reference.detail.fits")}>
+                {m.skills.map((s) => t(`skill.items.${s}`)).join(", ")}
+              </Field>
+            </div>
+            {(m.code === "extended_magazine" || m.code === "drum_magazine") && (
+              <MagazineTable which={m.code === "drum_magazine" ? "drum" : "extended"} data={data} />
+            )}
           </>
         );
       }

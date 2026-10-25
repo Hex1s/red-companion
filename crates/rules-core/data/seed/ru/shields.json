@@ -1,12 +1,13 @@
 {
   "name": "shields",
-  "version": 1,
+  "version": 2,
   "entries": [
     {
       "uuid": "3cdde50a-804a-5748-b128-bf3bb193400a",
       "code": "bulletproof_shield",
       "name": "Пуленепробиваемый щит",
       "hp": 10,
+      "price": 100,
       "source": {
         "page": 184
       }
@@ -16,6 +17,7 @@
       "code": "corpse",
       "name": "Труп",
       "hp": null,
+      "price": null,
       "source": {
         "page": 184
       }
@@ -25,6 +27,7 @@
       "code": "living_shield",
       "name": "Живой щит",
       "hp": null,
+      "price": null,
       "source": {
         "page": 184
       }

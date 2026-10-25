@@ -1,0 +1,576 @@
+{
+  "name": "specialties",
+  "version": 1,
+  "entries": [
+    {
+      "uuid": "616edc35-b2bb-5866-bcd7-f8aa9a6003b5",
+      "code": "chinese",
+      "skill": "language",
+      "name": "Chinese",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "eb82a595-fb0b-5a2d-abc1-96d33ccf05e0",
+      "code": "cree",
+      "skill": "language",
+      "name": "Cree",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "e2588251-e980-5828-bf60-f9d4a18447f3",
+      "code": "creole",
+      "skill": "language",
+      "name": "Creole",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "b47372ba-d832-51f2-86fa-4bb11a3f4258",
+      "code": "english",
+      "skill": "language",
+      "name": "English",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "7b0118a0-b71a-5f80-8320-13ea21baf523",
+      "code": "french",
+      "skill": "language",
+      "name": "French",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "18ea82ee-7225-5f71-b70f-264274a65cb1",
+      "code": "navajo",
+      "skill": "language",
+      "name": "Navajo",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "56ebd4c0-c49a-535b-b0cd-d90ddb4be1d9",
+      "code": "spanish",
+      "skill": "language",
+      "name": "Spanish",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "e92b5a95-b8aa-5d1c-b56a-470572f59052",
+      "code": "german",
+      "skill": "language",
+      "name": "German",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "9affa58d-ce17-5133-ae03-c561e6efd2b7",
+      "code": "guarani",
+      "skill": "language",
+      "name": "Guarani",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "cb718640-4903-54c1-b7fc-6da7b3933f4a",
+      "code": "maya",
+      "skill": "language",
+      "name": "Maya",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "4491f876-dd0d-5dea-a22a-d19d7e2eb793",
+      "code": "portuguese",
+      "skill": "language",
+      "name": "Portuguese",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "61d49ba5-ce5f-508c-a231-f2df12b5d246",
+      "code": "quechua",
+      "skill": "language",
+      "name": "Quechua",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "0a32aaad-1ad1-5548-844c-ef2137cc9811",
+      "code": "dutch",
+      "skill": "language",
+      "name": "Dutch",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "72ad6180-71fe-54d7-896b-ce67d4836800",
+      "code": "italian",
+      "skill": "language",
+      "name": "Italian",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "8aa8d61d-132a-5892-90c7-1efbddbe525a",
+      "code": "norwegian",
+      "skill": "language",
+      "name": "Norwegian",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "05a21549-9c68-5ebf-af76-77b98ceb41d6",
+      "code": "finnish",
+      "skill": "language",
+      "name": "Finnish",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "b3034478-1f0f-5985-9c86-16e7c099f1fb",
+      "code": "polish",
+      "skill": "language",
+      "name": "Polish",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "fec0faa8-7cdf-51ad-8f16-75f77f12d7aa",
+      "code": "romanian",
+      "skill": "language",
+      "name": "Romanian",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "825cbace-2d97-5a1c-afc0-63674392b330",
+      "code": "russian",
+      "skill": "language",
+      "name": "Russian",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "f9d4ee8b-08df-53ba-8fbe-6e26b617f289",
+      "code": "ukrainian",
+      "skill": "language",
+      "name": "Ukrainian",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "98f7e990-fc90-51bc-9d2e-d3707a60162d",
+      "code": "arabic",
+      "skill": "language",
+      "name": "Arabic",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "10c6bd9c-72a4-5928-be5c-8e450c284081",
+      "code": "berber",
+      "skill": "language",
+      "name": "Berber",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "ccdfd55a-fb55-5ae0-873d-8944b2414c9d",
+      "code": "farsi",
+      "skill": "language",
+      "name": "Farsi",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "e6b4b7f9-6243-5651-9a61-a0c3cbca6a30",
+      "code": "hebrew",
+      "skill": "language",
+      "name": "Hebrew",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "f6161fa0-bfe6-5a79-ac96-ad93dea312f7",
+      "code": "turkish",
+      "skill": "language",
+      "name": "Turkish",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "c2e6912b-388d-59c5-80a9-8045ccfe46c0",
+      "code": "hausa",
+      "skill": "language",
+      "name": "Hausa",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "1eddbc7b-548d-5ea3-91f3-9ac6c9d4bd5a",
+      "code": "lingala",
+      "skill": "language",
+      "name": "Lingala",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "88807aba-7b5d-5e46-a0ee-941a27dd7326",
+      "code": "oromo",
+      "skill": "language",
+      "name": "Oromo",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "71db8f46-56f3-5f3d-b1ce-7e75a23cd205",
+      "code": "swahili",
+      "skill": "language",
+      "name": "Swahili",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "d75e423d-6a0c-586f-ada2-c46f20381d48",
+      "code": "twi",
+      "skill": "language",
+      "name": "Twi",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "b1318173-7be0-5fc3-8911-b674e570c5b1",
+      "code": "yoruba",
+      "skill": "language",
+      "name": "Yoruba",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "d2511c5c-a1b7-572b-8ab7-64ee65df9ee8",
+      "code": "bengali",
+      "skill": "language",
+      "name": "Bengali",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "7ecc92b2-abb1-53bd-95b6-a098ff91c4f1",
+      "code": "dari",
+      "skill": "language",
+      "name": "Dari",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "45810a3c-13e5-502d-a99d-36037363fd03",
+      "code": "hindi",
+      "skill": "language",
+      "name": "Hindi",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "ed944674-3112-5b6a-9718-a6b5e0c5dae9",
+      "code": "nepali",
+      "skill": "language",
+      "name": "Nepali",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "7b8d47aa-edc7-5833-b1fc-db05cc4ea714",
+      "code": "sinhala",
+      "skill": "language",
+      "name": "Sinhala",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "f3e6750a-96f1-5a80-933d-33e1e8b6a70b",
+      "code": "tamil",
+      "skill": "language",
+      "name": "Tamil",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "aaf1cbf8-5574-5009-994c-b08bbabe9d9f",
+      "code": "urdu",
+      "skill": "language",
+      "name": "Urdu",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "d0c13329-d9c1-5fc7-87a7-0e1eeb5eeae3",
+      "code": "burmese",
+      "skill": "language",
+      "name": "Burmese",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "80445738-f098-5de1-9e7b-d55342130ab3",
+      "code": "filipino",
+      "skill": "language",
+      "name": "Filipino",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "d9247ca7-c30a-5590-8124-75444b119a2f",
+      "code": "indonesian",
+      "skill": "language",
+      "name": "Indonesian",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "a38f010f-33d8-54cf-92d4-970c2e63a4bb",
+      "code": "khmer",
+      "skill": "language",
+      "name": "Khmer",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "60d5252d-0c0a-51df-b3e0-3d71fe4c1a8c",
+      "code": "malay",
+      "skill": "language",
+      "name": "Malay",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "2ca4b605-394f-569a-ac8d-498ba74a0c00",
+      "code": "vietnamese",
+      "skill": "language",
+      "name": "Vietnamese",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "4c317ae7-4452-56a7-8c5e-d06f38c12f53",
+      "code": "cantonese",
+      "skill": "language",
+      "name": "Cantonese Chinese",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "bc88ed3b-8681-54c2-bcaa-82cd29c1a5a9",
+      "code": "japanese",
+      "skill": "language",
+      "name": "Japanese",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "d0714fec-b492-5b79-b909-ba632e255473",
+      "code": "korean",
+      "skill": "language",
+      "name": "Korean",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "1c2c1abc-11e9-52f2-9816-d708c92a6452",
+      "code": "mongolian",
+      "skill": "language",
+      "name": "Mongolian",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "98124760-c4a3-575a-81a7-f39603aecefb",
+      "code": "hawaiian",
+      "skill": "language",
+      "name": "Hawaiian",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "73f6e504-a198-53c4-9649-3dc034d979ac",
+      "code": "maori",
+      "skill": "language",
+      "name": "Maori",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "8c9a7e37-7feb-5900-8eae-9f0b15f0ec6b",
+      "code": "pama_nyungan",
+      "skill": "language",
+      "name": "Pama-Nyungan",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "f2fc5a63-6e5c-56b3-9cbe-442eee5a1630",
+      "code": "tahitian",
+      "skill": "language",
+      "name": "Tahitian",
+      "pack": "core",
+      "source": {
+        "page": 45
+      }
+    },
+    {
+      "uuid": "f336e2fe-ed9c-53de-866b-9feb157e429b",
+      "code": "singing",
+      "skill": "play_instrument",
+      "name": "Singing",
+      "pack": "core",
+      "source": {
+        "page": 137
+      }
+    },
+    {
+      "uuid": "cd7ae1e4-69b8-5c42-be47-b92201c656d7",
+      "code": "guitar",
+      "skill": "play_instrument",
+      "name": "Guitar",
+      "pack": "core",
+      "source": {
+        "page": 137
+      }
+    },
+    {
+      "uuid": "d6fd12c0-9177-5a1f-bf85-3b9d0405c83c",
+      "code": "drums",
+      "skill": "play_instrument",
+      "name": "Drums",
+      "pack": "core",
+      "source": {
+        "page": 137
+      }
+    },
+    {
+      "uuid": "cad6d756-c196-50ba-9bc2-67e580c905a2",
+      "code": "violin",
+      "skill": "play_instrument",
+      "name": "Violin",
+      "pack": "core",
+      "source": {
+        "page": 137
+      }
+    },
+    {
+      "uuid": "968f1e9d-4498-550b-abb0-8ac0d6b8fa23",
+      "code": "piano",
+      "skill": "play_instrument",
+      "name": "Piano",
+      "pack": "core",
+      "source": {
+        "page": 137
+      }
+    }
+  ]
+}

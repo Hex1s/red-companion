@@ -163,7 +163,7 @@ export function ReferencePage() {
                 </Button>
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
-                <ReferenceDetail entry={current} />
+                <ReferenceDetail entry={current} data={data} />
               </div>
             </aside>
           )}

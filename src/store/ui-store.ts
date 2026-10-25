@@ -3,7 +3,7 @@ import { create } from "zustand";
 export type AppTab = "characters" | "encounters" | "notes" | "rules";
 /** Tabs of a character sheet; the choice is kept while switching between characters. */
 export type SheetTab = "general" | "state" | "skills" | "roles" | "gear";
-export type ReferenceSection = "articles" | "injuries" | "cover" | "armor" | "weapons" | "skills" | "martial_arts" | "roles" | "reputation";
+export type ReferenceSection = "articles" | "injuries" | "cover" | "armor" | "weapons" | "gear" | "ammo" | "weapon_mods" | "clothing" | "street_drugs" | "skills" | "martial_arts" | "roles" | "reputation";
 
 const EXPLORER_KEY = "rc.explorer";
 

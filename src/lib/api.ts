@@ -3,7 +3,15 @@ import type { Character } from "@/bindings/Character";
 import type { CharacterKind } from "@/bindings/CharacterKind";
 import type { CharacterRecord } from "@/bindings/CharacterRecord";
 import type { DeletedCharacter } from "@/bindings/DeletedCharacter";
+import type { Ammo } from "@/bindings/Ammo";
 import type { Armor } from "@/bindings/Armor";
+import type { GearItem } from "@/bindings/GearItem";
+import type { MagazineRow } from "@/bindings/MagazineRow";
+import type { PriceCategory } from "@/bindings/PriceCategory";
+import type { ClothingStyle } from "@/bindings/ClothingStyle";
+import type { Specialty } from "@/bindings/Specialty";
+import type { StreetDrug } from "@/bindings/StreetDrug";
+import type { WeaponMod } from "@/bindings/WeaponMod";
 import type { Article } from "@/bindings/Article";
 import type { RangeTable } from "@/bindings/RangeTable";
 import type { MartialArt } from "@/bindings/MartialArt";
@@ -71,6 +79,14 @@ export const hasBackend = "__TAURI_INTERNALS__" in globalThis;
 export const api = {
   listArmor: (lang: string) => inLanguage(lang, () => invoke<Armor[]>("list_armor")),
   listWeapons: (lang: string) => inLanguage(lang, () => invoke<Weapon[]>("list_weapons")),
+  listGear: (lang: string) => inLanguage(lang, () => invoke<GearItem[]>("list_gear")),
+  listAmmo: (lang: string) => inLanguage(lang, () => invoke<Ammo[]>("list_ammo")),
+  listWeaponMods: (lang: string) => inLanguage(lang, () => invoke<WeaponMod[]>("list_weapon_mods")),
+  listMagazines: () => invoke<MagazineRow[]>("list_magazines"),
+  listPriceCategories: () => invoke<PriceCategory[]>("list_price_categories"),
+  listClothing: (lang: string) => inLanguage(lang, () => invoke<ClothingStyle[]>("list_clothing")),
+  listStreetDrugs: (lang: string) => inLanguage(lang, () => invoke<StreetDrug[]>("list_street_drugs")),
+  listSpecialties: (lang: string) => inLanguage(lang, () => invoke<Specialty[]>("list_specialties")),
   listSkills: () => invoke<Skill[]>("list_skills"),
   listArticles: () => invoke<Article[]>("list_articles"),
   listRangeTables: () => invoke<RangeTable[]>("list_range_tables"),
@@ -142,7 +158,7 @@ export const api = {
   openExportsFolder: (kind?: ExportKind) =>
     invoke<void>("open_exports_folder", { kind: kind ?? null }),
   /**
-   * Writes encounters and own NPC templates into a new `*.encounters.favoterm.json` file; the own
+   * Writes encounters and own NPC templates into a new `*.encounters.redcompanion.json` file; the own
    * templates an encounter uses go along with it.
    */
   exportEncounters: (encounterIds: number[], templateIds: number[]) =>

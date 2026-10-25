@@ -1,0 +1,76 @@
+{
+  "name": "street_drugs",
+  "version": 1,
+  "entries": [
+    {
+      "uuid": "64d24ddc-d037-5c05-b0fa-9513b780699d",
+      "code": "black_lace",
+      "name": "Black Lace",
+      "price": 50,
+      "duration_hours": 24,
+      "secondary_dv": 17,
+      "primary": "Taking a dose costs 2d6 HUM (returned if the secondary effect does not take hold). The effects of serious wounds are ignored while it lasts.",
+      "secondary": "The HUM lost to the primary effect is not returned. The user becomes addicted; while not under the primary effect their REF drops by 2.",
+      "pack": "core",
+      "source": {
+        "page": 357
+      }
+    },
+    {
+      "uuid": "be43568d-61d8-5d3a-92fe-4f90094387ac",
+      "code": "blue_glass",
+      "name": "Blue Glass",
+      "price": 20,
+      "duration_hours": 4,
+      "secondary_dv": 15,
+      "primary": "From time to time the GM tells you that you \"flash\": hallucinations of swirling bright colours, and you cannot take an action that turn.",
+      "secondary": "The user is addicted and flashes about once an hour (it varies from person to person). While the addiction lasts the primary effect changes: no flash on taking a dose and a stable state, which still does not feel natural; flashes during the effect remain.",
+      "pack": "core",
+      "source": {
+        "page": 357
+      }
+    },
+    {
+      "uuid": "cffcc2b6-31d1-5582-a367-8f5e52bff305",
+      "code": "boost",
+      "name": "Boost",
+      "price": 50,
+      "duration_hours": 24,
+      "secondary_dv": 17,
+      "primary": "While it lasts INT rises by 2, even above 8.",
+      "secondary": "The user is addicted; until the addiction is cured their INT drops by 2.",
+      "pack": "core",
+      "source": {
+        "page": 357
+      }
+    },
+    {
+      "uuid": "633e21d7-bcd5-57a0-8a0c-d6639e4caa78",
+      "code": "smash",
+      "name": "Smash",
+      "price": 10,
+      "duration_hours": 4,
+      "secondary_dv": 15,
+      "primary": "Euphoria, relaxation and readiness to party: +2 to Dance, Acrobatics, Conversation, Human Perception, Persuasion and Acting.",
+      "secondary": "The user is addicted; until it is cured the same skills drop by 2. The GM now and then reminds them of the craving, and it should be roleplayed.",
+      "pack": "core",
+      "source": {
+        "page": 357
+      }
+    },
+    {
+      "uuid": "b2aa1057-cda3-5be0-9cf2-5d3f514ecef5",
+      "code": "syntococaine",
+      "name": "Syntococaine",
+      "price": 20,
+      "duration_hours": 4,
+      "secondary_dv": 15,
+      "primary": "While it lasts REF rises by 1, even above 8; the user is prone to paranoia and the GM says when to roleplay it.",
+      "secondary": "The user is addicted; until it is cured their REF drops by 2. The GM now and then reminds them of the craving, and it should be roleplayed.",
+      "pack": "core",
+      "source": {
+        "page": 357
+      }
+    }
+  ]
+}

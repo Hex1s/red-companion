@@ -1,0 +1,134 @@
+{
+  "name": "weapon_mods",
+  "version": 1,
+  "entries": [
+    {
+      "uuid": "1dc50e9a-af8d-5d07-8f49-e2dbe2f28811",
+      "code": "bayonet",
+      "name": "Bayonet",
+      "price": 100,
+      "slots": 1,
+      "skills": [
+        "shoulder_arms"
+      ],
+      "summary": "The weapon can be used in melee as a light melee weapon. It cannot be hidden under clothes.",
+      "pack": "core",
+      "source": {
+        "page": 343
+      }
+    },
+    {
+      "uuid": "4e4d4f15-b7f8-55ed-96d3-2e2af7986797",
+      "code": "drum_magazine",
+      "name": "Drum magazine",
+      "price": 500,
+      "slots": 1,
+      "skills": [
+        "handgun",
+        "shoulder_arms",
+        "heavy_weapons"
+      ],
+      "summary": "Holds more rounds (see the magazine table); only one magazine per weapon. The weapon cannot be hidden.",
+      "pack": "core",
+      "source": {
+        "page": 343
+      }
+    },
+    {
+      "uuid": "f0507eb0-21d8-55bc-be55-c4a284bf2e52",
+      "code": "extended_magazine",
+      "name": "Extended magazine",
+      "price": 100,
+      "slots": 1,
+      "skills": [
+        "handgun",
+        "shoulder_arms",
+        "heavy_weapons"
+      ],
+      "summary": "Holds more rounds (see the magazine table); only one magazine per weapon. The weapon cannot be hidden.",
+      "pack": "core",
+      "source": {
+        "page": 343
+      }
+    },
+    {
+      "uuid": "94dc8f4b-431c-5f04-b645-51d149037ee9",
+      "code": "underbarrel_grenade_launcher",
+      "name": "Underbarrel grenade launcher",
+      "price": 500,
+      "slots": 2,
+      "skills": [
+        "shoulder_arms"
+      ],
+      "summary": "Held in two hands the weapon can be used as a grenade launcher with 1 grenade in the underbarrel. Cannot be hidden. Takes 2 slots.",
+      "pack": "core",
+      "source": {
+        "page": 343
+      }
+    },
+    {
+      "uuid": "491c2e31-2da1-5738-9436-2dc951053a5f",
+      "code": "infrared_night_scope",
+      "name": "Infrared night-vision scope",
+      "price": 500,
+      "slots": 1,
+      "skills": [
+        "shoulder_arms"
+      ],
+      "summary": "Removes penalties for darkness, smoke, fog and the like; shows body heat, but not which cyberware the target has.",
+      "pack": "core",
+      "source": {
+        "page": 343
+      }
+    },
+    {
+      "uuid": "ff7a83ba-e949-5843-8c00-fff75b59c18d",
+      "code": "underbarrel_shotgun",
+      "name": "Underbarrel shotgun",
+      "price": 500,
+      "slots": 2,
+      "skills": [
+        "shoulder_arms"
+      ],
+      "summary": "Held in two hands the weapon can be used as a shotgun with a 2-round magazine. Cannot be hidden. Takes 2 slots.",
+      "pack": "core",
+      "source": {
+        "page": 343
+      }
+    },
+    {
+      "uuid": "deeadd59-22b4-5c09-95f0-594ae5eef376",
+      "code": "smartlink_connector",
+      "name": "Smartlink connector",
+      "price": 500,
+      "slots": 2,
+      "skills": [
+        "handgun",
+        "shoulder_arms",
+        "heavy_weapons"
+      ],
+      "summary": "Makes the weapon smart: +1 to hit on a ranged attack. Needs special cyberware (an interface plug or a subdermal smartlink plus a neurolink); installing or removing takes an hour. Takes 2 slots.",
+      "pack": "core",
+      "source": {
+        "page": 344
+      }
+    },
+    {
+      "uuid": "4afee56e-d54b-534d-9a70-ff58cfcbee59",
+      "code": "sniper_scope",
+      "name": "Sniper scope",
+      "price": 100,
+      "slots": 1,
+      "skills": [
+        "handgun",
+        "shoulder_arms",
+        "heavy_weapons"
+      ],
+      "summary": "Lets you see details up to 800 m; +1 to the check on a single or aimed shot at 51 m or farther. Does not stack with the TeleOptics implant.",
+      "pack": "core",
+      "source": {
+        "page": 344
+      }
+    }
+  ]
+}

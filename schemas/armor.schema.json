@@ -49,6 +49,12 @@
           "maximum": 255,
           "minimum": 0
         },
+        "price": {
+          "description": "Price in eurobucks (p. 97 and p. 350 print the same table).",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
         "source": {
           "$ref": "#/$defs/Source"
         },
@@ -68,6 +74,7 @@
         "name",
         "sp",
         "penalty",
+        "price",
         "source"
       ]
     },

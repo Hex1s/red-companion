@@ -11,6 +11,10 @@ export type Shield = { uuid: string, code: string, name: string,
  */
 hp: number | null, 
 /**
+ * Price in eurobucks; `None` for a body or a living shield, which nobody sells.
+ */
+price: number | null, 
+/**
  * Content pack the entry belongs to: `core` (the main book) or `dlc:<code>`.
  */
 pack: string, source: Source, };

@@ -1,0 +1,162 @@
+{
+  "en": {
+    "ammo": {
+      "hash": "ea96d9466cb4d713ac9be33d6bbedf564392b7eef8dd88f87aa2478933949df7",
+      "version": 1
+    },
+    "armor": {
+      "hash": "8f7e57a44cefc59cfd4ca09a6192770601804b37fbcc0cc8f6ad11db989f7b0b",
+      "version": 2
+    },
+    "clothing": {
+      "hash": "f2916c26cd53b0dcd27cff47803354a02f7edbe3c37928eac37e492d17cbd48e",
+      "version": 1
+    },
+    "cover_materials": {
+      "hash": "da02f7d026dc21c745ddd46e07d22bfbe9b3877b44e49f587203f133a0a4d431",
+      "version": 1
+    },
+    "critical_injuries": {
+      "hash": "ea87b172538c664132b5354adb13e10752dc2023d33798e876f55ba6a89f349c",
+      "version": 1
+    },
+    "gear": {
+      "hash": "df969cbdf87a8f9092c247e50576973fde356aa5849b47d661aa42253835ca5f",
+      "version": 1
+    },
+    "magazines": {
+      "hash": "ec4c96f07ce6379e5814e75d5f996a0ac30a73997331339c77279b5c15db412d",
+      "version": 1
+    },
+    "martial_arts": {
+      "hash": "92a35fb6cd113f326d725635ea2b64d0368c5dd4faf6fa9be3b7abc39b63ecc2",
+      "version": 1
+    },
+    "npc_templates": {
+      "hash": "992b067204fe01007bb873ff7b37a927a3d954ae295b6d2e946e9d8877eb9233",
+      "version": 1
+    },
+    "price_categories": {
+      "hash": "89d00da8a22907c2a653a5992cba2fbc88b4f49a3e5d75306926b38537b720c7",
+      "version": 1
+    },
+    "range_tables": {
+      "hash": "802eb428d6ba5a5999c48d269d60ace2fca8f95b1ae0f3f8f61defaea5b6f5e8",
+      "version": 1
+    },
+    "roles": {
+      "hash": "cd98b16e789c3a8bf598b4456d2a7c2f03f117b800eb91e22958bb59a3a47d68",
+      "version": 2
+    },
+    "rules": {
+      "hash": "b0ba41287fd238fd203ea427cb17d18d34ea6fbe6c546d3045e239c0bb5772b7",
+      "version": 9
+    },
+    "shields": {
+      "hash": "661711c1fce2ef1028c66412fd42c55edd8b4493e97bf16b78dc12078f80cd2d",
+      "version": 2
+    },
+    "skills": {
+      "hash": "b4c03ba8a9e83bf35bf9897b9040b23c7f3dc0b25c200effb7455acc1046d7ca",
+      "version": 1
+    },
+    "specialties": {
+      "hash": "97fc4a03d342b3ccdb4db5577233da452d7a9fda1de9991e1895420ed4bc7bc4",
+      "version": 1
+    },
+    "street_drugs": {
+      "hash": "c676f31a76e8e9d20e76e9c745a961c13161c1272e3c62f51a3460b2550b3cb8",
+      "version": 1
+    },
+    "weapon_mods": {
+      "hash": "bd592fe02583c3df95dce3081988095ab78444f1b3b5a01d31d787f253c01bb6",
+      "version": 1
+    },
+    "weapons": {
+      "hash": "dc264a5f6f09c66b3a27f5e6156bf234d9b79c222a9478a1712a80f66a095098",
+      "version": 1
+    }
+  },
+  "ru": {
+    "ammo": {
+      "hash": "f318f7a38953d014a7d830acf19492575763ad1f6b217445ccd74cae45e8823f",
+      "version": 1
+    },
+    "armor": {
+      "hash": "9fbca584e37971dfe6ff255c0758ff2273c46a503a9859af2261e991da5d1e89",
+      "version": 2
+    },
+    "clothing": {
+      "hash": "4701a8c7b50dbe410146f2332ef4341449a84338c1a35c871de64ad54e194ccc",
+      "version": 1
+    },
+    "cover_materials": {
+      "hash": "1357e9812f2edc7a1da855acd5b69b997143906531a184135d93c5cc74a10b2a",
+      "version": 1
+    },
+    "critical_injuries": {
+      "hash": "ea87b172538c664132b5354adb13e10752dc2023d33798e876f55ba6a89f349c",
+      "version": 1
+    },
+    "gear": {
+      "hash": "0667dc09deb7afee5f5359929ebb0651a9150ddf49b9dae0258e32efcb7da098",
+      "version": 1
+    },
+    "magazines": {
+      "hash": "ec4c96f07ce6379e5814e75d5f996a0ac30a73997331339c77279b5c15db412d",
+      "version": 1
+    },
+    "martial_arts": {
+      "hash": "a96e101a0af83ddecdf293c4ea3a47c382bb5b31bbf1762fa15ebb40defd4d68",
+      "version": 1
+    },
+    "npc_templates": {
+      "hash": "13be17030dd12d6134378de78db8411f2c23cf8c2ca58577da34279c3265c2aa",
+      "version": 1
+    },
+    "price_categories": {
+      "hash": "89d00da8a22907c2a653a5992cba2fbc88b4f49a3e5d75306926b38537b720c7",
+      "version": 1
+    },
+    "range_tables": {
+      "hash": "802eb428d6ba5a5999c48d269d60ace2fca8f95b1ae0f3f8f61defaea5b6f5e8",
+      "version": 1
+    },
+    "roles": {
+      "hash": "fd98220db8c5731c29ccffa3a496ff077e408badef9269ecaa0d362db0a7d2b2",
+      "version": 2
+    },
+    "rules": {
+      "hash": "b0ba41287fd238fd203ea427cb17d18d34ea6fbe6c546d3045e239c0bb5772b7",
+      "version": 9
+    },
+    "shields": {
+      "hash": "d81d1a4df3d06cfc1158edaa7fb185f8e3b8b90febec40bc86650c309ec797b2",
+      "version": 2
+    },
+    "skills": {
+      "hash": "b4c03ba8a9e83bf35bf9897b9040b23c7f3dc0b25c200effb7455acc1046d7ca",
+      "version": 1
+    },
+    "specialties": {
+      "hash": "9def0b7bc545b5629bec67c0a4910b36d898f73c4aeaa71b0e83f740282e977b",
+      "version": 1
+    },
+    "street_drugs": {
+      "hash": "d5f54017de3b84a12c2606a495c6c9a4ea169153bfe4cbf66569816302e28d55",
+      "version": 1
+    },
+    "weapon_mods": {
+      "hash": "ca5ed26d5dc4e5f4d4dd00614996e49004b346c981dca3baba009a11dfbb2f5e",
+      "version": 1
+    },
+    "weapons": {
+      "hash": "26776cc5f19784840158bc365430d193739b6ee7e98afe2cbd5df0a41568e3f9",
+      "version": 1
+    }
+  },
+  "tiny": {
+    "canonical": "[{\"code\":\"a\",\"name\":\"A\",\"price\":1},{\"code\":\"b\",\"name\":\"B\",\"price\":2}]",
+    "hash": "f815a0e6484731920bf4d43ec4b196fe6ee19c616d84dce5128fc3c4a6016648"
+  }
+}
