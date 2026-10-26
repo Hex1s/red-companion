@@ -1,0 +1,162 @@
+name: Release
+
+# Push a tag vX.Y.Z -> build Windows, macOS (both architectures) and, when enabled, Android ->
+# upload everything to the Red Companion server, which publishes the release.
+#
+# Repository secrets:
+#   TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD  updater key (npx tauri signer generate)
+#   RC_CI_TOKEN                                                      service token of the server (npm run ci:create-token)
+#   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS  only when ANDROID_ENABLED
+# Repository variables:
+#   RC_SERVER_URL   https://red-companion.ru
+#   RC_MIN_SUPPORTED optional X.Y.Z, apps older than it must update (default: nobody must)
+#   ANDROID_ENABLED "true" once src-tauri/gen/android and the keystore exist (roadmap phase 8)
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: version
+        name: Tag must match the app version and CHANGELOG.md
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          conf=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          pkg=$(node -p "require('./package.json').version")
+          if [ "$version" != "$conf" ] || [ "$version" != "$pkg" ]; then
+            echo "Tag $version, tauri.conf.json $conf, package.json $pkg must be equal"; exit 1
+          fi
+          grep -q "^## $version\$" CHANGELOG.md || { echo "CHANGELOG.md has no section '## $version'"; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  build-desktop:
+    needs: check
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - name: windows
+            os: windows-latest
+            args: ""
+            target: ""
+            bundles: nsis
+          - name: macos-aarch64
+            os: macos-latest
+            args: --target aarch64-apple-darwin
+            target: aarch64-apple-darwin
+            bundles: dmg,app
+          - name: macos-x86_64
+            os: macos-latest
+            args: --target x86_64-apple-darwin
+            target: x86_64-apple-darwin
+            bundles: dmg,app
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+      - run: npm ci
+      - name: Build and sign updater packages
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npm run tauri build -- --bundles ${{ matrix.bundles }} ${{ matrix.args }}
+      - name: Collect files
+        shell: bash
+        run: |
+          mkdir -p out
+          root=target/release/bundle
+          [ -n "${{ matrix.target }}" ] && root=target/${{ matrix.target }}/release/bundle
+          find "$root" -type f \( -name '*-setup.exe' -o -name '*-setup.exe.sig' -o -name '*.dmg' -o -name '*.app.tar.gz' -o -name '*.app.tar.gz.sig' \) -exec cp {} out/ \;
+          ls -l out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.name }}
+          path: out/*
+          if-no-files-found: error
+
+  # Gated: needs `npx tauri android init` committed (src-tauri/gen/android) and a signing keystore.
+  build-android:
+    needs: check
+    if: vars.ANDROID_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+      - run: npm ci
+      - name: Build universal APK
+        run: |
+          sdkmanager "ndk;27.0.12077973" "build-tools;35.0.0"
+          export NDK_HOME="$ANDROID_HOME/ndk/27.0.12077973"
+          npm run tauri android build -- --apk
+      - name: Sign APK
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          mkdir -p out
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          apk=$(find src-tauri/gen/android -name '*universal*release*unsigned*.apk' | head -n 1)
+          [ -n "$apk" ] || { echo "No unsigned universal APK found"; exit 1; }
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks "$RUNNER_TEMP/release.jks" --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass env:KEYSTORE_PASSWORD --out out/app.apk "$apk"
+          rm -f "$RUNNER_TEMP/release.jks"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-android
+          path: out/app.apk
+          if-no-files-found: error
+
+  publish:
+    needs: [check, build-desktop, build-android]
+    # build-android is skipped when disabled; every other job must have succeeded.
+    if: ${{ !cancelled() && needs.check.result == 'success' && needs.build-desktop.result == 'success' && (needs.build-android.result == 'success' || needs.build-android.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Upload to the server and publish
+        env:
+          RC_SERVER_URL: ${{ vars.RC_SERVER_URL }}
+          RC_CI_TOKEN: ${{ secrets.RC_CI_TOKEN }}
+          ANDROID_ENABLED: ${{ vars.ANDROID_ENABLED }}
+          RC_MIN_SUPPORTED: ${{ vars.RC_MIN_SUPPORTED }}
+        run: node tools/upload-release.mjs "${{ needs.check.outputs.version }}" artifacts
