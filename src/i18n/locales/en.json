@@ -40,7 +40,9 @@
   },
   "armor": {
     "head": "HEAD",
-    "body": "BODY"
+    "body": "BODY",
+    "head_full": "Head armor",
+    "body_full": "Body armor"
   },
   "glossary": {
     "hp": "HP",
@@ -1030,7 +1032,26 @@
   "color": {
     "label": "Colour label",
     "hint": "Colour label: click to pick a colour",
-    "reset": "Clear"
+    "reset": "Clear",
+    "custom": "Custom colour",
+    "names": {
+      "red": "Red",
+      "orange": "Orange",
+      "yellow": "Yellow",
+      "lime": "Lime",
+      "green": "Green",
+      "teal": "Teal",
+      "cyan": "Cyan",
+      "blue": "Blue",
+      "indigo": "Indigo",
+      "violet": "Violet",
+      "magenta": "Magenta",
+      "pink": "Pink",
+      "white": "White",
+      "steel": "Steel",
+      "rust": "Rust",
+      "khaki": "Khaki"
+    }
   },
   "reputation": {
     "title": "Reputation",

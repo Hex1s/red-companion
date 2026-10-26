@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dices } from "lucide-react";
+import { Dices } from "@/components/ui/icons";
 import { useTranslation } from "react-i18next";
 import type { CriticalInjury } from "@/bindings/CriticalInjury";
 import type { HealApplied } from "@/bindings/HealApplied";

@@ -1,4 +1,4 @@
-import { ImagePlus, X } from "lucide-react";
+import { ImagePlus, X } from "@/components/ui/icons";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { PortraitCropper } from "@/components/character/portrait-cropper";
 import { api, type PortraitCrop } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
+import { MARK_PALETTE } from "@/lib/mark-palette";
 import { cn } from "@/lib/utils";
 import { status } from "@/store/status-store";
 
@@ -33,6 +34,8 @@ type ColorMarkProps = {
   portrait?: string | null;
   name: string;
   className?: string;
+  /** Outline the portrait in the colour label (off where a frame is drawn around it anyway). */
+  framed?: boolean;
 };
 
 /**
@@ -40,7 +43,7 @@ type ColorMarkProps = {
  * or clone number. The colour is user data, so it comes in through a CSS variable; the text takes
  * the theme's dark or light token to stay legible.
  */
-export function ColorMark({ color, portrait, name, className }: ColorMarkProps) {
+export function ColorMark({ color, portrait, name, className, framed = true }: ColorMarkProps) {
   const style = color
     ? ({ "--mark": color, "--mark-text": textOn(color) } as React.CSSProperties)
     : undefined;
@@ -52,7 +55,11 @@ export function ColorMark({ color, portrait, name, className }: ColorMarkProps) 
         aria-hidden
         draggable={false}
         style={style}
-        className={cn("size-6 shrink-0 object-cover", color && "outline-2 -outline-offset-2 outline-(--mark)", className)}
+        className={cn(
+          "size-6 shrink-0 object-cover",
+          framed && color && "outline-2 -outline-offset-2 outline-(--mark)",
+          className,
+        )}
       />
     );
   }
@@ -61,7 +68,7 @@ export function ColorMark({ color, portrait, name, className }: ColorMarkProps) 
       aria-hidden
       style={style}
       className={cn(
-        "num inline-flex size-6 shrink-0 items-center justify-center text-xs font-bold",
+        "num inline-flex size-6 shrink-0 items-center justify-center text-xs font-bold transition-colors duration-300",
         color ? "bg-(--mark) text-(--mark-text)" : "bg-muted text-muted-foreground",
         className,
       )}
@@ -77,14 +84,15 @@ type MarkPickerProps = {
   color: string | null;
   portrait: string | null;
   name: string;
-  /** Called once when the popover closes with something changed. */
+  /** Called at once for a colour (the card changes as you click), for a portrait when the popover closes. */
   onChange: (change: MarkChange) => void;
   className?: string;
   markClassName?: string;
+  framed?: boolean;
 };
 
 /** The badge as a button: opens the portrait and colour label settings, committed on close. */
-export function MarkPicker({ color, portrait, name, onChange, className, markClassName }: MarkPickerProps) {
+export function MarkPicker({ color, portrait, name, onChange, className, markClassName, framed }: MarkPickerProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [draftColor, setDraftColor] = useState(color);
@@ -101,7 +109,6 @@ export function MarkPicker({ color, portrait, name, onChange, className, markCla
     if (next) return;
     setFraming(null);
     const change: MarkChange = {};
-    if (draftColor !== color) change.color = draftColor;
     if (draftPortrait !== portrait) change.portrait = draftPortrait;
     if (Object.keys(change).length > 0) onChange(change);
   };
@@ -118,6 +125,12 @@ export function MarkPicker({ color, portrait, name, onChange, className, markCla
     }
   };
 
+  // A label set before the palette existed (any `#rrggbb`) stays visible as one more swatch.
+  const swatches: { id: string; color: string }[] = [...MARK_PALETTE];
+  if (draftColor !== null && !MARK_PALETTE.some((p) => p.color === draftColor)) {
+    swatches.push({ id: "custom", color: draftColor });
+  }
+
   return (
     <Popover open={open} onOpenChange={close}>
       <Hint label={t("portrait.hint")}>
@@ -127,7 +140,7 @@ export function MarkPicker({ color, portrait, name, onChange, className, markCla
             aria-label={t("portrait.label")}
             className={cn("shrink-0 outline-none focus-visible:ring-1 focus-visible:ring-ring", className)}
           >
-            <ColorMark color={draftColor} portrait={draftPortrait} name={name} className={markClassName} />
+            <ColorMark color={draftColor} portrait={draftPortrait} name={name} className={markClassName} framed={framed} />
           </button>
         </PopoverTrigger>
       </Hint>
@@ -169,14 +182,36 @@ export function MarkPicker({ color, portrait, name, onChange, className, markCla
         </div>
         <div className={cn("space-y-1.5", framing && "hidden")}>
           <p className="font-display text-xs font-semibold uppercase">{t("color.label")}</p>
-          <input
-            type="color"
-            aria-label={t("color.label")}
-            value={draftColor ?? "#808080"}
-            onChange={(e) => setDraftColor(e.target.value.toLowerCase())}
-            className="block h-9 w-full cursor-pointer border border-border bg-transparent p-0.5"
-          />
-          <Button type="button" size="xs" variant="outline" disabled={draftColor === null} onClick={() => setDraftColor(null)}>
+          <div className="grid grid-cols-8 gap-1">
+            {swatches.map(({ id, color: value }) => (
+              <Hint key={value} label={id === "custom" ? t("color.custom") : t(`color.names.${id}`)}>
+                <button
+                  type="button"
+                  aria-label={id === "custom" ? t("color.custom") : t(`color.names.${id}`)}
+                  aria-pressed={draftColor === value}
+                  onClick={() => {
+                    setDraftColor(value);
+                    onChange({ color: value });
+                  }}
+                  style={{ background: value }}
+                  className={cn(
+                    "aspect-square w-full outline-offset-2 outline-foreground hover:outline-1",
+                    draftColor === value && "outline-2",
+                  )}
+                />
+              </Hint>
+            ))}
+          </div>
+          <Button
+            type="button"
+            size="xs"
+            variant="outline"
+            disabled={draftColor === null}
+            onClick={() => {
+              setDraftColor(null);
+              onChange({ color: null });
+            }}
+          >
             {t("color.reset")}
           </Button>
         </div>

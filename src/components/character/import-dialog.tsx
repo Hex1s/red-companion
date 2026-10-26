@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FolderOpen } from "lucide-react";
+import { FolderOpen } from "@/components/ui/icons";
 import { useTranslation } from "react-i18next";
 import type { ExportFile } from "@/bindings/ExportFile";
 import { Button } from "@/components/ui/button";

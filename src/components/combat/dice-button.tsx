@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, Dices } from "lucide-react";
+import { ChevronDown, Dices } from "@/components/ui/icons";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { FieldBadge } from "@/components/ui/field-badge";

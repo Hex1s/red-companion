@@ -1,5 +1,5 @@
 import { formatHotkey } from "@/lib/hotkeys";
-import { BookOpen, Bomb, Crosshair, Rocket, Scan, Sparkles, Target, Wind, Zap } from "lucide-react";
+import { BookOpen, Bomb, Crosshair, Rocket, Scan, Sparkles, Target, Wind, Zap } from "@/components/ui/icons";
 import type { ComponentType } from "react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";

@@ -1,6 +1,6 @@
 import { SkillHint } from "@/components/character/skill-hint";
 import { useMemo, useState } from "react";
-import { ChevronDown, Search } from "lucide-react";
+import { ChevronDown, Search } from "@/components/ui/icons";
 import type { Path, UseFormReturn } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import type { Character } from "@/bindings/Character";

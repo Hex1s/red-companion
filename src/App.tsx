@@ -1,4 +1,4 @@
-import { Keyboard, PanelLeft, Search } from "lucide-react";
+import { Keyboard, PanelLeft, Search } from "@/components/ui/icons";
 import { useDeferredValue, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHotkeys } from "@/hooks/use-hotkeys";

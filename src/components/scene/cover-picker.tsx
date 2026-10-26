@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Shield } from "lucide-react";
+import { Shield } from "@/components/ui/icons";
 import { useTranslation } from "react-i18next";
 import type { CoverObject } from "@/bindings/CoverObject";
 import type { CoverPreset } from "@/bindings/CoverPreset";
@@ -84,13 +84,24 @@ export function CoverPicker({ scene, presets, current, onAssign, onCreate, onSet
         <PopoverTrigger asChild>
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             size="xs"
             aria-label={t("card.cover")}
-            className={cn(current && (destroyed ? "text-state-dead" : "text-cover"))}
+            className={cn(
+              "transition-colors",
+              current
+                ? destroyed
+                  ? "border-state-dead text-state-dead"
+                  : "border-cover text-cover hover:text-cover"
+                : "border-transparent text-muted-foreground",
+            )}
           >
-            <Shield />
-            {current && <span className="num">{current.hp}</span>}
+            <Shield className={current ? "size-4" : undefined} />
+            {current && (
+              <span className="num">
+                {current.hp}/{current.max_hp}
+              </span>
+            )}
           </Button>
         </PopoverTrigger>
       </Hint>

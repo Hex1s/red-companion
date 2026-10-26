@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Syringe } from "lucide-react";
+import { Syringe } from "@/components/ui/icons";
 import { useTranslation } from "react-i18next";
 import type { DrugApplied } from "@/bindings/DrugApplied";
 import { Button } from "@/components/ui/button";

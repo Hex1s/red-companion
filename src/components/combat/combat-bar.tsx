@@ -1,4 +1,4 @@
-import { Play, Square, SkipForward, Undo2 } from "lucide-react";
+import { Play, Square, SkipForward, Undo2 } from "@/components/ui/icons";
 import { useTranslation } from "react-i18next";
 import type { Combat } from "@/bindings/Combat";
 import type { DamageEvent } from "@/bindings/DamageEvent";

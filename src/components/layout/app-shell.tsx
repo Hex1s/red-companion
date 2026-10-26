@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { GlitchFilters } from "@/components/layout/glitch-filters";
 import { StatusArea } from "@/components/layout/status-area";
 import { CHARACTER_DRAG_TYPE, TEMPLATE_DRAG_TYPE, draggedCharacter, draggedTemplate } from "@/lib/drag";
 import { cn } from "@/lib/utils";
@@ -21,7 +22,8 @@ export function AppShell({ header, explorer, explorerOpen, main, rail, onRailDro
   const [railTarget, setRailTarget] = useState(false);
   return (
     <div className="grid h-dvh grid-rows-[auto_minmax(0,1fr)] overflow-hidden bg-background text-foreground">
-      <header className="flex items-center gap-4 border-b px-4 py-2">{header}</header>
+      <GlitchFilters />
+      <header className="relative flex items-center gap-4 border-b px-4 py-2 after:absolute after:bottom-[-1px] after:left-0 after:h-0.5 after:w-24 after:bg-brand">{header}</header>
       <div
         className={cn(
           "grid min-h-0 grid-rows-[minmax(0,1fr)]",

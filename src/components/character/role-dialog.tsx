@@ -1,4 +1,4 @@
-import { Minus, Plus, Syringe, X } from "lucide-react";
+import { Minus, Plus, Syringe, X } from "@/components/ui/icons";
 import { useTranslation } from "react-i18next";
 import type { Derived } from "@/bindings/Derived";
 import type { Role } from "@/bindings/Role";

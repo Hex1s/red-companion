@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AlertCircle, Check, Info, Loader2, X } from "lucide-react";
+import { AlertCircle, Check, Info, Loader2, X } from "@/components/ui/icons";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { useStatusStore, type StatusItem, type StatusKind } from "@/store/status-store";

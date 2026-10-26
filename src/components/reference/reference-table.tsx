@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronsUpDown } from "@/components/ui/icons";
 import { useTranslation } from "react-i18next";
 import type { RefColumn } from "@/lib/reference-columns";
 import type { RefEntry } from "@/lib/reference-entries";

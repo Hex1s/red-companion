@@ -44,6 +44,10 @@
   /* A character standing behind cover: a steel blue, not a wound colour. */
   --cover: #5b8fb9;
 
+  /* Brand gold: the card's contact strip, header accent, active tab. Structure only, never text, numbers
+     or state (`state-light` is a yellow with a meaning). */
+  --brand: #b8954a;
+
   /* The two colour layers of the glitch (RGB split). Decoration only, never state. */
   --glitch-a: #c413f0;
   --glitch-b: #05d9e8;
@@ -82,6 +86,7 @@
   --color-state-mortal-text: var(--state-mortal-text);
   --color-state-dead: var(--state-dead);
   --color-cover: var(--cover);
+  --color-brand: var(--brand);
   --color-glitch-a: var(--glitch-a);
   --color-glitch-b: var(--glitch-b);
 
@@ -94,12 +99,13 @@
 /*
  * Cut corners with a 1px border. clip-path would clip a regular border,
  * so the border is the element's own background and the fill is a pseudo-element.
- * Parameters: --cut (cut size), --cut-border, --cut-fill.
+ * Parameters: --cut (cut size), --cut-border, --cut-fill, --cut-w (border width, 1px by default).
  */
 @utility cut {
   --cut: 10px;
   --cut-border: var(--border);
   --cut-fill: var(--card);
+  --cut-w: 1px;
   position: relative;
   isolation: isolate;
   background: var(--cut-border);
@@ -115,17 +121,67 @@
   &::before {
     content: "";
     position: absolute;
-    inset: 1px;
+    inset: var(--cut-w);
     z-index: -1;
     background: var(--cut-fill);
     clip-path: polygon(
-      calc(var(--cut) - 0.4px) 0,
+      calc(var(--cut) - 0.414 * var(--cut-w)) 0,
       100% 0,
-      100% calc(100% - var(--cut) + 0.4px),
-      calc(100% - var(--cut) + 0.4px) 100%,
+      100% calc(100% - var(--cut) + 0.414 * var(--cut-w)),
+      calc(100% - var(--cut) + 0.414 * var(--cut-w)) 100%,
       0 100%,
-      0 calc(var(--cut) - 0.4px)
+      0 calc(var(--cut) - 0.414 * var(--cut-w))
     );
+  }
+}
+
+/*
+ * Octagonal window (the portrait slot of the card's board). Parameters: --win-x, --win-y (cut size
+ * as a share of the width and height of the element).
+ */
+@utility window-cut {
+  --win-x: 10%;
+  --win-y: 10%;
+  clip-path: polygon(
+    var(--win-x) 0,
+    calc(100% - var(--win-x)) 0,
+    100% var(--win-y),
+    100% calc(100% - var(--win-y)),
+    calc(100% - var(--win-x)) 100%,
+    var(--win-x) 100%,
+    0 calc(100% - var(--win-y)),
+    0 var(--win-y)
+  );
+}
+
+/*
+ * The board drawn on the character card (src/assets/card, made by tools/prepare-card-art.py).
+ * The red parts take the character's colour label (`--mark`, neutral when it is not set).
+ */
+.card-art {
+  .c-mark {
+    fill: var(--mark, var(--muted-foreground));
+    transition: fill 300ms ease;
+  }
+  .c-edge {
+    fill: var(--background);
+  }
+  .c-board {
+    fill: var(--card);
+  }
+  .c-line {
+    fill: var(--muted-foreground);
+    opacity: 0.17;
+  }
+  /* Corner brackets laid over the portrait. */
+  .c-bracket {
+    fill: var(--emphasis);
+    opacity: 0.7;
+  }
+  .c-gold {
+    fill: var(--gold, var(--brand));
+    opacity: 0.75;
+    transition: fill 300ms ease;
   }
 }
 
@@ -270,6 +326,117 @@
   }
 }
 
+/*
+ * HP signal (`HpSignal`): a pixel that runs along the line now and then, a flicker for a serious wound,
+ * a rare glitch of the whole trace for serious and mortal ones. Each card sets its own `--sig-delay`.
+ */
+@keyframes signal-run {
+  0%,
+  16%,
+  100% {
+    left: 0;
+    opacity: 0;
+  }
+  1.5% {
+    left: 0;
+    opacity: 1;
+  }
+  14% {
+    left: calc(100% - 3px);
+    opacity: 1;
+  }
+}
+
+/* A wounded line: two quick beats in a row, then a rest. */
+@keyframes signal-run-wounded {
+  0%,
+  26%,
+  100% {
+    left: 0;
+    opacity: 0;
+  }
+  1.5% {
+    left: 0;
+    opacity: 1;
+  }
+  10% {
+    left: calc(100% - 3px);
+    opacity: 1;
+  }
+  11% {
+    opacity: 0;
+  }
+  14% {
+    left: 0;
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.8;
+  }
+  24% {
+    left: calc(100% - 3px);
+    opacity: 0.8;
+  }
+}
+
+@keyframes signal-flicker {
+  0%,
+  86%,
+  100% {
+    opacity: 1;
+  }
+  89% {
+    opacity: 0.35;
+  }
+  92% {
+    opacity: 1;
+  }
+  95% {
+    opacity: 0.6;
+  }
+}
+
+/* The same RGB split as the text glitch, on the line: no movement, only the colour layers jump about. */
+@keyframes signal-glitch {
+  0%,
+  94%,
+  100% {
+    filter: none;
+  }
+  94.8% {
+    filter: drop-shadow(-2px 0 var(--glitch-a)) drop-shadow(2px 0 var(--glitch-b));
+  }
+  95.8% {
+    filter: drop-shadow(2px 0 var(--glitch-a)) drop-shadow(-1px 0 var(--glitch-b));
+  }
+  96.8% {
+    filter: drop-shadow(-1px 0 var(--glitch-a)) drop-shadow(1px 0 var(--glitch-b));
+  }
+  97.8% {
+    filter: drop-shadow(1px 0 var(--glitch-a)) drop-shadow(-2px 0 var(--glitch-b));
+  }
+}
+
+@utility signal-pulse {
+  animation: signal-run 7s ease-in-out infinite;
+  animation-delay: var(--sig-delay, 0s);
+}
+
+@utility signal-pulse-jerky {
+  animation: signal-run-wounded 5s ease-in-out infinite;
+  animation-delay: var(--sig-delay, 0s);
+}
+
+@utility signal-flicker {
+  animation: signal-flicker 7s linear infinite;
+  animation-delay: var(--sig-delay, 0s);
+}
+
+@utility signal-glitch {
+  animation: signal-glitch 11s steps(1, end) infinite;
+  animation-delay: var(--sig-delay, 0s);
+}
+
 @utility glitch-hover {
   &:hover:not(:disabled),
   &:focus-visible {
@@ -278,6 +445,32 @@
   & :is(.num, [class~="num"]) {
     text-shadow: none;
   }
+}
+
+/* Hit on a whole card: the colour channels of everything inside (text, board, portrait) jump apart. The filters are in `GlitchFilters`. */
+@keyframes glitch-rgb {
+  0%,
+  100% {
+    filter: none;
+  }
+  20% {
+    filter: url(#glitch-a);
+  }
+  40% {
+    filter: url(#glitch-b);
+  }
+  60% {
+    filter: url(#glitch-c);
+  }
+  80% {
+    filter: url(#glitch-d);
+  }
+}
+
+@utility glitch-hit-card {
+  animation:
+    glitch-rgb 0.32s steps(1, end),
+    glitch-shake 0.32s steps(1, end);
 }
 
 @utility glitch-hit {

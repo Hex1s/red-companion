@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TriangleAlert, X } from "lucide-react";
+import { TriangleAlert, X } from "@/components/ui/icons";
 import type { UseFormReturn } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import type { Character } from "@/bindings/Character";

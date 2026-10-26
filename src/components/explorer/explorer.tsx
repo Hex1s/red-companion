@@ -1,4 +1,4 @@
-import { ChevronRight, ChevronsDownUp, Plus } from "lucide-react";
+import { ChevronRight, ChevronsDownUp, Plus } from "@/components/ui/icons";
 import { useState, type DragEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { CharacterKind } from "@/bindings/CharacterKind";

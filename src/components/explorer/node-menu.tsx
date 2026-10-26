@@ -1,4 +1,4 @@
-import { Ellipsis } from "lucide-react";
+import { Ellipsis } from "@/components/ui/icons";
 import { useTranslation } from "react-i18next";
 import {
   ContextMenuItem,

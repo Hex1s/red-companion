@@ -1,4 +1,4 @@
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus } from "@/components/ui/icons";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@/components/ui/hint";

@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { X } from "@/components/ui/icons";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ReferenceDetail } from "@/components/reference/reference-detail";

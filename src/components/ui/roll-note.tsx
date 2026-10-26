@@ -1,4 +1,4 @@
-import { Zap } from "lucide-react";
+import { Zap } from "@/components/ui/icons";
 import { useTranslation } from "react-i18next";
 import type { CheckRoll } from "@/bindings/CheckRoll";
 import { explosionOf } from "@/lib/dice";

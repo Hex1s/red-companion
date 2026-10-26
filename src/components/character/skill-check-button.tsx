@@ -1,6 +1,6 @@
 import { useSkillText } from "@/components/character/skill-hint";
 import { useState } from "react";
-import { Dices } from "lucide-react";
+import { Dices } from "@/components/ui/icons";
 import { useTranslation } from "react-i18next";
 import type { SkillCheck } from "@/bindings/SkillCheck";
 import { Button } from "@/components/ui/button";

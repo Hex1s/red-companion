@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { BrainCircuit, Plus, Stethoscope, X } from "lucide-react";
+import { BrainCircuit, Plus, Stethoscope, X } from "@/components/ui/icons";
 import { useForm, type Path } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import type { Character } from "@/bindings/Character";
@@ -10,6 +10,8 @@ import type { Derived } from "@/bindings/Derived";
 import type { Stats } from "@/bindings/Stats";
 import { InjuryIcon } from "@/components/combat/injury-icons";
 import { MarkPicker } from "@/components/character/color-mark";
+import { PixelIcon } from "@/components/ui/icons";
+import { Chip, ModuleTile } from "@/components/character/hardware";
 import { HpBar } from "@/components/character/hp-bar";
 import { ReputationMeter } from "@/components/character/reputation-meter";
 import { RolesSection } from "@/components/character/roles-section";
@@ -93,15 +95,10 @@ function Section({ title, children }: SectionProps) {
   );
 }
 
-type StatTileProps = { label: string; value: string | number };
+type StatTileProps = { label: string; value: string | number; icon?: ReactNode };
 
-function StatTile({ label, value }: StatTileProps) {
-  return (
-    <div className="cut [--cut:6px] p-2">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="num text-lg font-bold">{value}</div>
-    </div>
-  );
+function StatTile({ label, value, icon }: StatTileProps) {
+  return <ModuleTile label={label} value={value} icon={icon} />;
 }
 
 /** Editable character sheet. Derived numbers come from Rust (saved record). */
@@ -155,12 +152,15 @@ export function CharacterSheet({
 
   // New values from the backend (a save, a hit taken) must not wipe what is being typed right
   // now, and must not look like an edit: `reset` announces every field to `watch`, so the
-  // autosave ignores those announcements while the flag is up.
+  // autosave ignores those announcements while the flag is up. Typed values are kept only while an
+  // edit waits for its save: "dirty" fields stay dirty after a save, and keeping them forever
+  // would freeze a field (HP) against changes that come from outside (damage on the card).
   const resetting = useRef(false);
+  const pendingSave = useRef(false);
   useEffect(() => {
     resetting.current = true;
     try {
-      reset(values, { keepDirtyValues: true });
+      reset(values, { keepDirtyValues: pendingSave.current });
     } finally {
       resetting.current = false;
     }
@@ -169,7 +169,6 @@ export function CharacterSheet({
   // The sheet saves itself shortly after the last edit; invalid values wait until fixed. The
   // progress shows in the status area under one id, so repeated saves update one message.
   const saveId = `save:${entry.id}`;
-  const pendingSave = useRef(false);
   const submit = handleSubmit(async (values) => {
     pendingSave.current = false;
     status.show({ id: saveId, kind: "loading", text: t("status.saving") });
@@ -379,21 +378,27 @@ export function CharacterSheet({
 
         <TabsContent value="general" forceMount className="space-y-6 data-[state=inactive]:hidden">
         <Section title={t("characters.section.stats")}>
-          <div className="grid grid-cols-5 gap-2">
+          <div className="flex flex-wrap justify-between gap-2">
             {STAT_KEYS.map(({ key, label }) => (
-              <div key={key} className="cut [--cut:6px] space-y-1 p-3">
-                <Hint
-                  label={
-                    <span className="block max-w-64 space-y-1">
-                      <span className="block font-semibold">{t(`stat_info.${label}.name`)}</span>
-                      <span className="block">{t(`stat_info.${label}.summary`)}</span>
-                    </span>
-                  }
-                >
-                  <Label htmlFor={`stats.${key}`} className="inline-block text-xs text-muted-foreground">
-                    {t(`stats.${label}`)}
-                  </Label>
-                </Hint>
+              <Chip
+                key={key}
+                className="w-28"
+                title={
+                  <Hint
+                    label={
+                      <span className="block max-w-64 space-y-1">
+                        <span className="block font-semibold">{t(`stat_info.${label}.name`)}</span>
+                        <span className="block">{t(`stat_info.${label}.summary`)}</span>
+                      </span>
+                    }
+                  >
+                    <Label htmlFor={`stats.${key}`} className="inline-block cursor-help font-display text-base leading-none font-semibold tracking-wider text-destructive-text uppercase">
+                      {t(`stats.${label}`)}
+                    </Label>
+                  </Hint>
+                }
+                caption={t(`stat_info.${label}.name`)}
+              >
                 <FieldBadge
                   error={errorText(errors.stats?.[key], {
                     min: key === "emp" || key === "luck" ? 0 : STAT_MIN,
@@ -405,13 +410,13 @@ export function CharacterSheet({
                       id={`stats.${key}`}
                       min={key === "emp" || key === "luck" ? 0 : STAT_MIN}
                       max={STAT_MAX}
-                      className="num text-lg font-bold"
+                      className="num h-10 border-transparent bg-transparent px-0 text-center text-3xl font-bold shadow-none dark:bg-transparent"
                       aria-invalid={invalid}
                       {...num(`stats.${key}`)}
                     />
                   )}
                 </FieldBadge>
-              </div>
+              </Chip>
             ))}
           </div>
           <ReputationMeter
@@ -422,10 +427,10 @@ export function CharacterSheet({
 
         <Section title={t("characters.section.derived")}>
             <div className="grid grid-cols-4 gap-2">
-              <StatTile label={t("characters.max_hp")} value={derived.max_hp} />
-              <StatTile label={t("characters.serious_threshold")} value={derived.serious_threshold} />
-              <StatTile label={t("characters.death_save")} value={`≤ ${derived.death_save}`} />
-              <StatTile label={t("characters.humanity")} value={derived.max_humanity} />
+              <StatTile label={t("characters.max_hp")} value={derived.max_hp} icon={<PixelIcon name="heart" />} />
+              <StatTile label={t("characters.serious_threshold")} value={derived.serious_threshold} icon={<PixelIcon name="warning-diamond" />} />
+              <StatTile label={t("characters.death_save")} value={`≤ ${derived.death_save}`} icon={<PixelIcon name="skull-sharp" />} />
+              <StatTile label={t("characters.humanity")} value={derived.max_humanity} icon={<PixelIcon name="human" />} />
             </div>
         </Section>
         </TabsContent>
@@ -437,9 +442,10 @@ export function CharacterSheet({
               <StatTile
                 label={t("glossary.humanity")}
                 value={`${derived.humanity} / ${derived.max_humanity}`}
+                icon={<PixelIcon name="human" />}
               />
-              <StatTile label={t("humanity.emp_now")} value={derived.effective_emp} />
-              <StatTile label={t("humanity.emp_base")} value={entry.character.stats.emp} />
+              <StatTile label={t("humanity.emp_now")} value={derived.effective_emp} icon={<PixelIcon name="zap" />} />
+              <StatTile label={t("humanity.emp_base")} value={entry.character.stats.emp} icon={<PixelIcon name="cpu-sharp" />} />
             </div>
             <Hint label={t("humanity.loss_hint")}>
               <Button type="button" size="sm" variant="outline" disabled={alive.dead} onClick={onLoseHumanity}>

@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { RotateCcw, Swords } from "lucide-react";
+import { RotateCcw, Swords } from "@/components/ui/icons";
 import { useTranslation } from "react-i18next";
 import type { CheckRoll } from "@/bindings/CheckRoll";
 import type { DeathSave } from "@/bindings/DeathSave";
+import { ArmorCell } from "@/components/character/armor-cell";
+import { BOARD_CONNECTOR_PX, BOARD_TOP_PX, CardBoard, PortraitWindow, WINDOW_BOTTOM_GAP_PX, WINDOW_TOP_PX } from "@/components/character/card-board";
 import { MarkPicker, type MarkChange } from "@/components/character/color-mark";
 import { WoundBadge } from "@/components/character/wound-badge";
 import { item, MoreMenu, separator, tidy } from "@/components/explorer/node-menu";
@@ -14,7 +16,7 @@ import { RollNote } from "@/components/ui/roll-note";
 import type { CharacterEntry } from "@/hooks/use-characters";
 import { explosionOf } from "@/lib/dice";
 import { cn } from "@/lib/utils";
-import { HpBar } from "./hp-bar";
+import { HpSignal } from "./hp-bar";
 
 /** Initiative range the backend accepts. */
 const INITIATIVE_MAX = 99;
@@ -182,8 +184,8 @@ export function CharacterCard({
   return (
     <div
       className={cn(
-        "cut relative animate-in cursor-pointer p-3 text-left duration-200 fade-in-0 slide-in-from-right-4 [--cut:8px]",
-        inCover && "[--cut-border:var(--cover)]",
+        "cut relative animate-in cursor-pointer text-left duration-200 fade-in-0 slide-in-from-right-4 [--cut:8px]",
+        inCover && "[--cut-border:var(--cover)] [--gold:var(--cover)]",
         selected && !active && !inCover && "[--cut-border:var(--muted-foreground)]",
         active && "[--cut-border:var(--primary)]",
         derived.wound_state === "dead" && "opacity-60",
@@ -191,140 +193,174 @@ export function CharacterCard({
       onClick={select}
       style={character.color ? ({ "--mark": character.color } as React.CSSProperties) : undefined}
     >
-      {character.color && <span aria-hidden className="absolute inset-y-3 left-0 z-10 w-1 bg-(--mark)" />}
-      {/* The glitch plays on this inner box: `glitch-hit` would replace the card's own entry animation. */}
+      {/* The glitch plays on this inner box, board included: `glitch-hit-card` on the root would replace the card's own entry animation. */}
       <div
-        className={cn("space-y-2", hit && "glitch-hit")}
+        className={cn("relative", hit && "glitch-hit-card")}
         onAnimationEnd={(e) => e.target === e.currentTarget && e.animationName === "glitch-shake" && setHit(false)}
       >
-      <div className="flex items-center gap-1.5">
-        <Hint
-          label={
-            initiativeBonus !== 0 || explosionOf(initiativeRoll) ? (
-              <span className="block max-w-64">
-                {t("card.initiative_hint")}
-                {initiativeBonus !== 0 && (
-                  <span className="num mt-1 block text-emphasis">
-                    {t("solo.initiative_from", { value: initiativeBonus })}
-                  </span>
-                )}
-                {/* A d10 that exploded is told here, not with an icon that takes room on the row. */}
-                {explosionOf(initiativeRoll) && (
-                  <span className="mt-1 block">
-                    <RollNote roll={initiativeRoll} />
-                  </span>
-                )}
+        <CardBoard />
+        <div className="relative">
+        <div className="flex" style={{ paddingTop: BOARD_TOP_PX }}>
+          <PortraitWindow
+            overlay={
+              <>
+                {/* Initiative sits on the window's top edge, half on the frame, so little of the photo is covered. */}
+                <div className="pointer-events-auto absolute top-0 left-[13%] -translate-y-1/2" onClick={stop}>
+                  <div className="cut transition-colors duration-300 [--cut-border:var(--mark,var(--border))] [--cut-fill:var(--card)] [--cut:5px] focus-within:[--cut-border:var(--ring)]">
+                    <Hint
+                label={
+                  initiativeBonus !== 0 || explosionOf(initiativeRoll) ? (
+                    <span className="block max-w-64">
+                      {t("card.initiative_hint")}
+                      {initiativeBonus !== 0 && (
+                        <span className="num mt-1 block text-emphasis">
+                          {t("solo.initiative_from", { value: initiativeBonus })}
+                        </span>
+                      )}
+                      {/* A d10 that exploded is told here, not with an icon that takes room on the row. */}
+                      {explosionOf(initiativeRoll) && (
+                        <span className="mt-1 block">
+                          <RollNote roll={initiativeRoll} />
+                        </span>
+                      )}
+                    </span>
+                  ) : (
+                    t("card.initiative_hint")
+                  )
+                }
+              >
+                <Input
+                  inputMode="numeric"
+                  value={text}
+                  placeholder="—"
+                  aria-label={t("initiative.total")}
+                  onChange={(e) => setText(e.target.value)}
+                  onBlur={commit}
+                  onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLElement).blur()}
+                  className="num h-5 w-9 border-0 bg-transparent px-0 text-center text-sm font-bold text-emphasis shadow-none focus-visible:ring-0 dark:bg-transparent"
+                />
+              </Hint>
+                  </div>
+                </div>
+                {/* Two cells on the window's left edge, half on the frame, stacked like the body: head over torso. */}
+                <div className="pointer-events-auto absolute top-[55%] left-0 -translate-x-1/2 -translate-y-1/2">
+                  <div className="cut flex w-6 flex-col [--cut-border:var(--mark,var(--border))] [--cut-fill:color-mix(in_oklab,var(--background)_88%,transparent)] [--cut:4px]">
+                    <ArmorCell label={t("armor.head_full")} value={character.armor_head.sp} />
+                    <span aria-hidden className="mx-1 h-px bg-[var(--mark,var(--border))] opacity-60" />
+                    <ArmorCell label={t("armor.body_full")} value={character.armor_body.sp} />
+                  </div>
+                </div>
+              </>
+            }
+          >
+            {/* Popovers are portals: their clicks must not reach the card. */}
+            <div className="size-full" onClick={stop}>
+              <MarkPicker
+                color={character.color}
+                portrait={character.portrait}
+                name={character.name}
+                className="block size-full"
+                markClassName="size-full text-3xl"
+                framed={false}
+                onChange={onSetMark}
+              />
+            </div>
+          </PortraitWindow>
+
+          {/* Lines up with the portrait window: the HP line at its top edge, the damage button at its bottom edge. */}
+          <div
+            className="flex min-w-0 flex-1 flex-col justify-between pr-3 pl-1"
+            style={{ paddingTop: WINDOW_TOP_PX, paddingBottom: WINDOW_BOTTOM_GAP_PX }}
+          >
+            <HpSignal current={character.hp} max={derived.max_hp} state={derived.wound_state} />
+
+            <div className="flex items-center gap-2">
+              <WoundBadge state={derived.wound_state} className="min-w-0 truncate text-xs" />
+              {/* Popovers and menus are portals: their clicks must not reach the card. */}
+              <span className="ml-auto bg-card" onClick={stop}>
+                {coverControl}
               </span>
-            ) : (
-              t("card.initiative_hint")
-            )
-          }
+            </div>
+
+            {!dead && (
+              <div className="flex justify-end">
+                <Hint label={t("combat.damage")}>
+                  <Button type="button" size="xs" onClick={onDamage}>
+                    <Swords />
+                    {t("card.damage")}
+                  </Button>
+                </Hint>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* The top strip: the name in a tag standing on the photo window's top edge, framed in the colour label like the card; a long name is cut with an ellipsis. */}
+        <div
+          className="absolute top-0 right-10 left-[76px] flex items-end"
+          style={{ height: BOARD_TOP_PX + WINDOW_TOP_PX }}
         >
-          <Input
-            inputMode="numeric"
-            value={text}
-            placeholder="—"
-            aria-label={t("initiative.total")}
-            onChange={(e) => setText(e.target.value)}
-            onBlur={commit}
-            onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLElement).blur()}
-            className="num h-7 w-12 px-1 text-center text-base font-bold text-emphasis"
-          />
-        </Hint>
-        {/* Popovers are portals: their clicks must not reach the card. */}
-        <span onClick={stop}>
-          <MarkPicker
-            color={character.color}
-            portrait={character.portrait}
-            name={character.name}
-            markClassName="size-8"
-            onChange={onSetMark}
-          />
-        </span>
-        <span className="min-w-0 flex-1 truncate font-display text-sm font-semibold uppercase">
-          {character.name}
-        </span>
+          <div className="cut min-w-0 transition-colors duration-300 [--cut-border:var(--mark,var(--border))] [--cut-fill:var(--card)] [--cut-w:2px] [--cut:7px]">
+            <span className="block truncate px-2.5 font-display text-xs leading-5 font-semibold uppercase">
+              {character.name}
+            </span>
+          </div>
+        </div>
         {/* Popovers and menus are portals: their clicks must not reach the card. */}
-        <span onClick={stop}>
+        <span className="absolute top-[3px] right-2 bg-card" onClick={stop}>
           <MoreMenu entries={menu} alwaysVisible />
         </span>
-      </div>
 
-      <div className="flex items-center gap-2">
-        <HpBar current={character.hp} max={derived.max_hp} className="flex-1" />
-        <WoundBadge state={derived.wound_state} className="w-20 shrink-0 text-right text-xs" />
-      </div>
-
-      {hasSoloEffects && (
-        <Hint
-          label={
-            <ul className="num space-y-0.5">
-              {derived.solo_initiative > 0 && <li>{t("solo.initiative", { value: derived.solo_initiative })}</li>}
-              {derived.solo_deflection > 0 && <li>{t("solo.deflection", { value: derived.solo_deflection })}</li>}
-              {derived.solo_perception > 0 && <li>{t("solo.perception", { value: derived.solo_perception })}</li>}
-              {derived.solo_precision > 0 && <li>{t("solo.precision", { value: derived.solo_precision })}</li>}
-              {derived.solo_spot_weakness > 0 && (
-                <li>{t("solo.spot_weakness", { value: derived.solo_spot_weakness })}</li>
-              )}
-            </ul>
-          }
-        >
-          <p className="font-display text-xs font-semibold text-emphasis uppercase">{t("solo.badge")}</p>
-        </Hint>
-      )}
-      {derived.cyberpsychosis && (
-        <Hint label={t("humanity.cyberpsychosis_hint")}>
-          <p className="font-display text-xs font-semibold text-state-mortal-text uppercase">
-            {t("humanity.cyberpsychosis")} <span className="num">{derived.humanity}</span>
-          </p>
-        </Hint>
-      )}
-
-      <div className="flex items-center gap-1.5">
-        <span className="num flex items-center gap-3 text-xs text-muted-foreground">
-          <span>
-            {t("armor.head")} {character.armor_head.sp}
-          </span>
-          <span>
-            {t("armor.body")} {character.armor_body.sp}
-          </span>
-        </span>
-        {mortal && (
-          <Button type="button" size="xs" variant="outline" onClick={onStabilize}>
-            {t("initiative.stabilize")}
-          </Button>
-        )}
-        {dead && (
-          <Hint label={t("card.revive_hint")}>
-            <Button type="button" size="xs" variant="outline" onClick={onRevive}>
-              <RotateCcw />
-              {t("card.revive")}
+        {/* Whatever is not always there goes below the board's body; the padding keeps clear of its contact strip. */}
+        <div className="space-y-2 px-3" style={{ paddingBottom: BOARD_CONNECTOR_PX + 6 }}>
+          {hasSoloEffects && (
+            <Hint
+              label={
+                <ul className="num space-y-0.5">
+                  {derived.solo_initiative > 0 && <li>{t("solo.initiative", { value: derived.solo_initiative })}</li>}
+                  {derived.solo_deflection > 0 && <li>{t("solo.deflection", { value: derived.solo_deflection })}</li>}
+                  {derived.solo_perception > 0 && <li>{t("solo.perception", { value: derived.solo_perception })}</li>}
+                  {derived.solo_precision > 0 && <li>{t("solo.precision", { value: derived.solo_precision })}</li>}
+                  {derived.solo_spot_weakness > 0 && (
+                    <li>{t("solo.spot_weakness", { value: derived.solo_spot_weakness })}</li>
+                  )}
+                </ul>
+              }
+            >
+              <p className="font-display text-xs font-semibold text-emphasis uppercase">{t("solo.badge")}</p>
+            </Hint>
+          )}
+          {derived.cyberpsychosis && (
+            <Hint label={t("humanity.cyberpsychosis_hint")}>
+              <p className="font-display text-xs font-semibold text-state-mortal-text uppercase">
+                {t("humanity.cyberpsychosis")} <span className="num">{derived.humanity}</span>
+              </p>
+            </Hint>
+          )}
+          {mortal && (
+            <Button type="button" size="xs" variant="outline" onClick={onStabilize}>
+              {t("initiative.stabilize")}
             </Button>
-          </Hint>
-        )}
-        <span className="ml-auto flex items-center gap-1.5">
-          {/* Popovers and menus are portals: their clicks must not reach the card. */}
-          <span onClick={stop}>{coverControl}</span>
-          {!dead && (
-            <Hint label={t("combat.damage")}>
-              <Button type="button" size="xs" onClick={onDamage}>
-                <Swords />
-                {t("card.damage")}
+          )}
+          {dead && (
+            <Hint label={t("card.revive_hint")}>
+              <Button type="button" size="xs" variant="outline" onClick={onRevive}>
+                <RotateCcw />
+                {t("card.revive")}
               </Button>
             </Hint>
           )}
-        </span>
-      </div>
-
-      {deathSaveDue && active && mortal && <DeathSaveRow character={entry} onRoll={onDeathSave} />}
-      {lastSave && !deathSaveDue && (
-        <p className="num text-xs">
-          {t("initiative.death_save")}: d10 {lastSave.roll.dice[0]} + {lastSave.penalty} —{" "}
-          <span className={lastSave.passed ? "text-state-ok" : "text-state-dead"}>
-            {t(lastSave.passed ? "initiative.death_save_passed" : "initiative.death_save_failed")}
-          </span>
-        </p>
-      )}
+          {deathSaveDue && active && mortal && <DeathSaveRow character={entry} onRoll={onDeathSave} />}
+          {lastSave && !deathSaveDue && (
+            <p className="num text-xs">
+              {t("initiative.death_save")}: d10 {lastSave.roll.dice[0]} + {lastSave.penalty} —{" "}
+              <span className={lastSave.passed ? "text-state-ok" : "text-state-dead"}>
+                {t(lastSave.passed ? "initiative.death_save_passed" : "initiative.death_save_failed")}
+              </span>
+            </p>
+          )}
+        </div>
+        </div>
       </div>
     </div>
   );
