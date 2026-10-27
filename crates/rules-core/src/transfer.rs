@@ -203,11 +203,10 @@ pub fn parse_import(
     if !matches!(value.get("format").and_then(|f| f.as_str()), Some(FORMAT | LEGACY_FORMAT)) {
         return Err(TransferError::WrongFormat);
     }
-    if let Some(version) = value.get("schema_version").and_then(|v| v.as_u64()) {
-        if version != u64::from(FILE_VERSION) {
+    if let Some(version) = value.get("schema_version").and_then(|v| v.as_u64())
+        && version != u64::from(FILE_VERSION) {
             return Err(TransferError::UnsupportedVersion(version.try_into().unwrap_or(u32::MAX)));
         }
-    }
     let mut file: CharacterFile = serde_json::from_value(value)?;
     if file.characters.is_empty() {
         return Err(TransferError::Empty);

@@ -516,7 +516,7 @@ mod tests {
         let mut rng = ScriptedDice::new([]);
         let ok = roll_injury(&t, BodyArea::Body, &[], Some(&[3, 4]), &mut rng).unwrap();
         assert_eq!(ok.injury_id, row.id);
-        let err = roll_injury(&t, BodyArea::Body, &[row.id.clone()], Some(&[3, 4]), &mut rng)
+        let err = roll_injury(&t, BodyArea::Body, std::slice::from_ref(&row.id), Some(&[3, 4]), &mut rng)
             .unwrap_err();
         assert_eq!(err, EventError::InjuryOwned(row.id.clone()));
         assert!(roll_injury(&t, BodyArea::Body, &[], Some(&[3]), &mut rng).is_err());

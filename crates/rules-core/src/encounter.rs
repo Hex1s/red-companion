@@ -162,6 +162,7 @@ pub const COMBAT_SKILLS: [&str; 9] = [
 /// - best combat skill (STAT + level): mooks and lieutenants 10-12, mini-bosses 14, boss 17
 ///   -> mini-boss from 13, boss from 16;
 /// - HP: 20-40 for all but the boss (55) -> boss from 50.
+///
 /// Only one boss is printed, so the boss thresholds are the least certain.
 pub const HINT_LIEUTENANT_SP: u8 = 10;
 pub const HINT_MINI_BOSS_SKILL: u8 = 13;

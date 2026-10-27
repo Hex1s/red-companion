@@ -313,11 +313,10 @@ impl Character {
     pub fn take_injury(&mut self, id: &str) -> bool {
         let Some(at) = self.injuries.iter().position(|i| i == id) else { return false };
         self.injuries.remove(at);
-        if self.aided_count(id) > self.injury_count(id) {
-            if let Some(mark) = self.first_aided.iter().position(|i| i == id) {
+        if self.aided_count(id) > self.injury_count(id)
+            && let Some(mark) = self.first_aided.iter().position(|i| i == id) {
                 self.first_aided.remove(mark);
             }
-        }
         true
     }
 
@@ -406,16 +405,14 @@ impl Character {
         if !(-REPUTATION_MAX..=REPUTATION_MAX).contains(&self.reputation) {
             return Err(CharacterError::ReputationOutOfRange(self.reputation));
         }
-        if let Some(color) = &self.color {
-            if !is_hex_color(color) {
+        if let Some(color) = &self.color
+            && !is_hex_color(color) {
                 return Err(CharacterError::BadColor(color.clone()));
             }
-        }
-        if let Some(portrait) = &self.portrait {
-            if !is_portrait(portrait) {
+        if let Some(portrait) = &self.portrait
+            && !is_portrait(portrait) {
                 return Err(CharacterError::BadPortrait);
             }
-        }
         roles::validate_entries(&self.roles)?;
         roles::validate_doses(&self.doses)?;
         let s = &self.stats;

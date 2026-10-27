@@ -116,13 +116,11 @@ pub fn used_template_ids(encounters: &[Encounter]) -> Vec<i64> {
     let mut seen = HashSet::new();
     let mut ids = Vec::new();
     for e in encounters.iter().flat_map(|e| &e.entries) {
-        if e.source == TemplateSource::Custom {
-            if let Ok(id) = e.template.parse::<i64>() {
-                if seen.insert(id) {
+        if e.source == TemplateSource::Custom
+            && let Ok(id) = e.template.parse::<i64>()
+                && seen.insert(id) {
                     ids.push(id);
                 }
-            }
-        }
     }
     ids
 }
@@ -139,13 +137,12 @@ pub fn parse_import(
     if !matches!(value.get("format").and_then(|f| f.as_str()), Some(FORMAT | LEGACY_FORMAT)) {
         return Err(EncounterTransferError::WrongFormat);
     }
-    if let Some(version) = value.get("schema_version").and_then(|v| v.as_u64()) {
-        if version != u64::from(FILE_VERSION) {
+    if let Some(version) = value.get("schema_version").and_then(|v| v.as_u64())
+        && version != u64::from(FILE_VERSION) {
             return Err(EncounterTransferError::UnsupportedVersion(
                 version.try_into().unwrap_or(u32::MAX),
             ));
         }
-    }
     let mut file: EncountersFile = serde_json::from_value(value)?;
     if file.templates.is_empty() && file.encounters.is_empty() {
         return Err(EncounterTransferError::Empty);
@@ -212,11 +209,10 @@ pub fn parse_import(
 /// Rewrites own-template lines from file keys to the ids the templates got on import.
 pub fn remap_templates(encounter: &mut Encounter, new_ids: &HashMap<String, i64>) {
     for line in &mut encounter.entries {
-        if line.source == TemplateSource::Custom {
-            if let Some(id) = new_ids.get(&line.template) {
+        if line.source == TemplateSource::Custom
+            && let Some(id) = new_ids.get(&line.template) {
                 line.template = id.to_string();
             }
-        }
     }
 }
 

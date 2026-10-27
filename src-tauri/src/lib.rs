@@ -1584,6 +1584,7 @@ fn stabilize(
 /// and paramedic; surgery is a role ability not kept on the sheet, so its `bonus` is typed in.
 /// `manual_total` is a physical d10 (explosion already added), `granted` declares success.
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 fn heal_injury(
     state: State<'_, AppStorage>,
     target_id: i64,

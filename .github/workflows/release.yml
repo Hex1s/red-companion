@@ -1,12 +1,14 @@
 name: Release
 
 # Push a tag vX.Y.Z -> build Windows, macOS (both architectures) and, when enabled, Android ->
-# upload everything to the Red Companion server, which publishes the release.
+# upload everything to the Red Companion server. The server answers 202 awaiting_approval: the
+# release goes live only when the owner presses "Publish" in the server admin (by default).
+# Run manually (workflow_dispatch) for a dry build: everything is built, nothing is uploaded.
 #
 # Repository secrets:
 #   TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD  updater key (npx tauri signer generate)
 #   RC_CI_TOKEN                                                      service token of the server (npm run ci:create-token)
-#   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS  only when ANDROID_ENABLED
+#   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_PASSWORD, ANDROID_KEY_ALIAS  only when ANDROID_ENABLED
 # Repository variables:
 #   RC_SERVER_URL   https://red-companion.ru
 #   RC_MIN_SUPPORTED optional X.Y.Z, apps older than it must update (default: nobody must)
@@ -14,10 +16,20 @@ name: Release
 
 on:
   push:
-    tags: ["v*.*.*"]
+    # Glob, not a regex: the exact X.Y.Z format is enforced by the `check` job.
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Dry run: version to build, X.Y.Z (must equal the app version). Nothing is uploaded."
+        required: true
 
 permissions:
   contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   check:
@@ -27,21 +39,40 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - id: version
-        name: Tag must match the app version and CHANGELOG.md
+        name: Tag must be X.Y.Z and match the app version and CHANGELOG.md
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          version="${GITHUB_REF_NAME#v}"
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then version="${INPUT_VERSION#v}"; else version="${GITHUB_REF_NAME#v}"; fi
+          echo "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "Version '$version' must be X.Y.Z (no pre-release suffix)"; exit 1; }
           conf=$(node -p "require('./src-tauri/tauri.conf.json').version")
           pkg=$(node -p "require('./package.json').version")
-          if [ "$version" != "$conf" ] || [ "$version" != "$pkg" ]; then
-            echo "Tag $version, tauri.conf.json $conf, package.json $pkg must be equal"; exit 1
+          crate=$(sed -n '/^\[workspace.package\]/,/^\[/{s/^version *= *"\(.*\)"/\1/p}' Cargo.toml)
+          if [ "$version" != "$conf" ] || [ "$version" != "$pkg" ] || [ "$version" != "$crate" ]; then
+            echo "Version $version, tauri.conf.json $conf, package.json $pkg, Cargo.toml $crate must be equal"; exit 1
           fi
           grep -q "^## $version\$" CHANGELOG.md || { echo "CHANGELOG.md has no section '## $version'"; exit 1; }
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
-  build-desktop:
+  test:
     needs: check
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: npm ci
+      - run: npm run check
+      - run: cargo test --workspace
+
+  build-desktop:
+    needs: [check, test]
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
           - name: windows
@@ -95,7 +126,7 @@ jobs:
 
   # Gated: needs `npx tauri android init` committed (src-tauri/gen/android) and a signing keystore.
   build-android:
-    needs: check
+    needs: [check, test]
     if: vars.ANDROID_ENABLED == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -125,6 +156,7 @@ jobs:
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
           mkdir -p out
@@ -132,7 +164,7 @@ jobs:
           apk=$(find src-tauri/gen/android -name '*universal*release*unsigned*.apk' | head -n 1)
           [ -n "$apk" ] || { echo "No unsigned universal APK found"; exit 1; }
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks "$RUNNER_TEMP/release.jks" --ks-key-alias "$KEY_ALIAS" \
-            --ks-pass env:KEYSTORE_PASSWORD --out out/app.apk "$apk"
+            --ks-pass env:KEYSTORE_PASSWORD --key-pass env:KEY_PASSWORD --out out/app.apk "$apk"
           rm -f "$RUNNER_TEMP/release.jks"
       - uses: actions/upload-artifact@v4
         with:
@@ -143,7 +175,8 @@ jobs:
   publish:
     needs: [check, build-desktop, build-android]
     # build-android is skipped when disabled; every other job must have succeeded.
-    if: ${{ !cancelled() && needs.check.result == 'success' && needs.build-desktop.result == 'success' && (needs.build-android.result == 'success' || needs.build-android.result == 'skipped') }}
+    # A manual run is a dry build and never uploads.
+    if: ${{ github.event_name == 'push' && !cancelled() && needs.check.result == 'success' && needs.build-desktop.result == 'success' && (needs.build-android.result == 'success' || needs.build-android.result == 'skipped') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -8,7 +8,8 @@
 // releases:write), ANDROID_ENABLED ("true" when an APK is expected), GITHUB_SHA (optional),
 // RC_MIN_SUPPORTED (optional X.Y.Z: older apps are told the update is mandatory).
 // Steps: read CHANGELOG.md, find the files, declare the release, upload every file (streamed,
-// with its SHA-256 and updater signature), publish. Nothing is published unless every file is there.
+// with its SHA-256 and updater signature), publish (the server may answer 202: awaiting approval
+// in the admin, which counts as success but not as released). Nothing is published unless every file is there.
 import { createHash } from "node:crypto";
 import { createReadStream, existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
@@ -70,7 +71,7 @@ async function request(method, url, init = {}) {
   const response = await fetch(server + url, { method, ...init, headers: { Authorization: `Bearer ${RC_CI_TOKEN}`, ...init.headers } });
   const text = await response.text();
   if (!response.ok) throw new Error(`${method} ${url} -> ${response.status} ${text}`);
-  return text ? JSON.parse(text) : null;
+  return { status: response.status, body: text ? JSON.parse(text) : null };
 }
 
 const declaration = {
@@ -80,7 +81,7 @@ const declaration = {
   source_commit: GITHUB_SHA?.slice(0, 40),
   assets: files.map((f) => ({ platform: f.platform, arch: f.arch, kind: f.kind, file_name: f.fileName, signed: f.signed })),
 };
-const created = await request("POST", "/api/ci/app-releases", { headers: { "Content-Type": "application/json" }, body: JSON.stringify(declaration) });
+const { body: created } = await request("POST", "/api/ci/app-releases", { headers: { "Content-Type": "application/json" }, body: JSON.stringify(declaration) });
 console.log(`Release ${version} declared (${created.files.length} file(s) already on the server).`);
 
 for (const f of files) {
@@ -95,5 +96,11 @@ for (const f of files) {
   console.log(`Uploaded ${f.fileName} (${(size / 1048576).toFixed(1)} MB)`);
 }
 
-await request("POST", `/api/ci/app-releases/${version}/publish`);
-console.log(`Release ${version} published.`);
+// 200: published at once (RC_REQUIRE_APPROVAL=0). 202 awaiting_approval is also success: the
+// server keeps the release as a draft until the owner presses "Publish" in the admin.
+const { status, body } = await request("POST", `/api/ci/app-releases/${version}/publish`);
+if (status === 202 || body?.status === "awaiting_approval") {
+  console.log(`Release ${version} uploaded and awaiting approval: press "Publish" in the server admin. It is NOT live yet.`);
+} else {
+  console.log(`Release ${version} published.`);
+}
