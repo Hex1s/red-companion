@@ -92,6 +92,7 @@ export function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
             <span className="text-muted-foreground">{t("about.version")}</span>
             <span className="num">{version ?? "—"}</span>
           </p>
+          <p className="border-t border-border pt-3 text-xs text-muted-foreground">{t("about.unofficial")}</p>
           <section className="space-y-2 border-t border-border pt-3">
             <h3 className="text-xs text-muted-foreground">{t("about.updates")}</h3>
             {phase === "latest" && <p>{t("about.latest")}</p>}

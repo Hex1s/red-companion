@@ -21,12 +21,8 @@
       }
     ],
     "security": {
-      "csp": null
-    },
-    "trayIcon": {
-      "iconPath": "icons/64x64.png",
-      "tooltip": "Red Companion"
-  }
+      "csp": "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src ipc: http://ipc.localhost"
+    }
   },
   "bundle": {
     "active": true,
@@ -34,7 +30,12 @@
     "createUpdaterArtifacts": true,
     "windows": {
       "nsis": {
-        "installMode": "currentUser"
+        "installMode": "currentUser",
+        "languages": [
+          "Russian",
+          "English"
+        ],
+        "displayLanguageSelector": true
       }
     },
     "icon": [
@@ -43,7 +44,12 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "publisher": "Hex1s",
+    "copyright": "Copyright (c) 2026 Hex1s",
+    "category": "Utility",
+    "shortDescription": "Game master's companion for Cyberpunk RED",
+    "longDescription": "Unofficial desktop companion for game masters of the Cyberpunk RED tabletop game: characters, combat tracker, rules reference."
   },
   "plugins": {
     "updater": {

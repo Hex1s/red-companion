@@ -1,7 +1,26 @@
-# Tauri + React + Typescript
+# Red Companion
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+Десктопный и планшетный помощник мастера для настольной ролевой игры **Cyberpunk RED**: персонажи, бой (ПЗ, ОС, укрытия, спасброски), энкаунтеры, справочники. Все данные хранятся локально на вашем устройстве.
 
-## Recommended IDE Setup
+> **Неофициальный материал.** Приложение не связано с R. Talsorian Games и не одобрено ею. Cyberpunk и Cyberpunk RED — торговые марки R. Talsorian Games Inc.
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+## Установка
+
+Скачайте установщик на [red-companion.ru](https://red-companion.ru). Дальше приложение обновляется само: «О приложении» → «Проверить обновления».
+
+- **Windows.** Установщик не подписан сертификатом издателя, поэтому SmartScreen покажет «Windows защитила ваш компьютер». Нажмите «Подробнее» → «Выполнить в любом случае». Установка идёт в профиль пользователя, права администратора не нужны.
+- **macOS.** Сборка не нотаризована, поэтому Gatekeeper откажется открыть приложение. Перетащите приложение в «Программы», затем в «Системные настройки» → «Конфиденциальность и безопасность» нажмите «Всё равно открыть» (или в Терминале: `xattr -dr com.apple.quarantine "/Applications/Red Companion.app"`).
+- **Android.** Скачайте `.apk` и разрешите установку из этого источника. Обновление: «О приложении» → «Скачать и установить».
+
+## Разработка
+
+Правила работы, архитектура и дизайн-система — в `CLAUDE.md`, план — в `docs/ROADMAP.md`.
+
+```
+npm install
+npm run tauri dev        # приложение целиком
+npm run check            # типы, линтеры, тесты фронта
+cargo test --workspace   # правила и хранилище
+```
+
+Лицензия — см. `LICENSE` (все права сохранены).
