@@ -259,7 +259,7 @@ AuditLog        id, user_id|service_token_id, action, target, diff, at
 | `GET /releases/{n}/manifest` | токен | манифест конкретного релиза |
 | `GET /releases/{n}/changes?lang=` | токен | что изменилось в релизе (добавлено / изменено / выведено), для «Посмотреть changelog» |
 | `GET /app/changelog?lang=&since=` | токен | changelog приложения |
-| `GET /app/update/{target}/{arch}/{current_version}` | токен | **Windows и macOS:** ответ в формате **updater Tauri**: `{ version, notes, pub_date, url, signature }` или `204`, если обновления нет; файл подписан ключом updater (раздел 10) |
+| `GET /app/update/{target}/{arch}/{current_version}` | токен | **Windows и macOS:** ответ в формате **updater Tauri**: `{ version, notes, pub_date, url, signature }` или `204`, если обновления нет; файл подписан ключом updater (раздел 10). **Android** (`target=android`, `arch=universal`): `{ version, notes, pub_date, url, sha256, size }` или `204`; подписи minisign у APK нет, клиент сверяет `sha256`, а установку APK чужого ключа отклоняет сам Android |
 | `GET /download/{platform}` | публичный | актуальный установщик с диска VPS (для первой установки с сайта); засчитывает загрузку (раздел 9) |
 | `POST /ci/app-releases` | токен CI (`releases:write`) | CI загружает релиз: версия, changelog ru/en, файлы и подписи (раздел 8.2, п. 9) |
 | `GET /openapi.json` | публичный | описание API |

@@ -82,8 +82,8 @@ export type UpdateInfo = { version: string; notes: string | null };
 export const api = {
   /** `null` = this is the latest version. Throws a coded error when the server cannot be reached. */
   checkUpdate: () => invoke<UpdateInfo | null>("check_update"),
-  /** Downloads and installs the update found by `checkUpdate` (progress arrives as `update-progress` events). */
-  installUpdate: () => invoke<void>("install_update"),
+  /** Downloads and installs the update found by `checkUpdate` (progress arrives as `update-progress` events). `true`: restart now; `false` (Android): the system installer has taken over. */
+  installUpdate: () => invoke<boolean>("install_update"),
   restartApp: () => invoke<void>("restart_app"),
   listArmor: (lang: string) => inLanguage(lang, () => invoke<Armor[]>("list_armor")),
   listWeapons: (lang: string) => inLanguage(lang, () => invoke<Weapon[]>("list_weapons")),
@@ -162,6 +162,14 @@ export const api = {
   /** Imports one character or session file as new characters; rejects the whole file if anything is invalid. */
   importExportFile: (kind: ExportKind, name: string) =>
     invoke<CharacterRecord[]>("import_export_file", { kind, name }),
+  /** Whether the app runs on a phone or tablet: files go through system dialogs, not the exports folder. */
+  isMobile: () => invoke<boolean>("is_mobile"),
+  /** Hands a file written to the exports folder to the system "save as" dialog; false if the user backed out. */
+  deliverExport: (kind: ExportKind, name: string) => invoke<boolean>("deliver_export", { kind, name }),
+  /** System "open" dialog, then imports the chosen characters or session file; null if the user backed out. */
+  importPickedFile: () => invoke<CharacterRecord[] | null>("import_picked_file"),
+  /** The same for an encounters file. */
+  importPickedEncounterFile: () => invoke<EncountersImported | null>("import_picked_encounter_file"),
   /** Shows the exports folder, or the sub-folder of one type, in the file manager. */
   openExportsFolder: (kind?: ExportKind) =>
     invoke<void>("open_exports_folder", { kind: kind ?? null }),

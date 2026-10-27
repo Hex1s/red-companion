@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 mod error;
+mod picker;
 mod portrait;
 mod startup;
 #[cfg(desktop)]
@@ -42,6 +43,7 @@ use rules_core::encounter::{
 };
 use storage::{CharacterRow, DocRow, DocTable, Storage};
 use tauri::{AppHandle, Manager, State};
+#[cfg(desktop)]
 use tauri_plugin_opener::OpenerExt;
 
 /// Folder the export files live in. It is created at startup, so the GM always knows where
@@ -793,9 +795,13 @@ fn import_encounter_file(
     let path = resolve_export(&dir.0, ExportKind::Encounters, &name)
         .ok_or_else(|| CmdError::wrong_file_kind(&name))?;
     let json = std::fs::read_to_string(path)?;
-    let file = encounter_transfer::parse_import(&json, &SeedDataSource::default())
-        ?;
-    let storage = lock(&state)?;
+    store_encounters_file(&state, &json)
+}
+
+/// Validates an encounters file and stores its templates and encounters as new ones.
+fn store_encounters_file(state: &State<'_, AppStorage>, json: &str) -> Result<EncountersImported, CmdError> {
+    let file = encounter_transfer::parse_import(json, &SeedDataSource::default())?;
+    let storage = lock(state)?;
     let mut new_ids = std::collections::HashMap::new();
     let mut templates = Vec::new();
     for t in file.templates {
@@ -835,8 +841,13 @@ fn import_export_file(
     let path = resolve_export(&dir.0, kind, &name)
         .ok_or_else(|| CmdError::wrong_file_kind(&name))?;
     let json = std::fs::read_to_string(path)?;
-    let items = transfer::parse_import(&json, &SeedDataSource::default())?;
-    let storage = lock(&state)?;
+    store_characters_file(&state, &json)
+}
+
+/// Validates a characters or session file and stores its characters as new ones.
+fn store_characters_file(state: &State<'_, AppStorage>, json: &str) -> Result<Vec<CharacterRecord>, CmdError> {
+    let items = transfer::parse_import(json, &SeedDataSource::default())?;
+    let storage = lock(state)?;
     let mut records = Vec::new();
     for mut item in items {
         if item.kind == CharacterKind::Npc {
@@ -852,7 +863,49 @@ fn import_export_file(
     Ok(records)
 }
 
+/// Lets the user choose a characters or session file in the system dialog and imports it. `None` when the
+/// dialog is closed without a choice.
+#[tauri::command]
+async fn import_picked_file(
+    app: AppHandle,
+    state: State<'_, AppStorage>,
+) -> Result<Option<Vec<CharacterRecord>>, CmdError> {
+    let Some(json) = picker::pick_and_read(&app).await? else { return Ok(None) };
+    store_characters_file(&state, &json).map(Some)
+}
+
+/// Same for an encounters file.
+#[tauri::command]
+async fn import_picked_encounter_file(
+    app: AppHandle,
+    state: State<'_, AppStorage>,
+) -> Result<Option<EncountersImported>, CmdError> {
+    let Some(json) = picker::pick_and_read(&app).await? else { return Ok(None) };
+    store_encounters_file(&state, &json).map(Some)
+}
+
+/// Hands a file just written to the exports folder over to the system "save as" dialog. False when the
+/// dialog is closed without a choice (the copy in the exports folder stays).
+#[tauri::command]
+async fn deliver_export(
+    app: AppHandle,
+    dir: State<'_, ExportsDir>,
+    kind: ExportKind,
+    name: String,
+) -> Result<bool, CmdError> {
+    let path = resolve_export(&dir.0, kind, &name).ok_or_else(|| CmdError::wrong_file_kind(&name))?;
+    let bytes = std::fs::read(path)?;
+    picker::save_bytes(&app, &name, bytes).await
+}
+
+/// Whether the app runs on a phone or tablet, where files move through system dialogs instead of a folder.
+#[tauri::command]
+fn is_mobile() -> bool {
+    cfg!(mobile)
+}
+
 /// Shows the exports folder (or the sub-folder of one type) in the system file manager.
+#[cfg(desktop)]
 #[tauri::command]
 fn open_exports_folder(
     app: AppHandle,
@@ -862,6 +915,16 @@ fn open_exports_folder(
     let target = kind.map_or_else(|| dir.0.clone(), |k| kind_dir(&dir.0, k));
     std::fs::create_dir_all(&target)?;
     app.opener().open_path(target.display().to_string(), None::<&str>).map_err(CmdError::from)
+}
+
+/// Android keeps the exports folder in the app sandbox, where no file manager reaches it; files move through
+/// the system save/open dialogs instead (ROADMAP 8.3). The command stays so the list of commands is the same.
+#[cfg(not(desktop))]
+#[tauri::command]
+fn open_exports_folder(dir: State<'_, ExportsDir>, kind: Option<ExportKind>) -> Result<(), CmdError> {
+    let target = kind.map_or_else(|| dir.0.clone(), |k| kind_dir(&dir.0, k));
+    std::fs::create_dir_all(&target)?;
+    Ok(())
 }
 
 /// Deletes a character at once and returns a snapshot of what went with it, for `restore_character`.
@@ -1997,9 +2060,12 @@ pub fn run() {
     }));
     #[cfg(desktop)]
     let builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+    #[cfg(not(desktop))]
+    let builder = builder.plugin(updater::plugin());
     builder
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .setup(|app| {
             let log_dir = app.path().app_log_dir()?;
             startup::install_panic_hook(log_dir.clone());
@@ -2083,6 +2149,10 @@ pub fn run() {
             import_encounter_file,
             import_export_file,
             open_exports_folder,
+            import_picked_file,
+            import_picked_encounter_file,
+            deliver_export,
+            is_mobile,
             create_session,
             switch_session,
             session_notes,

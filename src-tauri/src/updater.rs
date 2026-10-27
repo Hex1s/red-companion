@@ -81,9 +81,10 @@ pub async fn check_update(app: AppHandle, pending: State<'_, PendingUpdate>) -> 
 }
 
 /// Downloads and installs the update found by `check_update`, reporting `update-progress` events.
-/// On Windows the installer may close the app itself before this returns.
+/// On Windows the installer may close the app itself before this returns. Returns true: the app should restart now
+/// (on Android the system installer takes over and this is false).
 #[tauri::command]
-pub async fn install_update(app: AppHandle, pending: State<'_, PendingUpdate>) -> Result<(), CmdError> {
+pub async fn install_update(app: AppHandle, pending: State<'_, PendingUpdate>) -> Result<bool, CmdError> {
     let update = pending
         .0
         .lock()
@@ -100,7 +101,7 @@ pub async fn install_update(app: AppHandle, pending: State<'_, PendingUpdate>) -
             || {},
         )
         .await?;
-    Ok(())
+    Ok(true)
 }
 
 #[tauri::command]

@@ -47,6 +47,10 @@ impl CmdError {
         Self::new("transfer.nothing_to_export", Params::new(), "nothing to export".to_string())
     }
 
+    pub fn dialog_failed() -> Self {
+        Self::new("file.dialog_failed", Params::new(), "the file dialog did not finish".to_string())
+    }
+
     pub fn wrong_file_kind(name: &str) -> Self {
         Self::new("transfer.wrong_file_kind", params! { "name" => name }, format!("{name:?} is not a file of this type"))
     }
@@ -76,8 +80,33 @@ impl CmdError {
     }
 
     /// The signature of an update was made by neither of the built-in keys.
+    #[cfg(desktop)]
     pub fn update_untrusted() -> Self {
         Self::new("updater.untrusted", Params::new(), "the update is signed with an unknown key".to_string())
+    }
+
+    /// The update server (or the network on the way) did not answer as expected.
+    #[cfg(not(desktop))]
+    pub fn update_unavailable(detail: String) -> Self {
+        Self::new("updater.unavailable", Params::new(), detail)
+    }
+
+    /// The APK could not be stored or handed to the system installer.
+    #[cfg(not(desktop))]
+    pub fn update_install_failed(detail: String) -> Self {
+        Self::new("updater.install_failed", Params::new(), detail)
+    }
+
+    /// The downloaded APK does not match the hash the server announced.
+    #[cfg(not(desktop))]
+    pub fn update_bad_checksum() -> Self {
+        Self::new("updater.bad_checksum", Params::new(), "the downloaded file does not match its checksum".to_string())
+    }
+
+    /// Android asks the user to allow installs from this app first; the settings screen has been opened.
+    #[cfg(not(desktop))]
+    pub fn update_install_permission() -> Self {
+        Self::new("updater.install_permission", Params::new(), "installing apps from this app is not allowed yet".to_string())
     }
 
     /// Install was asked for without a successful check before it.
@@ -231,6 +260,7 @@ mod tests {
                 "file.not_found",
                 "file.permission_denied",
                 "file.io",
+                "file.dialog_failed",
                 "file.open_folder",
                 "already_exists.character",
                 "not_found.character",
@@ -250,6 +280,8 @@ mod tests {
                 "updater.unavailable",
                 "updater.bad_signature",
                 "updater.install_failed",
+                "updater.bad_checksum",
+                "updater.install_permission",
                 "updater.failed",
             ]
             .map(String::from),

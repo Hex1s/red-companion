@@ -633,6 +633,8 @@
     "empty_session": "No sessions to import. Save one with «Export session» or drop a file into the folder.",
     "exported_one": "Exported 1 character: {{path}}",
     "exported_many": "Exported characters: {{count}}. File: {{path}}",
+    "saved_as": "Saved: {{name}}",
+    "save_cancelled": "Saving cancelled. A copy stays in the app folder.",
     "open_folder": "Open folder",
     "empty": "The export folder has no files.",
     "import_title": "Import from the app folder",
@@ -1155,7 +1157,8 @@
       "not_found": "The file or folder was not found. It may have been deleted or moved: refresh the list and try again.",
       "permission_denied": "No access to the file or folder. Close the programs that use it, or pick another place.",
       "io": "Could not read or write the file. Check the free disk space and try again.",
-      "open_folder": "Could not open the folder. Open it by hand: it lies in the app data folder."
+      "open_folder": "Could not open the folder. Open it by hand: it lies in the app data folder.",
+      "dialog_failed": "The file dialog did not open. Try again."
     },
     "already_exists": {
       "character": "The character is already there, so it cannot be restored. Refresh the list."
@@ -1317,6 +1320,8 @@
       "bad_signature": "The signature of the update did not pass the check, so it was not installed. Try again later; if it repeats, download the installer from the website.",
       "untrusted": "The update is signed with an unknown key, so it was not installed. Download the installer from the website.",
       "install_failed": "Could not install the update. Close other windows of the app, free some disk space and try again.",
+      "bad_checksum": "The downloaded file did not match its checksum, so it was not installed. Try again; if it repeats, download the APK from the website.",
+      "install_permission": "Allow installs from this app in the settings that just opened, come back and press “Install” again.",
       "not_checked": "Check for updates first.",
       "failed": "Could not update the app. Try again; if it repeats, download the installer from the website."
     }
@@ -1658,6 +1663,8 @@
     "latest": "You have the latest version.",
     "available": "A new version is available:",
     "install": "Install and restart",
+    "install_mobile": "Download and install",
+    "handed_over": "Confirm the install in the system window. If it did not appear, press the button again.",
     "installing": "Installing the update…",
     "downloading": "Downloading the update: {{percent}}%"
   }

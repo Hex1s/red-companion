@@ -478,6 +478,23 @@ export default function App() {
     }
   };
 
+  /** On a phone or tablet the exports folder is out of the user's reach: files go through system dialogs. */
+  const [mobile, setMobile] = useState(false);
+  useEffect(() => {
+    api.isMobile().then(setMobile, () => setMobile(false));
+  }, []);
+
+  /** Mobile: after the file is written, offers it to the system "save as" dialog and reports the result. */
+  const deliverExport = async (kind: ExportKind, name: string, id: string) => {
+    const saved = await api.deliverExport(kind, name);
+    status.show({
+      id,
+      kind: saved ? "success" : "info",
+      text: t(saved ? "transfer.saved_as" : "transfer.save_cancelled", { name }),
+      autoHideMs: 9000,
+    });
+  };
+
   const openExportsFolder = (kind?: ExportKind) =>
     api.openExportsFolder(kind).catch((e: unknown) => status.fail(e, "transfer:open"));
 
@@ -488,6 +505,10 @@ export default function App() {
       const saved = await (what === "session"
         ? api.exportSession()
         : api.exportCharacters(what.ids));
+      if (mobile) {
+        await deliverExport(kind, saved.name, "transfer");
+        return;
+      }
       status.show({
         id: "transfer",
         kind: "success",
@@ -509,6 +530,15 @@ export default function App() {
    */
   const startImport = async (kind: "character" | "session") => {
     try {
+      if (mobile) {
+        const records = await api.importPickedFile();
+        if (records) {
+          void reload();
+          if (records.length === 1) selectCharacter(records[0].id);
+          status.show({ id: "transfer", kind: "success", text: t("transfer.imported", { count: records.length }) });
+        }
+        return;
+      }
       const files = await api.listExports(kind);
       if (files.length === 0) {
         status.show({
@@ -531,6 +561,10 @@ export default function App() {
   const exportEncounters = async (encounterIds: number[], templateIds: number[]) => {
     try {
       const saved = await api.exportEncounters(encounterIds, templateIds);
+      if (mobile) {
+        await deliverExport("encounters", saved.name, "transfer:encounters");
+        return;
+      }
       status.show({
         id: "transfer:encounters",
         kind: "success",
@@ -549,6 +583,18 @@ export default function App() {
 
   const startEncounterImport = async () => {
     try {
+      if (mobile) {
+        const added = await api.importPickedEncounterFile();
+        if (added) {
+          await encounterState.reload();
+          status.show({
+            id: "transfer:encounters",
+            kind: "success",
+            text: t("encounters.imported", { encounters: added.encounters.length, templates: added.templates.length }),
+          });
+        }
+        return;
+      }
       const files = await api.listExports("encounters");
       if (files.length === 0) {
         status.show({

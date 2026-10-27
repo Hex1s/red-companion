@@ -13,7 +13,7 @@ type AboutDialogProps = {
   onOpenChange: (open: boolean) => void;
 };
 
-type Phase = "idle" | "checking" | "latest" | "available" | "installing";
+type Phase = "idle" | "checking" | "latest" | "available" | "installing" | "handed_over";
 
 type Progress = { downloaded: number; total: number | null };
 
@@ -25,6 +25,11 @@ export function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
   const [progress, setProgress] = useState<Progress | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [mobile, setMobile] = useState(false);
+
+  useEffect(() => {
+    if (hasBackend) api.isMobile().then(setMobile, () => setMobile(false));
+  }, []);
 
   useEffect(() => {
     if (!open || !hasBackend) return;
@@ -60,8 +65,9 @@ export function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
     setProgress(null);
     setPhase("installing");
     try {
-      await api.installUpdate();
-      await api.restartApp();
+      // Android: the system installer takes over and restarts the app itself after the install.
+      if (await api.installUpdate()) await api.restartApp();
+      else setPhase("handed_over");
     } catch (e) {
       setError(errorMessage(e));
       setPhase("available");
@@ -99,6 +105,7 @@ export function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
                 )}
               </div>
             )}
+            {phase === "handed_over" && <p>{t("about.handed_over")}</p>}
             {phase === "installing" && (
               <p aria-live="polite" className="num">
                 {percent === null ? t("about.installing") : t("about.downloading", { percent })}
@@ -106,9 +113,9 @@ export function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
             )}
             <ErrorNotice message={error} />
             <div className="flex gap-2">
-              {phase === "available" ? (
+              {phase === "available" || phase === "handed_over" ? (
                 <Button size="sm" onClick={install}>
-                  {t("about.install")}
+                  {t(mobile ? "about.install_mobile" : "about.install")}
                 </Button>
               ) : (
                 <Button
