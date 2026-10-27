@@ -10,7 +10,7 @@ import type { Derived } from "@/bindings/Derived";
 import type { Stats } from "@/bindings/Stats";
 import { InjuryIcon } from "@/components/combat/injury-icons";
 import { MarkPicker } from "@/components/character/color-mark";
-import { PixelIcon } from "@/components/ui/icons";
+import { Icon } from "@/components/ui/icons";
 import { Chip, ModuleTile } from "@/components/character/hardware";
 import { HpBar } from "@/components/character/hp-bar";
 import { ReputationMeter } from "@/components/character/reputation-meter";
@@ -427,10 +427,10 @@ export function CharacterSheet({
 
         <Section title={t("characters.section.derived")}>
             <div className="grid grid-cols-4 gap-2">
-              <StatTile label={t("characters.max_hp")} value={derived.max_hp} icon={<PixelIcon name="heart" />} />
-              <StatTile label={t("characters.serious_threshold")} value={derived.serious_threshold} icon={<PixelIcon name="warning-diamond" />} />
-              <StatTile label={t("characters.death_save")} value={`≤ ${derived.death_save}`} icon={<PixelIcon name="skull-sharp" />} />
-              <StatTile label={t("characters.humanity")} value={derived.max_humanity} icon={<PixelIcon name="human" />} />
+              <StatTile label={t("characters.max_hp")} value={derived.max_hp} icon={<Icon name="favorite" />} />
+              <StatTile label={t("characters.serious_threshold")} value={derived.serious_threshold} icon={<Icon name="warning" />} />
+              <StatTile label={t("characters.death_save")} value={`≤ ${derived.death_save}`} icon={<Icon name="skull" />} />
+              <StatTile label={t("characters.humanity")} value={derived.max_humanity} icon={<Icon name="person" />} />
             </div>
         </Section>
         </TabsContent>
@@ -442,10 +442,10 @@ export function CharacterSheet({
               <StatTile
                 label={t("glossary.humanity")}
                 value={`${derived.humanity} / ${derived.max_humanity}`}
-                icon={<PixelIcon name="human" />}
+                icon={<Icon name="person" />}
               />
-              <StatTile label={t("humanity.emp_now")} value={derived.effective_emp} icon={<PixelIcon name="zap" />} />
-              <StatTile label={t("humanity.emp_base")} value={entry.character.stats.emp} icon={<PixelIcon name="cpu-sharp" />} />
+              <StatTile label={t("humanity.emp_now")} value={derived.effective_emp} icon={<Icon name="bolt" />} />
+              <StatTile label={t("humanity.emp_base")} value={entry.character.stats.emp} icon={<Icon name="memory" />} />
             </div>
             <Hint label={t("humanity.loss_hint")}>
               <Button type="button" size="sm" variant="outline" disabled={alive.dead} onClick={onLoseHumanity}>

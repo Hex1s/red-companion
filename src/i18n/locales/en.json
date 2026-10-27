@@ -519,6 +519,7 @@
     "rolled": "{{name}}: initiative REF {{reflex}} + d10 {{die}} = {{total}}",
     "title": "Initiative",
     "round": "Round",
+    "prev_turn": "Previous turn",
     "next_turn": "Next turn",
     "start": "Start fight",
     "end": "End fight",
@@ -1006,7 +1007,7 @@
   },
   "hotkeys": {
     "title": "Keyboard shortcuts",
-    "rule": "Ctrl (⌘ on Mac) is for the interface, Alt (⌥) for game actions. There are no bare letters, so nothing fires by accident.",
+    "rule": "Ctrl (⌘ on Mac) is for the interface, Alt (⌥) for game actions",
     "button": "Keyboard shortcuts",
     "group": {
       "interface": "Interface",
@@ -1018,6 +1019,7 @@
       "search": "Search the reference",
       "help": "This window",
       "attackRef": "Attack reference",
+      "prevTurn": "Previous turn",
       "nextTurn": "Next turn",
       "damage": "Damage to the active character",
       "undoDamage": "Undo the last damage",
@@ -1604,7 +1606,6 @@
     "dv": "DV",
     "impossible": "no shot",
     "noRow": "This table has no such weapon",
-    "note": "Reference only: the GM decides hits.",
     "pickHint": "Pick a weapon or a mode",
     "page": "p. {{page}}"
   },

@@ -1382,7 +1382,8 @@ fn combat_roll(
         scene
             .combat
             .roll_with_bonus(character_id, reflex, bonus, die)
-            .map_err(CmdError::from)
+            .map_err(CmdError::from)?;
+        refresh_death_save_due(scene, storage)
     })
 }
 
@@ -1396,7 +1397,21 @@ fn combat_set_initiative(
 ) -> Result<SceneRecord, CmdError> {
     with_combat(&state, |scene, storage| {
         let reflex = require_character(storage, character_id)?.stats.reflex;
-        scene.combat.set_or_add(character_id, reflex, initiative).map_err(CmdError::from)
+        scene.combat.set_or_add(character_id, reflex, initiative).map_err(CmdError::from)?;
+        refresh_death_save_due(scene, storage)
+    })
+}
+
+/// Puts a fighter at a place in the order (the card was dragged there).
+#[tauri::command]
+fn combat_move(
+    state: State<'_, AppStorage>,
+    character_id: i64,
+    to: usize,
+) -> Result<SceneRecord, CmdError> {
+    with_combat(&state, |scene, storage| {
+        scene.combat.move_to(character_id, to).map_err(CmdError::from)?;
+        refresh_death_save_due(scene, storage)
     })
 }
 
@@ -1471,6 +1486,16 @@ fn combat_next_turn(state: State<'_, AppStorage>) -> Result<SceneRecord, CmdErro
     with_combat(&state, |scene, storage| {
         let skip = dead_ids(storage, scene)?;
         scene.combat.next_turn(&skip)?;
+        refresh_death_save_due(scene, storage)
+    })
+}
+
+/// Steps the turn back (a mis-click, a missed action); nothing already dealt is undone.
+#[tauri::command]
+fn combat_prev_turn(state: State<'_, AppStorage>) -> Result<SceneRecord, CmdError> {
+    with_combat(&state, |scene, storage| {
+        let skip = dead_ids(storage, scene)?;
+        scene.combat.prev_turn(&skip)?;
         refresh_death_save_due(scene, storage)
     })
 }
@@ -2051,9 +2076,11 @@ pub fn run() {
             preview_derived,
             combat_set_initiative,
             combat_shift,
+            combat_move,
             combat_remove,
             combat_start,
             combat_next_turn,
+            combat_prev_turn,
             combat_end,
             death_save,
             stabilize,

@@ -153,6 +153,7 @@ impl Combat {
             initiative: i32::from(reflex) + bonus + roll.total,
             roll: Some(roll),
         });
+        self.follow_turn(character_id, at);
         Ok(())
     }
 
@@ -171,6 +172,7 @@ impl Combat {
         entry.bonus = 0;
         entry.initiative = initiative;
         self.insert_sorted(entry);
+        self.follow_turn(character_id, at);
         Ok(())
     }
 
@@ -231,6 +233,52 @@ impl Combat {
         Ok(())
     }
 
+    /// Keeps the turn on the right slot when the active fighter moved later in the order (a delay,
+    /// a re-rolled total): the turn passes to whoever now stands where they stood, and the mover acts
+    /// at the new place. Others who cross the active fighter simply act again or are skipped, as the
+    /// order says: that is how a GM gives an extra turn or takes one away.
+    fn follow_turn(&mut self, character_id: i64, was_at: usize) {
+        if !self.is_started() || self.active != Some(character_id) {
+            return;
+        }
+        if self.position(character_id).is_ok_and(|now| now > was_at) {
+            self.active = Some(self.combatants[was_at].character_id);
+        }
+    }
+
+    /// Puts the combatant at `to` (a place in the order, clamped to the ends): a drag of the card.
+    /// The total follows the new place, so the order stays sorted by initiative: it is kept when it
+    /// already fits between the new neighbours, else it becomes the nearest bound (a tie with the
+    /// neighbour); dropped on top (an ambush) or at the bottom (a delay) it goes one past the end.
+    /// A changed total drops the die face. Moving across the active fighter is allowed: someone who
+    /// has acted and goes below them acts again, someone who has not and goes above them is skipped.
+    pub fn move_to(&mut self, character_id: i64, to: usize) -> Result<(), InitiativeError> {
+        let at = self.position(character_id)?;
+        let to = to.min(self.combatants.len() - 1);
+        if to == at {
+            return Ok(());
+        }
+        let mut entry = self.combatants.remove(at);
+        let own = entry.initiative;
+        let above = to.checked_sub(1).map(|i| self.combatants[i].initiative);
+        let below = self.combatants.get(to).map(|c| c.initiative);
+        let total = match (above, below) {
+            (Some(a), Some(b)) => own.min(a).max(b),
+            (None, Some(b)) => if own >= b { own } else { b + 1 },
+            (Some(a), None) => if own <= a { own } else { a - 1 },
+            (None, None) => own,
+        }
+        .clamp(INITIATIVE_MIN, INITIATIVE_MAX);
+        if total != own {
+            entry.initiative = total;
+            entry.roll = None;
+            entry.bonus = 0;
+        }
+        self.combatants.insert(to, entry);
+        self.follow_turn(character_id, at);
+        Ok(())
+    }
+
     /// Index and wrap flag of the next combatant after `from` who is not in
     /// `skip`. `include_self` allows coming back round to `from` itself.
     fn next_after(&self, from: usize, skip: &[i64], include_self: bool) -> Option<(usize, bool)> {
@@ -265,6 +313,28 @@ impl Combat {
         self.active = Some(self.combatants[idx].character_id);
         if wrapped {
             self.round += 1;
+        }
+        Ok(())
+    }
+
+    /// Steps the turn back to the previous fighter who can act; the round counter goes down when
+    /// the order wraps backwards. Nothing happens at the very start of round 1. Only the pointer
+    /// moves: damage dealt and saves made are not undone.
+    pub fn prev_turn(&mut self, skip: &[i64]) -> Result<(), InitiativeError> {
+        let active =
+            self.active.filter(|_| self.is_started()).ok_or(InitiativeError::NotStarted)?;
+        let from = self.position(active)?;
+        let n = self.combatants.len();
+        let found = (1..=n)
+            .map(|i| ((from + n - i) % n, i > from))
+            .find(|&(idx, _)| !skip.contains(&self.combatants[idx].character_id));
+        let (idx, wrapped) = found.ok_or(InitiativeError::NobodyCanAct)?;
+        if wrapped && self.round == 1 {
+            return Ok(());
+        }
+        self.active = Some(self.combatants[idx].character_id);
+        if wrapped {
+            self.round -= 1;
         }
         Ok(())
     }
@@ -388,6 +458,112 @@ mod tests {
         assert_eq!(ids(&combat), vec![2, 4, 3, 1]);
         combat.shift(1, 1).unwrap(); // already last: stays
         assert_eq!(ids(&combat), vec![2, 4, 3, 1]);
+    }
+
+    fn initiatives(combat: &Combat) -> Vec<i32> {
+        combat.combatants.iter().map(|c| c.initiative).collect()
+    }
+
+    #[test]
+    fn move_to_keeps_the_total_when_it_fits() {
+        let mut combat = fight(); // 2:14, 3:10, 4:10, 1:10
+        combat.move_to(1, 1).unwrap(); // a tie broken by hand
+        assert_eq!(ids(&combat), vec![2, 1, 3, 4]);
+        assert_eq!(initiatives(&combat), vec![14, 10, 10, 10]);
+        assert!(combat.combatants[1].roll.is_some());
+    }
+
+    #[test]
+    fn dropped_on_top_the_total_goes_one_past_the_first() {
+        let mut combat = fight();
+        combat.move_to(1, 0).unwrap(); // an ambush
+        assert_eq!(ids(&combat), vec![1, 2, 3, 4]);
+        assert_eq!(initiatives(&combat), vec![15, 14, 10, 10]);
+        assert_eq!(combat.combatants[0].roll, None);
+    }
+
+    #[test]
+    fn dropped_between_neighbours_takes_the_nearest_bound() {
+        let mut combat = fight();
+        combat.move_to(2, 99).unwrap(); // the leader goes last: one below the rest
+        assert_eq!(ids(&combat), vec![3, 4, 1, 2]);
+        assert_eq!(initiatives(&combat), vec![10, 10, 10, 9]);
+        combat.move_to(2, 1).unwrap(); // back up between 10 and 10: clamped to 10
+        assert_eq!(ids(&combat), vec![3, 2, 4, 1]);
+        assert_eq!(initiatives(&combat), vec![10, 10, 10, 10]);
+    }
+
+    #[test]
+    fn move_to_is_checked_and_clamped() {
+        let mut combat = fight();
+        assert_eq!(combat.move_to(9, 0), Err(InitiativeError::NotInFight(9)));
+        combat.move_to(3, 0).unwrap();
+        assert_eq!(initiatives(&combat), vec![15, 14, 10, 10]);
+    }
+
+    #[test]
+    fn someone_who_acted_dragged_below_the_active_one_acts_again() {
+        let mut combat = fight(); // 2:14, 3:10, 4:10, 1:10
+        combat.start(&[]).unwrap();
+        combat.next_turn(&[]).unwrap(); // #3 acts; #2 has acted
+        combat.move_to(2, 3).unwrap();
+        assert_eq!(ids(&combat), vec![3, 4, 1, 2]);
+        assert_eq!(combat.active, Some(3));
+        for expected in [4, 1, 2] {
+            combat.next_turn(&[]).unwrap();
+            assert_eq!((combat.active, combat.round), (Some(expected), 1));
+        }
+        combat.next_turn(&[]).unwrap(); // the order wraps
+        assert_eq!((combat.active, combat.round), (Some(3), 2));
+    }
+
+    #[test]
+    fn someone_who_has_not_acted_dragged_above_the_active_one_is_skipped() {
+        let mut combat = fight();
+        combat.start(&[]).unwrap();
+        combat.next_turn(&[]).unwrap(); // #3 acts
+        combat.move_to(1, 0).unwrap();
+        assert_eq!(ids(&combat), vec![1, 2, 3, 4]);
+        assert_eq!(combat.active, Some(3));
+        combat.next_turn(&[]).unwrap();
+        assert_eq!((combat.active, combat.round), (Some(4), 1));
+        combat.next_turn(&[]).unwrap(); // #1 would have gone now: it comes first next round
+        assert_eq!((combat.active, combat.round), (Some(1), 2));
+    }
+
+    #[test]
+    fn the_active_fighter_moved_later_hands_the_turn_on() {
+        let mut combat = fight();
+        combat.start(&[]).unwrap(); // #2 acts
+        combat.move_to(2, 3).unwrap(); // a delay
+        assert_eq!(ids(&combat), vec![3, 4, 1, 2]);
+        assert_eq!(combat.active, Some(3));
+        let mut combat = fight();
+        combat.start(&[]).unwrap();
+        combat.set_initiative(2, 3).unwrap(); // a lower total moves them down the same way
+        assert_eq!(ids(&combat), vec![3, 4, 1, 2]);
+        assert_eq!(combat.active, Some(3));
+    }
+
+    #[test]
+    fn prev_turn_walks_back_and_counts_rounds_down() {
+        let mut combat = fight(); // 2, 3, 4, 1
+        combat.start(&[]).unwrap();
+        combat.prev_turn(&[]).unwrap(); // the start of round 1: stays
+        assert_eq!((combat.active, combat.round), (Some(2), 1));
+        combat.next_turn(&[]).unwrap();
+        combat.prev_turn(&[]).unwrap();
+        assert_eq!((combat.active, combat.round), (Some(2), 1));
+        for _ in 0..4 {
+            combat.next_turn(&[]).unwrap();
+        }
+        assert_eq!((combat.active, combat.round), (Some(2), 2));
+        combat.prev_turn(&[]).unwrap(); // wrapped back to the end of round 1
+        assert_eq!((combat.active, combat.round), (Some(1), 1));
+        combat.prev_turn(&[4]).unwrap(); // the one who cannot act is passed over
+        assert_eq!((combat.active, combat.round), (Some(3), 1));
+        let mut idle = Combat::default();
+        assert_eq!(idle.prev_turn(&[]), Err(InitiativeError::NotStarted));
     }
 
     #[test]

@@ -1,4 +1,4 @@
-import { Play, Square, SkipForward, Undo2 } from "@/components/ui/icons";
+import { Play, Square, SkipBack, SkipForward, Undo2 } from "@/components/ui/icons";
 import { useTranslation } from "react-i18next";
 import type { Combat } from "@/bindings/Combat";
 import type { DamageEvent } from "@/bindings/DamageEvent";
@@ -12,6 +12,7 @@ type CombatBarProps = {
   hasCharacters: boolean;
   lastDamage: DamageEvent | null;
   onStart: () => void;
+  onPrevTurn: () => void;
   onNextTurn: () => void;
   onEnd: () => void;
   onUndo: () => void;
@@ -23,6 +24,7 @@ export function CombatBar({
   hasCharacters,
   lastDamage,
   onStart,
+  onPrevTurn,
   onNextTurn,
   onEnd,
   onUndo,
@@ -32,7 +34,7 @@ export function CombatBar({
 
   return (
     // Sticks to the top of the rail so next turn and the initiative are always in reach.
-    <div className="sticky top-0 z-10 -mx-3 -mt-3 space-y-2 border-b bg-background px-3 py-3">
+    <div className="sticky top-0 z-10 -mt-4 -mr-3 -ml-4 space-y-2 border-b bg-background py-3 pr-3 pl-4">
       <div className="flex items-center gap-1.5">
         <span className="mr-auto text-xs text-muted-foreground uppercase">
           {started ? (
@@ -45,6 +47,19 @@ export function CombatBar({
         </span>
         {started ? (
           <>
+            <Hint label={t("initiative.prev_turn")}>
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="outline"
+                // Nothing to step back to at the very start of round 1.
+                disabled={combat.round === 1 && combat.combatants[0]?.character_id === combat.active}
+                aria-label={t("initiative.prev_turn")}
+                onClick={onPrevTurn}
+              >
+                <SkipBack />
+              </Button>
+            </Hint>
             <Hint label={t("initiative.next_turn")}>
               <Button type="button" size="icon-sm" aria-label={t("initiative.next_turn")} onClick={onNextTurn}>
                 <SkipForward />

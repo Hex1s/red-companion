@@ -11,6 +11,7 @@ export type HotkeyId =
   | "search"
   | "help"
   | "attackRef"
+  | "prevTurn"
   | "nextTurn"
   | "damage"
   | "undoDamage"
@@ -38,6 +39,7 @@ export const HOTKEYS: Record<HotkeyId, Hotkey> = {
   search: { mod: "ctrl", code: "KeyK", group: "interface", game: false },
   help: { mod: "ctrl", code: "Slash", group: "interface", game: false },
   attackRef: { mod: "alt", code: "KeyA", group: "combat", game: false },
+  prevTurn: { mod: "alt", code: "KeyP", group: "combat", game: true },
   nextTurn: { mod: "alt", code: "KeyN", group: "combat", game: true },
   damage: { mod: "alt", code: "KeyD", group: "combat", game: true },
   undoDamage: { mod: "alt", code: "KeyZ", group: "combat", game: true },

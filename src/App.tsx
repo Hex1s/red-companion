@@ -9,6 +9,8 @@ import type { DeathSave } from "@/bindings/DeathSave";
 import type { ExportFile } from "@/bindings/ExportFile";
 import type { ExportKind } from "@/bindings/ExportKind";
 import { TemplateEditor } from "@/components/character/template-editor";
+import { arrayMove } from "@dnd-kit/sortable";
+import { SortableCard, SortableRail } from "@/components/character/sortable-rail";
 import { CharacterCard } from "@/components/character/character-card";
 import { CharacterSheet } from "@/components/character/character-sheet";
 import { Explorer } from "@/components/explorer/explorer";
@@ -144,6 +146,17 @@ export default function App() {
     ? combat.combatants.flatMap((c) => entries.filter((e) => e.id === c.character_id))
     : [];
   const railEntries = fighters;
+  // A dragged card keeps its new place at once; the order the backend answers with replaces it.
+  const [pendingOrder, setPendingOrder] = useState<number[] | null>(null);
+  const railShown =
+    pendingOrder && pendingOrder.length === railEntries.length
+      ? pendingOrder.flatMap((id) => railEntries.filter((e) => e.id === id))
+      : railEntries;
+  const moveFighter = (id: number, to: number) => {
+    const ids = railEntries.map((e) => e.id);
+    setPendingOrder(arrayMove(ids, ids.indexOf(id), to));
+    void sceneState.combatMove(id, to).finally(() => setPendingOrder(null));
+  };
   // Helpers (healers, who gives a dose) may be anyone at the table: fighters and the session.
   const tableEntries = [...fighters, ...sessionEntries.filter((e) => !fighters.some((f) => f.id === e.id))];
   // A dose can go to anyone in the session, or to the Medtech themselves.
@@ -558,6 +571,7 @@ export default function App() {
       const { attackRefOpen, setAttackRefOpen } = useUiStore.getState();
       setAttackRefOpen(!attackRefOpen);
     },
+    prevTurn: () => combat && void sceneState.combatPrevTurn(),
     nextTurn: () => combat && void sceneState.combatNextTurn(),
     damage: () => {
       // The one whose turn it is; outside a fight, the one open on the sheet.
@@ -784,18 +798,20 @@ export default function App() {
                 hasCharacters={sessionEntries.length > 0 || fighters.length > 0}
                 lastDamage={scene?.last_damage ?? null}
                 onStart={() => void sceneState.combatStart()}
+                onPrevTurn={() => void sceneState.combatPrevTurn()}
                 onNextTurn={() => void sceneState.combatNextTurn()}
                 onEnd={() => void sceneState.combatEnd()}
                 onUndo={() => void undoDamage()}
               />
             )}
-            {railEntries.map((e) => {
+            <SortableRail ids={railShown.map((e) => e.id)} onMove={moveFighter}>
+            {railShown.map((e) => {
               const fighter = combat?.combatants.find((c) => c.character_id === e.id);
               const index = fighter && combat ? combat.combatants.indexOf(fighter) : -1;
               const cover = coverOf(e.id);
               return (
+                <SortableCard key={e.id} id={e.id}>
                 <CharacterCard
-                  key={e.id}
                   entry={e}
                   initiative={fighter?.initiative ?? null}
                   place={
@@ -860,8 +876,10 @@ export default function App() {
                   onDeathSave={(manual) => deathSave(e.id, manual)}
                   onLeave={() => void sceneState.combatRemove(e.id)}
                 />
+                </SortableCard>
               );
             })}
+            </SortableRail>
             {railEntries.length === 0 && explorer.active && (
               <p className="p-2 text-sm text-muted-foreground">{t("rail.empty")}</p>
             )}

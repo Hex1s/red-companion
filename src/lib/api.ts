@@ -274,12 +274,15 @@ export const api = {
   previewDerived: (character: Character) => invoke<Derived>("preview_derived", { character }),
   combatSetInitiative: (characterId: number, initiative: number) =>
     invoke<SceneRecord>("combat_set_initiative", { characterId, initiative }),
+  combatMove: (characterId: number, to: number) =>
+    invoke<SceneRecord>("combat_move", { characterId, to }),
   combatShift: (characterId: number, delta: number) =>
     invoke<SceneRecord>("combat_shift", { characterId, delta }),
   /** Puts a character into the fight with a rolled initiative; someone already there keeps theirs. */
   combatAdd: (characterId: number) => invoke<SceneRecord>("combat_add", { characterId }),
   combatRemove: (characterId: number) => invoke<SceneRecord>("combat_remove", { characterId }),
   combatStart: () => invoke<SceneRecord>("combat_start"),
+  combatPrevTurn: () => invoke<SceneRecord>("combat_prev_turn"),
   combatNextTurn: () => invoke<SceneRecord>("combat_next_turn"),
   combatEnd: () => invoke<SceneRecord>("combat_end"),
   deathSave: (characterId: number, manual: number | null) =>

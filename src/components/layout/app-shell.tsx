@@ -42,7 +42,7 @@ export function AppShell({ header, explorer, explorerOpen, main, rail, onRailDro
         </div>
         <aside
           className={cn(
-            "min-h-0 space-y-3 overflow-y-auto border-l bg-card/40 p-3",
+            "min-h-0 space-y-3 overflow-y-auto border-l bg-card/40 p-3 pt-4 pl-4",
             railTarget && "outline-2 -outline-offset-2 outline-primary",
           )}
           onDragOver={(e) => {

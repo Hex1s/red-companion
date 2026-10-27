@@ -13,7 +13,7 @@ const SCALE = MODULE_PX / CARD_ART.moduleW;
 /** Height of the board's body (module, middle, traces) on screen, px. */
 export const BOARD_BODY_PX = CARD_ART.bodyH * SCALE;
 /** The board starts this far below the card's top: the strip above it is for the name. */
-export const BOARD_TOP_PX = 10;
+export const BOARD_TOP_PX = 16;
 const share = (v: string) => parseFloat(v) / 100;
 /** Where the portrait window lies inside the board's body, px from its top: the right column lines up with it. */
 export const WINDOW_TOP_PX = share(CARD_ART.window.top) * BOARD_BODY_PX;
