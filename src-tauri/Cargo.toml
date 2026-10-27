@@ -20,6 +20,8 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+sys-locale = "0.3"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 rules-core = { path = "../crates/rules-core" }
@@ -27,4 +29,10 @@ storage = { path = "../crates/storage" }
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp", "bmp"] }
 webp = "0.3"
 base64 = "0.22"
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-single-instance = "2"
+
+[dev-dependencies]
+tempfile = "3"
 

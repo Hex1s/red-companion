@@ -1144,6 +1144,8 @@
     "storage": {
       "database": "Could not reach the database. Try again; if it keeps happening, restart the app and check the free disk space.",
       "migration": "Could not update the database to the new version. Close the app, copy the database file and start again.",
+      "schema_too_new": "The data was created by a newer version of the app and this version cannot open it. Update the app to the latest version; the data file is untouched.",
+      "backup_failed": "Could not copy the database before updating, so the update was not done and your data is untouched. Free some disk space and start the app again.",
       "corrupt_data": "A stored record is damaged and cannot be read. If it is one character, delete it and create it again (or import it from a file)."
     },
     "file": {

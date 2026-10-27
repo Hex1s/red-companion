@@ -3,6 +3,7 @@ use std::sync::Mutex;
 
 mod error;
 mod portrait;
+mod startup;
 
 use error::CmdError;
 use rules_core::RulesInfo;
@@ -590,10 +591,14 @@ fn free_export_name(dir: &std::path::Path, name: String, suffix: &str) -> String
         return name;
     }
     let stem = name.strip_suffix(suffix).unwrap_or(&name).to_string();
-    (2..)
-        .map(|n| format!("{stem}-{n}{suffix}"))
-        .find(|candidate| !dir.join(candidate).exists())
-        .expect("an unused file name exists")
+    let mut n = 2;
+    loop {
+        let candidate = format!("{stem}-{n}{suffix}");
+        if !dir.join(&candidate).exists() {
+            return candidate;
+        }
+        n += 1;
+    }
 }
 
 /// Writes `json` as a new file of this type into its folder and says where it went.
@@ -1973,9 +1978,22 @@ fn copy_dir(from: &std::path::Path, to: &std::path::Path) -> std::io::Result<()>
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    // Registered first: a second launch hands over to the running window instead of opening the same database twice.
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        if let Some(window) = app.get_webview_window("main") {
+            let _ = window.unminimize();
+            let _ = window.show();
+            let _ = window.set_focus();
+        }
+    }));
+    builder
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
+            let log_dir = app.path().app_log_dir()?;
+            startup::install_panic_hook(log_dir.clone());
             let dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&dir)?;
             if let Some(parent) = dir.parent() {
@@ -1986,7 +2004,15 @@ pub fn run() {
                     }
                 }
             }
-            let storage = Storage::open(&dir.join(DB_FILE))?;
+            let db_path = dir.join(DB_FILE);
+            let storage = match Storage::open(&db_path) {
+                Ok(storage) => storage,
+                Err(error) => {
+                    startup::log_line(&log_dir, &format!("the database did not open: {error}"));
+                    startup::show_database_error(app.handle(), &error, &db_path, &log_dir);
+                    std::process::exit(1);
+                }
+            };
             let exports = dir.join("exports");
             std::fs::create_dir_all(&exports)?;
             app.manage(ExportsDir(exports));

@@ -2,6 +2,7 @@
 //! schema lives in `rules-core`.
 
 use std::path::Path;
+use std::time::Duration;
 
 use rusqlite::{Connection, OptionalExtension, params};
 
@@ -15,6 +16,12 @@ pub enum StorageError {
     Sqlite(#[from] rusqlite::Error),
     #[error("migration error: {0}")]
     Migration(#[from] refinery::Error),
+    /// The file was last opened by a newer build, whose schema this one does not know.
+    #[error("the database schema is version {found}, but this build only knows versions up to {supported}")]
+    SchemaTooNew { found: i32, supported: i32 },
+    /// The safety copy before a migration could not be made, so nothing was migrated.
+    #[error("could not back up the database before migrating: {0}")]
+    Backup(String),
 }
 
 pub type Result<T> = std::result::Result<T, StorageError>;
@@ -89,6 +96,57 @@ pub struct DocRow {
     pub data: String,
 }
 
+/// Versions recorded by refinery in this database; empty for a brand-new file.
+fn applied_versions(conn: &Connection) -> Result<Vec<i32>> {
+    let has_history: bool = conn.query_row(
+        "SELECT EXISTS (SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'refinery_schema_history')",
+        [],
+        |r| r.get(0),
+    )?;
+    if !has_history {
+        return Ok(Vec::new());
+    }
+    let mut stmt = conn.prepare("SELECT version FROM refinery_schema_history")?;
+    let rows = stmt.query_map([], |r| r.get::<_, i32>(0))?;
+    Ok(rows.collect::<std::result::Result<_, _>>()?)
+}
+
+/// Refuses a database from a newer build, and copies one that is about to be migrated.
+fn guard_schema(conn: &Connection, path: &Path) -> Result<()> {
+    let known: Vec<i32> = embedded::migrations::runner().get_migrations().iter().map(|m| m.version()).collect();
+    let supported = known.iter().copied().max().unwrap_or(0);
+    let applied = applied_versions(conn)?;
+    if let Some(found) = applied.iter().copied().filter(|v| !known.contains(v)).max() {
+        return Err(StorageError::SchemaTooNew { found, supported });
+    }
+    let pending = known.iter().any(|v| !applied.contains(v));
+    if pending && let Some(from) = applied.iter().copied().max() {
+        back_up_before_migration(conn, path, from).map_err(|e| StorageError::Backup(e.to_string()))?;
+    }
+    Ok(())
+}
+
+/// `VACUUM INTO` makes a consistent copy even while the file is in WAL mode.
+fn back_up_before_migration(conn: &Connection, path: &Path, from_version: i32) -> std::result::Result<(), Box<dyn std::error::Error>> {
+    let dir = path.parent().unwrap_or_else(|| Path::new(".")).join(BACKUP_DIR);
+    std::fs::create_dir_all(&dir)?;
+    let stamp: String = conn.query_row("SELECT strftime('%Y%m%d-%H%M%S', 'now')", [], |r| r.get(0))?;
+    let target = dir.join(format!("{BACKUP_PREFIX}{stamp}-v{from_version}.db"));
+    conn.execute("VACUUM INTO ?1", [target.to_string_lossy().as_ref()])?;
+
+    // The stamp leads the name, so name order is time order.
+    let mut copies: Vec<_> = std::fs::read_dir(&dir)?
+        .filter_map(|e| e.ok().map(|e| e.path()))
+        .filter(|p| p.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.starts_with(BACKUP_PREFIX) && n.ends_with(".db")))
+        .collect();
+    copies.sort();
+    let excess = copies.len().saturating_sub(BACKUPS_KEPT);
+    for old in &copies[..excess] {
+        let _ = std::fs::remove_file(old);
+    }
+    Ok(())
+}
+
 /// The tables that hold `DocRow`s.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DocTable {
@@ -105,14 +163,27 @@ impl DocTable {
     }
 }
 
+/// How many pre-migration copies are kept in `backups/` next to the database.
+const BACKUPS_KEPT: usize = 5;
+pub const BACKUP_DIR: &str = "backups";
+const BACKUP_PREFIX: &str = "pre-migration-";
+
 pub struct Storage {
     conn: Connection,
 }
 
 impl Storage {
     /// Opens (creating if needed) the database file and applies migrations.
+    ///
+    /// A database that already holds data and needs migrating is copied to `backups/` first; one written
+    /// by a newer build is refused untouched (`SchemaTooNew`), since migrations only go forward.
     pub fn open(path: &Path) -> Result<Self> {
-        Self::init(Connection::open(path)?)
+        let conn = Connection::open(path)?;
+        conn.busy_timeout(Duration::from_secs(5))?;
+        guard_schema(&conn, path)?;
+        // WAL keeps readers and the writer from blocking each other and survives a crash mid-write better.
+        let _mode: String = conn.query_row("PRAGMA journal_mode = WAL", [], |r| r.get(0))?;
+        Self::init(conn)
     }
 
     pub fn open_in_memory() -> Result<Self> {
@@ -506,6 +577,96 @@ fn character_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<CharacterRow> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn db_in(dir: &tempfile::TempDir) -> std::path::PathBuf {
+        dir.path().join("test.db")
+    }
+
+    fn backups_in(dir: &tempfile::TempDir) -> Vec<std::path::PathBuf> {
+        match std::fs::read_dir(dir.path().join(BACKUP_DIR)) {
+            Ok(entries) => entries.map(|e| e.unwrap().path()).collect(),
+            Err(_) => Vec::new(),
+        }
+    }
+
+    /// A file as an older build left it: only the first migration applied, one character in it.
+    fn old_database(path: &Path) {
+        let mut conn = Connection::open(path).unwrap();
+        embedded::migrations::runner().set_target(refinery::Target::Version(1)).run(&mut conn).unwrap();
+        conn.execute("INSERT INTO characters (kind, name, data) VALUES ('pc', 'V', '{}')", []).unwrap();
+    }
+
+    #[test]
+    fn a_new_file_is_created_without_a_backup() {
+        let dir = tempfile::tempdir().unwrap();
+        Storage::open(&db_in(&dir)).unwrap();
+        assert!(backups_in(&dir).is_empty());
+    }
+
+    #[test]
+    fn an_old_schema_is_copied_before_it_is_migrated() {
+        let dir = tempfile::tempdir().unwrap();
+        old_database(&db_in(&dir));
+
+        let storage = Storage::open(&db_in(&dir)).unwrap();
+        assert_eq!(storage.list_characters(CharacterKind::Pc).unwrap().len(), 1);
+
+        let copies = backups_in(&dir);
+        assert_eq!(copies.len(), 1);
+        let name = copies[0].file_name().unwrap().to_str().unwrap();
+        assert!(name.ends_with("-v1.db"), "{name}");
+        // The copy is the old schema with the old data, untouched by the migration.
+        let copy = Connection::open(&copies[0]).unwrap();
+        assert_eq!(applied_versions(&copy).unwrap(), vec![1]);
+        let count: i64 = copy.query_row("SELECT COUNT(*) FROM characters", [], |r| r.get(0)).unwrap();
+        assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn an_up_to_date_file_is_not_copied_again() {
+        let dir = tempfile::tempdir().unwrap();
+        old_database(&db_in(&dir));
+        Storage::open(&db_in(&dir)).unwrap();
+        Storage::open(&db_in(&dir)).unwrap();
+        assert_eq!(backups_in(&dir).len(), 1);
+    }
+
+    #[test]
+    fn only_the_newest_copies_are_kept() {
+        let dir = tempfile::tempdir().unwrap();
+        let backups = dir.path().join(BACKUP_DIR);
+        std::fs::create_dir_all(&backups).unwrap();
+        for n in 0..BACKUPS_KEPT + 3 {
+            std::fs::write(backups.join(format!("{BACKUP_PREFIX}20200101-00000{n}-v1.db")), "").unwrap();
+        }
+        old_database(&db_in(&dir));
+        Storage::open(&db_in(&dir)).unwrap();
+
+        let names: Vec<_> = backups_in(&dir).iter().map(|p| p.file_name().unwrap().to_str().unwrap().to_string()).collect();
+        assert_eq!(names.len(), BACKUPS_KEPT);
+        // The fresh copy (a current date) survives; the oldest placeholders are gone.
+        assert!(names.iter().any(|n| !n.contains("2020")));
+        assert!(!names.iter().any(|n| n.contains("20200101-000000")));
+    }
+
+    #[test]
+    fn a_schema_from_a_newer_build_is_refused_and_left_alone() {
+        let dir = tempfile::tempdir().unwrap();
+        Storage::open(&db_in(&dir)).unwrap();
+        {
+            let conn = Connection::open(db_in(&dir)).unwrap();
+            conn.execute(
+                "INSERT INTO refinery_schema_history (version, name, applied_on, checksum) VALUES (999, 'future', '2099-01-01T00:00:00Z', '0')",
+                [],
+            )
+            .unwrap();
+        }
+        match Storage::open(&db_in(&dir)) {
+            Err(StorageError::SchemaTooNew { found: 999, .. }) => {}
+            other => panic!("expected SchemaTooNew, got {:?}", other.map(|_| ())),
+        }
+        assert!(backups_in(&dir).is_empty());
+    }
 
     #[test]
     fn character_crud_and_kinds() {

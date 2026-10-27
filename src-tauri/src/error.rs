@@ -116,6 +116,8 @@ impl From<storage::StorageError> for CmdError {
         let code = match &error {
             storage::StorageError::Sqlite(_) => "storage.database",
             storage::StorageError::Migration(_) => "storage.migration",
+            storage::StorageError::SchemaTooNew { .. } => "storage.schema_too_new",
+            storage::StorageError::Backup(_) => "storage.backup_failed",
         };
         Self::new(code, Params::new(), error.to_string())
     }
@@ -193,6 +195,8 @@ mod tests {
                 "internal.locked",
                 "storage.database",
                 "storage.migration",
+                "storage.schema_too_new",
+                "storage.backup_failed",
                 "storage.corrupt_data",
                 "file.not_found",
                 "file.permission_denied",

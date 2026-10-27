@@ -29,9 +29,9 @@ dist-ssr
 # Local caches (rendered book pages etc.)
 .cache
 
-# Claude Code local config and skills
-.claude/
-CLAUDE.md
+# Claude Code: CLAUDE.md, skills and hooks are versioned; only machine-local settings are ignored
+.claude/settings.local.json
+.claude/worktrees/
 
 # Rulebook sources (copyrighted, large)
 docs/cyberpunkRedBook.pdf
