@@ -89,8 +89,9 @@ export function ReferencePage() {
       ) : (
         <div
           className={cn(
-            "grid min-h-0 flex-1 gap-4",
-            current ? "grid-cols-[minmax(0,1fr)_minmax(0,28rem)]" : "grid-cols-[minmax(0,1fr)]",
+            "relative grid min-h-0 flex-1 gap-4",
+            // Narrow: the card covers the list instead of squeezing it.
+            current ? "grid-cols-[minmax(0,1fr)] mid:grid-cols-[minmax(0,1fr)_minmax(0,28rem)]" : "grid-cols-[minmax(0,1fr)]",
           )}
         >
           <div className="flex min-h-0 flex-col gap-2">
@@ -150,7 +151,7 @@ export function ReferencePage() {
             )}
           </div>
           {current && (
-            <aside className="cut flex min-h-0 animate-in flex-col duration-200 fade-in-0 slide-in-from-right-4 [--cut:10px]">
+            <aside className="cut flex min-h-0 max-mid:absolute max-mid:inset-0 max-mid:z-10 animate-in flex-col duration-200 fade-in-0 slide-in-from-right-4 [--cut:10px]">
               <div className="flex justify-end p-1">
                 <Button
                   type="button"

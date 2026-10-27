@@ -861,6 +861,8 @@
     "remove_from_folder": "Remove from folder",
     "new_folder": "New folder",
     "to_top_level": "Move to the top level",
+    "add_to": "Add to…",
+    "move_to": "Move to…",
     "new_subfolder": "New subfolder",
     "folder_default_name": "Folder {{n}}",
     "folder_name": "Folder name",

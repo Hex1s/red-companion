@@ -861,6 +861,8 @@
     "remove_from_folder": "Убрать из папки",
     "new_folder": "Новая папка",
     "to_top_level": "Вынести на верхний уровень",
+    "add_to": "Добавить в…",
+    "move_to": "Переместить в…",
     "new_subfolder": "Новая вложенная папка",
     "folder_default_name": "Папка {{n}}",
     "folder_name": "Название папки",

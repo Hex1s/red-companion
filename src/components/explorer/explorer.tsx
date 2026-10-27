@@ -11,6 +11,7 @@ import {
   MoreMenu,
   item,
   separator,
+  submenu,
   tidy,
   type MenuEntry,
 } from "@/components/explorer/node-menu";
@@ -190,9 +191,23 @@ export function Explorer({
       ...(node.parent_id !== null
         ? [item("to-root", t("explorer.to_top_level"), () => actions.moveFolder(node.id, null))]
         : []),
+      // The touch replacement for dragging a folder onto another one (the backend refuses a bad parent).
+      ...(rootFolders.some((f) => f.id !== node.id && f.id !== node.parent_id)
+        ? [
+            submenu(
+              "move-to",
+              t("explorer.move_to"),
+              rootFolders
+                .filter((f) => f.id !== node.id && f.id !== node.parent_id)
+                .map((f) => item(`move-${f.id}`, f.name, () => actions.moveFolder(node.id, f.id))),
+            ),
+          ]
+        : []),
       separator("s2"),
       item("delete", t("sessions.delete"), () => setDeleting(node), { destructive: true }),
     ]);
+
+  const addTargets = (entry: CharacterEntry) => nodes.filter((n) => !n.members.includes(entry.id));
 
   const characterMenu = (entry: CharacterEntry, container: ExplorerNode | null): MenuEntry[] => {
     if (instanceIds.has(entry.id)) {
@@ -220,6 +235,18 @@ export function Explorer({
       fighters.includes(entry.id)
         ? item("combat", t("initiative.remove_from_fight"), () => actions.removeFromCombat(entry.id))
         : item("combat", t("initiative.add"), () => actions.addToCombat(entry.id)),
+      // The touch replacement for dragging a character onto a session or a folder.
+      ...(addTargets(entry).length > 0
+        ? [
+            submenu(
+              "add-to",
+              t("explorer.add_to"),
+              addTargets(entry).map((node) =>
+                item(`add-${node.id}`, node.name, () => actions.addToContainer(node.id, entry.id)),
+              ),
+            ),
+          ]
+        : []),
       ...(container
         ? [
             item(
