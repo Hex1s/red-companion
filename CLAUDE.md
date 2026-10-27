@@ -27,6 +27,7 @@
 
 - `tools/render-pages.py` — рендер страниц книги в PNG (`python tools/render-pages.py 168 175`). Печатная страница N = страница PDF N+1.
 - `tools/import-ocr.py` — раскладывает готовый OCR всей книги (утилита `pdf-reader`) по печатным страницам в `.cache/book-ocr/`; пометки «проверить» лежат в `index.json`.
+- `tools/set-version.mjs` (`npm run version:set -- X.Y.Z`) — ставит версию во всех местах, которые сверяет `release.yml` (`package.json`, `package-lock.json`, `tauri.conf.json`, `Cargo.toml`, `Cargo.lock`), и заводит раздел в `CHANGELOG.md` с `TODO`, который нужно заполнить (CI не пропустит релиз с `TODO`). Git не трогает: коммит и тег делает пользователь.
 - `tools/ocr-pages.py` — OCR страниц через Tesseract (русский + английский) в `.cache/ocr/`. Годится для сплошного текста; **таблицы и числа из OCR не брать**, сверять по картинке страницы.
 - Проектные скиллы в `.claude/skills/`: `read-rulebook` (как читать книгу и где какая глава), `add-ui-component` (чек-лист дизайн-системы), `rules-golden-test` (тесты правил по примерам из книги). Вызывай их, когда задача подходит.
 

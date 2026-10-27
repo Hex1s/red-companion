@@ -23,6 +23,10 @@ on:
       version:
         description: "Dry run: version to build, X.Y.Z (must equal the app version). Nothing is uploaded."
         required: true
+      android_only:
+        description: "Dry run: build only Android (skips Windows and macOS, saves the expensive macOS minutes)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -52,6 +56,7 @@ jobs:
             echo "Version $version, tauri.conf.json $conf, package.json $pkg, Cargo.toml $crate must be equal"; exit 1
           fi
           grep -q "^## $version\$" CHANGELOG.md || { echo "CHANGELOG.md has no section '## $version'"; exit 1; }
+          if sed -n "/^## $version\$/,/^## /p" CHANGELOG.md | grep -q TODO; then echo "CHANGELOG.md section '## $version' still has TODO"; exit 1; fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
   test:
@@ -71,6 +76,7 @@ jobs:
 
   build-desktop:
     needs: [check, test]
+    if: ${{ !inputs.android_only }}
     strategy:
       fail-fast: false
       matrix:
@@ -139,7 +145,6 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - uses: android-actions/setup-android@v3
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
@@ -149,7 +154,13 @@ jobs:
       - run: npm ci
       - name: Build universal APK
         run: |
-          sdkmanager "ndk;27.0.12077973" "build-tools;35.0.0"
+          # The runner image ships the Android SDK; android-actions/setup-android@v3 breaks on its newer
+          # cmdline-tools ("Failed to find package 'tools'"), so the preinstalled sdkmanager is used.
+          SDKMANAGER="$(ls "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -n 1)"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" "ndk;27.0.12077973" "build-tools;35.0.0"
+          # compileSdk of the generated project; Gradle fetches it itself if this name does not exist.
+          "$SDKMANAGER" "platforms;android-37" || true
           export NDK_HOME="$ANDROID_HOME/ndk/27.0.12077973"
           npm run tauri android build -- --apk
       - name: Sign APK
