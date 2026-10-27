@@ -1,7 +1,8 @@
-import { Keyboard, PanelLeft, Search } from "@/components/ui/icons";
+import { Info, Keyboard, PanelLeft, Search } from "@/components/ui/icons";
 import { useDeferredValue, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHotkeys } from "@/hooks/use-hotkeys";
+import { AboutDialog } from "@/components/layout/about-dialog";
 import { ShortcutsDialog } from "@/components/layout/shortcuts-dialog";
 import { formatHotkey } from "@/lib/hotkeys";
 import type { CharacterKind } from "@/bindings/CharacterKind";
@@ -81,6 +82,7 @@ export default function App() {
   const encounterState = useEncounters();
   const [searchOpen, setSearchOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const [stabilizeTargetId, setStabilizeTargetId] = useState<number | null>(null);
   const [restTargetId, setRestTargetId] = useState<number | null>(null);
   const [humanityLossTargetId, setHumanityLossTargetId] = useState<number | null>(null);
@@ -698,6 +700,15 @@ export default function App() {
             >
               <Keyboard className="size-4" />
             </Button>
+            <Button
+              size="xs"
+              variant="outline"
+              aria-label={t("about.button")}
+              title={t("about.button")}
+              onClick={() => setAboutOpen(true)}
+            >
+              <Info className="size-4" />
+            </Button>
             <div className="flex gap-1">
               {SUPPORTED_LANGUAGES.map((lng) => (
                 <Button
@@ -885,6 +896,7 @@ export default function App() {
             )}
             <ReferenceSearch open={searchOpen} onOpenChange={setSearchOpen} />
             <ShortcutsDialog open={helpOpen} onOpenChange={setHelpOpen} />
+            <AboutDialog open={aboutOpen} onOpenChange={setAboutOpen} />
             <ImportDialog
               files={importFiles}
               onImport={async (name) => {

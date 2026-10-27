@@ -4,6 +4,12 @@ use std::sync::Mutex;
 mod error;
 mod portrait;
 mod startup;
+#[cfg(desktop)]
+mod updater;
+// Android updates through its own APK flow (ROADMAP 8.6); the commands exist so the UI code is the same.
+#[cfg(not(desktop))]
+#[path = "updater_mobile.rs"]
+mod updater;
 
 use error::CmdError;
 use rules_core::RulesInfo;
@@ -1989,6 +1995,8 @@ pub fn run() {
             let _ = window.set_focus();
         }
     }));
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
     builder
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
@@ -2019,6 +2027,7 @@ pub fn run() {
             app.manage(ExportsDir(exports));
             app.manage(AppStorage(Mutex::new(storage)));
             app.manage(ContentLang(Mutex::new(Lang::default())));
+            app.manage(updater::PendingUpdate::default());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -2062,6 +2071,9 @@ pub fn run() {
             save_character,
             delete_character,
             restore_character,
+            updater::check_update,
+            updater::install_update,
+            updater::restart_app,
             save_instance_to_library,
             clear_session_instances,
             export_characters,

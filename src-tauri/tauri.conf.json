@@ -28,6 +28,11 @@
     "active": true,
     "targets": "all",
     "createUpdaterArtifacts": true,
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -35,5 +40,16 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQwOTg5OUFEOEVBMTNEN0UKUldSK1BhR09yWm1ZUUYzVEYwRGhxOXNvTVRWaWxOeGRjK1p3MDFHekEzRlF4Y05ya0lUYmRNTk0K",
+      "endpoints": [
+        "https://red-companion.ru/api/v1/app/update/{{target}}/{{arch}}/{{current_version}}"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

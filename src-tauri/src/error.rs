@@ -75,6 +75,16 @@ impl CmdError {
         Self::new("not_found.cover_preset", params! { "id" => id }, format!("unknown cover preset {id:?}"))
     }
 
+    /// The signature of an update was made by neither of the built-in keys.
+    pub fn update_untrusted() -> Self {
+        Self::new("updater.untrusted", Params::new(), "the update is signed with an unknown key".to_string())
+    }
+
+    /// Install was asked for without a successful check before it.
+    pub fn update_not_checked() -> Self {
+        Self::new("updater.not_checked", Params::new(), "no update was found by a check".to_string())
+    }
+
     /// A poisoned lock: an earlier command panicked while holding it.
     pub fn locked(what: &str) -> Self {
         Self::new("internal.locked", params! { "what" => what }, format!("{what} lock poisoned"))
@@ -136,6 +146,26 @@ impl From<std::io::Error> for CmdError {
             std::io::ErrorKind::NotFound => "file.not_found",
             std::io::ErrorKind::PermissionDenied => "file.permission_denied",
             _ => "file.io",
+        };
+        Self::new(code, Params::new(), error.to_string())
+    }
+}
+
+#[cfg(desktop)]
+impl From<tauri_plugin_updater::Error> for CmdError {
+    fn from(error: tauri_plugin_updater::Error) -> Self {
+        use tauri_plugin_updater::Error as E;
+        let code = match &error {
+            E::Reqwest(_) | E::Network(_) | E::ReleaseNotFound | E::TargetNotFound(_) | E::TargetsNotFound(_) => {
+                "updater.unavailable"
+            }
+            E::Minisign(_) | E::Base64(_) | E::SignatureUtf8(_) | E::SignedVersionMismatch { .. } => {
+                "updater.bad_signature"
+            }
+            E::Io(_) | E::TempDirNotFound | E::TempDirNotOnSameMountPoint | E::PreviousAppNotRestored(_) => {
+                "updater.install_failed"
+            }
+            _ => "updater.failed",
         };
         Self::new(code, Params::new(), error.to_string())
     }
@@ -215,6 +245,12 @@ mod tests {
                 "scene.nothing_to_undo",
                 "injury.not_on_sheet",
                 "healing.surgery_bonus_missing",
+                "updater.untrusted",
+                "updater.not_checked",
+                "updater.unavailable",
+                "updater.bad_signature",
+                "updater.install_failed",
+                "updater.failed",
             ]
             .map(String::from),
         );

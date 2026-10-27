@@ -76,7 +76,15 @@ export type PortraitCrop = { cx: number; cy: number; size: number };
 /** True inside the Tauri window; false in plain `npm run dev` in a browser. */
 export const hasBackend = "__TAURI_INTERNALS__" in globalThis;
 
+/** A newer app version found on the server. */
+export type UpdateInfo = { version: string; notes: string | null };
+
 export const api = {
+  /** `null` = this is the latest version. Throws a coded error when the server cannot be reached. */
+  checkUpdate: () => invoke<UpdateInfo | null>("check_update"),
+  /** Downloads and installs the update found by `checkUpdate` (progress arrives as `update-progress` events). */
+  installUpdate: () => invoke<void>("install_update"),
+  restartApp: () => invoke<void>("restart_app"),
   listArmor: (lang: string) => inLanguage(lang, () => invoke<Armor[]>("list_armor")),
   listWeapons: (lang: string) => inLanguage(lang, () => invoke<Weapon[]>("list_weapons")),
   listGear: (lang: string) => inLanguage(lang, () => invoke<GearItem[]>("list_gear")),
