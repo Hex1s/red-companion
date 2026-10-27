@@ -6,6 +6,18 @@
 /* Dark-only app: <html class="dark"> is set in index.html. */
 @custom-variant dark (&:is(.dark *));
 
+/* Adaptive layout (ROADMAP 8.1). Width modes: narrow < 900, medium 900–1279 (`mid:`), wide ≥ 1280
+   (`wide:`); keep in sync with `src/hooks/use-layout-mode.ts`. Touch is decided by input type, not
+   width: `touch:` = coarse pointer, `no-hover:` = the primary input cannot hover. `short:` = a
+   landscape tablet's ~600 px of height. */
+@theme {
+  --breakpoint-mid: 56.25rem;
+  --breakpoint-wide: 80rem;
+}
+@custom-variant touch (@media (pointer: coarse));
+@custom-variant no-hover (@media (hover: none));
+@custom-variant short (@media (max-height: 640px));
+
 :root {
   --radius: 0px;
 

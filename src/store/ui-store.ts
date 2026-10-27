@@ -60,6 +60,11 @@ type UiState = {
   /** Whether the explorer panel is shown. */
   explorerOpen: boolean;
   toggleExplorer: () => void;
+  /** Slide-in panels of the narrower layouts (ROADMAP 8.1); transient, never saved. */
+  explorerDrawerOpen: boolean;
+  setExplorerDrawerOpen: (open: boolean) => void;
+  railDrawerOpen: boolean;
+  setRailDrawerOpen: (open: boolean) => void;
   /** Open/closed state of tree nodes by key ("session:3", "library", ...). */
   expanded: Record<string, boolean>;
   setExpanded: (key: string, open: boolean) => void;
@@ -93,6 +98,10 @@ export const useUiStore = create<UiState>((set, get) => ({
     set({ explorerOpen: !get().explorerOpen });
     saveExplorer({ open: get().explorerOpen, expanded: get().expanded });
   },
+  explorerDrawerOpen: false,
+  setExplorerDrawerOpen: (explorerDrawerOpen) => set({ explorerDrawerOpen }),
+  railDrawerOpen: false,
+  setRailDrawerOpen: (railDrawerOpen) => set({ railDrawerOpen }),
   expanded: initialExplorer.expanded,
   setExpanded: (key, open) => {
     set({ expanded: { ...get().expanded, [key]: open } });

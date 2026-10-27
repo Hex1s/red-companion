@@ -613,6 +613,7 @@
     "revive_hint": "Revive: 1 HP, no death save penalty, no injuries"
   },
   "rail": {
+    "title": "Combat",
     "start_hint": "Start the fight: with an empty column, everyone in the session fights",
     "empty": "Nobody in the fight. Drag characters from the explorer or pick \"Add to fight\" in their menu."
   },

@@ -80,7 +80,7 @@ export function MoreMenu({ entries, alwaysVisible, icon, label }: MoreMenuProps)
           type="button"
           aria-label={label ?? t("explorer.actions")}
           className={cn(
-            "flex size-6 shrink-0 items-center justify-center text-muted-foreground outline-none hover:text-foreground focus-visible:opacity-100 data-[state=open]:opacity-100",
+            "flex size-6 touch:size-11 shrink-0 items-center justify-center text-muted-foreground outline-none hover:text-foreground focus-visible:opacity-100 data-[state=open]:opacity-100",
             alwaysVisible ? "opacity-100" : "opacity-0 group-hover:opacity-100",
           )}
         >

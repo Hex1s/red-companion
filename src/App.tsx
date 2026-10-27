@@ -2,6 +2,8 @@ import { Info, Keyboard, PanelLeft, Search } from "@/components/ui/icons";
 import { useDeferredValue, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHotkeys } from "@/hooks/use-hotkeys";
+import { useLayoutMode } from "@/hooks/use-layout-mode";
+import { CombatDock } from "@/components/combat/combat-dock";
 import { AboutDialog } from "@/components/layout/about-dialog";
 import { ShortcutsDialog } from "@/components/layout/shortcuts-dialog";
 import { formatHotkey } from "@/lib/hotkeys";
@@ -70,7 +72,25 @@ export default function App() {
     openDamage,
     explorerOpen,
     toggleExplorer,
+    explorerDrawerOpen,
+    setExplorerDrawerOpen,
+    railDrawerOpen,
+    setRailDrawerOpen,
   } = useUiStore();
+  const layoutMode = useLayoutMode();
+  // Wide: the explorer is a pinned column; narrower: a drawer that opens on demand.
+  const explorerShown = layoutMode === "wide" ? explorerOpen : explorerDrawerOpen;
+  const toggleExplorerPanel = () =>
+    layoutMode === "wide" ? toggleExplorer() : setExplorerDrawerOpen(!explorerDrawerOpen);
+  // Drawers belong to the narrower layouts: leaving them must not leave a stale open flag behind.
+  useEffect(() => {
+    if (layoutMode === "wide") setExplorerDrawerOpen(false);
+    if (layoutMode !== "narrow") setRailDrawerOpen(false);
+  }, [layoutMode, setExplorerDrawerOpen, setRailDrawerOpen]);
+  // Picking something in the explorer drawer reveals it in the main area.
+  useEffect(() => {
+    setExplorerDrawerOpen(false);
+  }, [tab, selectedCharacterId, selectedTemplateKey, setExplorerDrawerOpen]);
   const explorer = useExplorer();
   const sessionId = explorer.active?.id ?? null;
   const { entries, error, create, save, remove, restore, reload } = useCharacters(sessionId, explorer.reload);
@@ -566,7 +586,7 @@ export default function App() {
     setTab("characters");
   };
   useHotkeys({
-    explorer: toggleExplorer,
+    explorer: toggleExplorerPanel,
     search: () => setSearchOpen(true),
     help: () => setHelpOpen((open) => !open),
     attackRef: () => {
@@ -611,6 +631,10 @@ export default function App() {
         }}
         onRailDropTemplate={(key) => void spawnTemplate(key, 1, true)}
         explorerOpen={explorerOpen}
+        explorerDrawerOpen={explorerDrawerOpen}
+        onExplorerDrawerChange={setExplorerDrawerOpen}
+        railDrawerOpen={railDrawerOpen}
+        onRailDrawerChange={setRailDrawerOpen}
         explorer={
           <Explorer
             nodes={explorer.nodes}
@@ -671,9 +695,9 @@ export default function App() {
             <Button
               size="xs"
               variant="outline"
-              aria-label={t(explorerOpen ? "explorer.hide" : "explorer.show")}
-              title={`${t(explorerOpen ? "explorer.hide" : "explorer.show")} ${formatHotkey("explorer")}`}
-              onClick={toggleExplorer}
+              aria-label={t(explorerShown ? "explorer.hide" : "explorer.show")}
+              title={`${t(explorerShown ? "explorer.hide" : "explorer.show")} ${formatHotkey("explorer")}`}
+              onClick={toggleExplorerPanel}
             >
               <PanelLeft className="size-4" />
             </Button>
@@ -689,11 +713,14 @@ export default function App() {
             />
             <Button size="xs" variant="outline" onClick={() => setSearchOpen(true)}>
               <Search className="size-4" />
-              {t("reference.global_button")} {formatHotkey("search")}
+              <span className="max-mid:sr-only">
+                {t("reference.global_button")} {formatHotkey("search")}
+              </span>
             </Button>
             <Button
               size="xs"
               variant="outline"
+              className="max-mid:hidden"
               aria-label={t("hotkeys.button")}
               title={`${t("hotkeys.button")} ${formatHotkey("help")}`}
               onClick={() => setHelpOpen(true)}
@@ -800,6 +827,17 @@ export default function App() {
             <ReferencePage />
           )}
           </div>
+        }
+        dock={
+          <CombatDock
+            combat={combat}
+            active={railShown.find((e) => e.id === combat?.active) ?? null}
+            hasCharacters={sessionEntries.length > 0 || fighters.length > 0}
+            onExpand={() => setRailDrawerOpen(true)}
+            onStart={() => void sceneState.combatStart()}
+            onNextTurn={() => void sceneState.combatNextTurn()}
+            onDamage={openDamage}
+          />
         }
         rail={
           <>

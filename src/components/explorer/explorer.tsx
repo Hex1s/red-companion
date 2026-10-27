@@ -656,7 +656,7 @@ function Section({ label, open, onToggle, add, plain, action, onDropFolder, chil
           type="button"
           onClick={onToggle}
           disabled={plain}
-          className="flex min-w-0 flex-1 items-center gap-1 px-1.5 py-1 text-left font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground outline-none hover:text-foreground disabled:pointer-events-none"
+          className="flex min-w-0 flex-1 items-center gap-1 px-1.5 py-1 touch:py-3 text-left font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground outline-none hover:text-foreground disabled:pointer-events-none"
         >
           {!plain && <ChevronRight className={cn("size-3.5 transition-transform duration-150", open && "rotate-90")} />}
           <span className="truncate">{label}</span>
@@ -723,7 +723,7 @@ function TreeRow({
   const row = (
     <div
       className={cn(
-        "group flex h-7 items-center border-l-2 border-transparent pr-1 text-sm",
+        "group flex h-7 touch:h-11 items-center border-l-2 border-transparent pr-1 text-sm",
         selected ? "border-primary bg-accent text-foreground" : "hover:bg-accent/50",
         highlighted && "border-primary bg-primary/20",
       )}
@@ -749,7 +749,7 @@ function TreeRow({
           tabIndex={-1}
           aria-hidden
           onClick={onToggle}
-          className="flex size-4 shrink-0 items-center justify-center text-muted-foreground"
+          className="flex size-4 touch:size-8 shrink-0 items-center justify-center text-muted-foreground"
         >
           <ChevronRight className={cn("size-3.5 transition-transform duration-150", open && "rotate-90")} />
         </button>
