@@ -596,6 +596,18 @@ mod tests {
         conn.execute("INSERT INTO characters (kind, name, data) VALUES ('pc', 'V', '{}')", []).unwrap();
     }
 
+    /// Migrations are checksummed by refinery over their text: a CRLF checkout (a Windows CI runner without
+    /// `.gitattributes`) makes the installed app refuse every database made by an LF build.
+    #[test]
+    fn embedded_migrations_use_lf_line_endings() {
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("migrations");
+        for entry in std::fs::read_dir(dir).unwrap() {
+            let path = entry.unwrap().path();
+            let text = std::fs::read_to_string(&path).unwrap();
+            assert!(!text.contains('\r'), "{} has CRLF line endings, see .gitattributes", path.display());
+        }
+    }
+
     #[test]
     fn a_new_file_is_created_without_a_backup() {
         let dir = tempfile::tempdir().unwrap();
