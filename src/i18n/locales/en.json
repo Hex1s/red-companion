@@ -924,6 +924,7 @@
     "lines": "Lineup",
     "template": "NPC template",
     "missing_template": "Template deleted",
+    "missing_book": "Template is not in the references",
     "book_group": "From the book",
     "own_group": "My templates",
     "remove_line": "Remove",
@@ -951,7 +952,7 @@
     "tier": "Tier",
     "strength": "Strength: {{weight}} / {{players}} · {{verdict}}",
     "strength_hint": "Estimate. NPC weight in player slots: mook 1, lieutenant 2, mini-boss 3 (p. 413-415), boss 6 (estimate, not in the book). Total {{weight}} against {{players}} players: up to 0.7 weak, up to 1.3 fair, up to 1.8 strong, above very strong. Own templates count by the chosen tier.",
-    "strength_skipped": "NPCs not counted because of deleted templates: {{count}}",
+    "strength_skipped": "NPCs not counted because their templates are not in the references (not downloaded, pack off or deleted): {{count}}",
     "verdict": {
       "weak": "weak",
       "fair": "fair",
@@ -1166,7 +1167,7 @@
     "not_found": {
       "character": "The character was not found (maybe it was already deleted). Refresh the list.",
       "template": "The template was not found (maybe it was already deleted). Refresh the list.",
-      "npc_template": "The ready-made NPC is not in the reference. Pick another one.",
+      "npc_template": "The ready-made NPC is not in your references: it is not downloaded, its pack is off or the entry was removed. Download the NPC reference (\"Server references\" in the header) or pick another one.",
       "encounter": "The encounter was not found (maybe it was already deleted). Refresh the list.",
       "session": "The session was not found (maybe it was already deleted). Pick another one in the list on the left.",
       "container": "The session or folder was not found (maybe it was already deleted). Refresh the list on the left.",
@@ -1711,7 +1712,10 @@
     "skip": "Skip",
     "open": "Open",
     "fetch_failed": "Could not get the reference from the server: {{error}}",
-    "empty_hint": "The reference is empty. Download the data from the server."
+    "empty_hint": "The reference is empty. Download the data from the server.",
+    "not_in_references": "{{name}} (not in the references)",
+    "collection": {"weapons": "Weapons", "armor": "Armor", "shields": "Shields", "cover_materials": "Cover", "ammo": "Ammo", "gear": "Gear", "clothing": "Clothing", "street_drugs": "Street drugs", "weapon_mods": "Weapon mods", "martial_arts": "Martial arts", "npc_templates": "Ready-made NPCs"},
+    "missing": {"not_downloaded": "The \"{{collection}}\" reference is not downloaded.", "pack_off": "The pack with the \"{{collection}}\" reference is switched off.", "absent": "This entry is not in the \"{{collection}}\" reference: it is from another pack or was removed.", "fix_not_downloaded": "Download", "fix_pack_off": "Switch the pack on"}
   },
   "about": {
     "button": "About",

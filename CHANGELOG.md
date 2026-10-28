@@ -41,16 +41,18 @@
 ### ru
 
 - Первый выпуск: персонажи и сессии, бой с ПЗ, ОС, укрытиями и спасбросками, энкаунтеры, справочники, экспорт и импорт.
+- Справочники (оружие, броня, снаряжение, NPC и другой контент) приходят с сервера по запросу или целиком, подлинность данных проверяется подписью. Механики правил (травмы, навыки, роли, таблицы дальности) встроены и работают без сети.
 - Windows, macOS и Android; на планшете интерфейс адаптируется под касание.
-- Обновление приложения по кнопке в «О приложении».
-- Перед обновлением базы создаётся резервная копия.
+- Обновление приложения по кнопке в «О приложении» и уведомление при запуске.
+- Перед обновлением базы создаётся резервная копия; база от более новой версии не открывается и остаётся нетронутой.
 
 ### en
 
 - First release: characters and sessions, combat with HP, SP, cover and death saves, encounters, reference pages, export and import.
+- References (weapons, armor, gear, NPCs and other content) come from the server on request or all at once, and the data is checked by a signature. The rules mechanics (injuries, skills, roles, range tables) are built in and work offline.
 - Windows, macOS and Android; the interface adapts to touch on tablets.
-- In-app update from the About dialog.
-- The database is backed up before it is upgraded.
+- In-app update from the About dialog and a notice at start.
+- The database is backed up before it is upgraded; a database from a newer version is not opened and stays untouched.
 
 ## 0.9.1
 

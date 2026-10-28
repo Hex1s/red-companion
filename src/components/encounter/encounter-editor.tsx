@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { errorMessage } from "@/lib/errors";
+import { MissingReference } from "@/components/content/missing-reference";
 import { templateKey, templateLabel } from "@/lib/encounter";
 
 /** Same limits as `rules_core::encounter`. */
@@ -173,8 +174,10 @@ export function EncounterEditor({
             <ul className="max-h-[32vh] space-y-2 overflow-y-auto pr-1">
               {lines.map((line) => {
                 const missing = !known.has(line.template);
+                const missingBook = missing && line.template.startsWith("book:");
                 return (
-                  <li key={line.key} className="flex items-center gap-2">
+                  <li key={line.key} className="space-y-1">
+                    <div className="flex items-center gap-2">
                     <Select
                       value={line.template}
                       onValueChange={(v) => update(line.key, { template: v })}
@@ -182,7 +185,7 @@ export function EncounterEditor({
                       <SelectTrigger className="flex-1" aria-label={t("encounters.template")}>
                         <SelectValue>
                           {missing
-                            ? t("encounters.missing_template")
+                            ? t(missingBook ? "encounters.missing_book" : "encounters.missing_template")
                             : templateLabel(line.template, bookTemplates, userTemplates)}
                         </SelectValue>
                       </SelectTrigger>
@@ -235,6 +238,8 @@ export function EncounterEditor({
                     >
                       {t("encounters.remove_line")}
                     </Button>
+                    </div>
+                    {missingBook && <MissingReference collection="npc_templates" listLoaded={bookTemplates.length > 0} />}
                   </li>
                 );
               })}

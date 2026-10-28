@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import { Label } from "@/components/ui/label";
 import { useMartialArts } from "@/hooks/use-martial-arts";
+import { MissingReference } from "@/components/content/missing-reference";
 import { useSpecialties } from "@/hooks/use-specialties";
 import { SKILL_MAX } from "@/lib/character-schema";
 import { STAT_ABBR } from "@/lib/stat-abbr";
@@ -66,7 +67,11 @@ export function SkillsSection({ characterId, form, skills, onChange }: SkillsSec
     // A code from the list shows the name in the interface language; typed text (a style or a
     // language that is not in the list, which the GM may allow) shows as typed.
     const known = suggestionsOf(key.slice(0, key.indexOf(":"))).find((x) => x.code === name);
-    return known ? known.name : t(`skill.specialties.${name}`, { defaultValue: name });
+    if (known) return known.name;
+    // A martial art comes only from the downloaded list: once that is loaded, a code missing from it
+    // (another pack, a removed entry) says so instead of showing the bare code.
+    if (key.startsWith("martial_arts:") && styles.length > 0) return t("content.not_in_references", { name });
+    return t(`skill.specialties.${name}`, { defaultValue: name });
   };
   const rowsOf = (skill: Skill) =>
     Object.keys(values)
@@ -223,7 +228,8 @@ export function SkillsSection({ characterId, form, skills, onChange }: SkillsSec
         {rowsOf(skill)
           .filter((key) => rowVisible(key, nameMatches))
           .map((key) => (
-            <div key={key} className="flex items-center gap-2 pl-4">
+            <div key={key} className="space-y-1">
+            <div className="flex items-center gap-2 pl-4">
               <Label htmlFor={`skills.${key}`} className="flex-1 font-normal">
                 {styleOf(key) ? (
                   <Hint label={styleHint(styleOf(key)!)}>
@@ -247,6 +253,10 @@ export function SkillsSection({ characterId, form, skills, onChange }: SkillsSec
               >
                 ×
               </Button>
+            </div>
+            {key.startsWith("martial_arts:") && !styleOf(key) && (
+              <MissingReference className="pl-4" collection="martial_arts" listLoaded={styles.length > 0} />
+            )}
             </div>
           ))}
       </li>
