@@ -2,6 +2,20 @@
 
 Формат нужен CI релиза (`tools/upload-release.mjs`): раздел версии `## X.Y.Z`, внутри подразделы `### ru` и `### en`. Текст подраздела уходит на сервер как есть и показывается в приложении («Что нового») и на сайте. Релиз по тегу `vX.Y.Z` не соберётся, пока в этом файле нет раздела версии.
 
+## 0.9.4
+
+### ru
+
+- Справочники (оружие, броня, снаряжение, NPC и другой контент) теперь приходят с сервера: при первом запуске предлагается выбрать язык и режим (по запросу или только скачанное), потом всё доступно кнопкой «Справочники с сервера» в шапке. Подлинность данных проверяется подписью. Механики правил (травмы, навыки, роли, таблицы дальности) остаются встроенными и работают без сети.
+- В базе появились таблицы для сохранённых справочников (перед обновлением базы создаётся резервная копия).
+- Уведомление об обновлении при запуске не повторяется чаще раза в 6 часов, метка на кнопке «О приложении» остаётся.
+
+### en
+
+- References (weapons, armor, gear, NPCs and other content) now come from the server: the first start offers to choose the language and mode (on request or downloaded only), and everything is then available with the "Server references" button in the header. The data is checked by a signature. The rules mechanics (injuries, skills, roles, range tables) stay built in and work offline.
+- The database gets tables for the saved references (it is backed up before the upgrade).
+- The start-up update notice is not repeated more often than every 6 hours; the mark on the About button stays.
+
 ## 0.9.3
 
 ### ru

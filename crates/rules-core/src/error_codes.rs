@@ -68,12 +68,14 @@ impl ErrorInfo for DataError {
     fn code(&self) -> &'static str {
         match self {
             Self::Malformed { .. } => "data.malformed",
+            Self::Cache { .. } => "data.cache_failed",
         }
     }
 
     fn params(&self) -> Params {
         match self {
             Self::Malformed { name, .. } => params! { "name" => name },
+            Self::Cache { name, .. } => params! { "name" => name },
         }
     }
 }

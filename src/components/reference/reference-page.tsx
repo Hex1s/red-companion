@@ -14,6 +14,7 @@ import { modalOpen } from "@/lib/hotkeys";
 import { columnsOf, sortEntries } from "@/lib/reference-columns";
 import { entriesOf, fold, REFERENCE_SECTIONS } from "@/lib/reference-entries";
 import { cn } from "@/lib/utils";
+import { useContentStore } from "@/store/content-store";
 import { useUiStore } from "@/store/ui-store";
 import type { WeaponKind } from "@/bindings/WeaponKind";
 
@@ -25,6 +26,7 @@ export function ReferencePage() {
   const { referenceSection, setReferenceSection, referenceQuery, setReferenceQuery, referenceId, setReferenceId } =
     useUiStore();
   const data = useReferenceData();
+  const setContentOpen = useContentStore((s) => s.setManagerOpen);
   // Section filters; they are plain view state and reset with the page.
   const [weaponKind, setWeaponKind] = useState<WeaponKind | null>(null);
   const [onlyConcealable, setOnlyConcealable] = useState(false);
@@ -137,7 +139,14 @@ export function ReferencePage() {
                 </label>
               </div>
             )}
-            {shown.length === 0 ? (
+            {entries.length === 0 && hasBackend ? (
+              <div className="space-y-2 text-sm">
+                <p className="text-muted-foreground">{t("content.empty_hint")}</p>
+                <Button size="sm" variant="outline" onClick={() => setContentOpen(true)}>
+                  {t("content.button")}
+                </Button>
+              </div>
+            ) : shown.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("reference.nothing_found")}</p>
             ) : (
               <ReferenceTable

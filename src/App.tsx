@@ -1,10 +1,11 @@
-import { Info, Keyboard, PanelLeft, Search } from "@/components/ui/icons";
+import { ArrowDown, Info, Keyboard, PanelLeft, Search } from "@/components/ui/icons";
 import { useDeferredValue, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHotkeys } from "@/hooks/use-hotkeys";
 import { useLayoutMode } from "@/hooks/use-layout-mode";
 import { CombatDock } from "@/components/combat/combat-dock";
 import { AboutDialog } from "@/components/layout/about-dialog";
+import { ContentManager } from "@/components/content/content-manager";
 import { ShortcutsDialog } from "@/components/layout/shortcuts-dialog";
 import { formatHotkey } from "@/lib/hotkeys";
 import type { CharacterKind } from "@/bindings/CharacterKind";
@@ -53,6 +54,8 @@ import { SUPPORTED_LANGUAGES } from "@/i18n";
 import { status } from "@/store/status-store";
 import { useUpdateStore } from "@/store/update-store";
 import { useStartupUpdateCheck } from "@/hooks/use-startup-update-check";
+import { useContentBootstrap } from "@/hooks/use-content-bootstrap";
+import { useContentStore } from "@/store/content-store";
 import { useUiStore } from "@/store/ui-store";
 import { AppPath } from "@/components/layout/app-path";
 
@@ -107,6 +110,9 @@ export default function App() {
   const [aboutOpen, setAboutOpen] = useState(false);
   const updateAvailable = useUpdateStore((s) => s.available);
   useStartupUpdateCheck(() => setAboutOpen(true));
+  const contentOpen = useContentStore((s) => s.managerOpen);
+  const setContentOpen = useContentStore((s) => s.setManagerOpen);
+  const { firstRun, finishFirstRun } = useContentBootstrap();
   const [stabilizeTargetId, setStabilizeTargetId] = useState<number | null>(null);
   const [restTargetId, setRestTargetId] = useState<number | null>(null);
   const [humanityLossTargetId, setHumanityLossTargetId] = useState<number | null>(null);
@@ -780,6 +786,15 @@ export default function App() {
             <Button
               size="xs"
               variant="outline"
+              aria-label={t("content.button")}
+              title={t("content.button")}
+              onClick={() => setContentOpen(true)}
+            >
+              <ArrowDown className="size-4" />
+            </Button>
+            <Button
+              size="xs"
+              variant="outline"
               className="relative"
               aria-label={t("about.button")}
               title={updateAvailable ? t("about.button_update", { version: updateAvailable.version }) : t("about.button")}
@@ -987,6 +1002,14 @@ export default function App() {
             <ReferenceSearch open={searchOpen} onOpenChange={setSearchOpen} />
             <ShortcutsDialog open={helpOpen} onOpenChange={setHelpOpen} />
             <AboutDialog open={aboutOpen} onOpenChange={setAboutOpen} />
+            <ContentManager
+              open={contentOpen}
+              firstRun={firstRun}
+              onOpenChange={(open) => {
+                setContentOpen(open);
+                if (!open && firstRun) finishFirstRun();
+              }}
+            />
             <ImportDialog
               files={importFiles}
               onImport={async (name) => {

@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 mod error;
+mod content;
 mod picker;
 mod portrait;
 mod startup;
@@ -41,6 +42,7 @@ use rules_core::vitals::{self, DeathSaveApplied, STABILIZE_SKILLS, StabilizeAppl
 use rules_core::encounter::{
     self, Assessment, Encounter, EncounterRecord, TemplateSource, UserTemplateDoc, UserTemplateRecord,
 };
+use content_sync::CachedSource;
 use storage::{CharacterRow, DocRow, DocTable, Storage};
 use tauri::{AppHandle, Manager, State};
 #[cfg(desktop)]
@@ -58,10 +60,12 @@ pub struct AppStorage(pub Mutex<Storage>);
 /// snapshot stands in for it.
 pub struct ContentLang(pub Mutex<Lang>);
 
-/// Reference data source in the current content language.
-fn content(state: &State<'_, ContentLang>) -> Result<SeedDataSource, CmdError> {
-    let lang = *state.0.lock().map_err(|_| CmdError::locked("content language"))?;
-    Ok(SeedDataSource::new(lang))
+/// Reference data in the current content language: the mechanics are built in, the content comes
+/// from what was downloaded (empty until then). It locks the storage only while it reads, so call
+/// it before locking `AppStorage` and never while holding the guard.
+fn content<'a>(storage: &'a State<'_, AppStorage>, lang: &State<'_, ContentLang>) -> Result<CachedSource<'a, Mutex<Storage>>, CmdError> {
+    let lang = *lang.0.lock().map_err(|_| CmdError::locked("content language"))?;
+    Ok(CachedSource::new(&storage.0, lang))
 }
 
 /// Switches the content language (`ru`, `en`, `ru-RU`...); unknown codes mean English.
@@ -92,38 +96,38 @@ fn list_range_tables() -> Result<Vec<RangeTable>, CmdError> {
 }
 
 #[tauri::command]
-fn list_martial_arts(lang: State<'_, ContentLang>) -> Result<Vec<MartialArt>, CmdError> {
-    content(&lang)?.martial_arts().map(|c| c.entries).map_err(CmdError::from)
+fn list_martial_arts(state: State<'_, AppStorage>, lang: State<'_, ContentLang>) -> Result<Vec<MartialArt>, CmdError> {
+    content(&state, &lang)?.martial_arts().map(|c| c.entries).map_err(CmdError::from)
 }
 
 #[tauri::command]
-fn list_roles(lang: State<'_, ContentLang>) -> Result<Vec<Role>, CmdError> {
-    content(&lang)?.roles().map(|c| c.entries).map_err(CmdError::from)
+fn list_roles(state: State<'_, AppStorage>, lang: State<'_, ContentLang>) -> Result<Vec<Role>, CmdError> {
+    content(&state, &lang)?.roles().map(|c| c.entries).map_err(CmdError::from)
 }
 
 #[tauri::command]
-fn list_armor(lang: State<'_, ContentLang>) -> Result<Vec<Armor>, CmdError> {
-    content(&lang)?.armor().map(|c| c.entries).map_err(CmdError::from)
+fn list_armor(state: State<'_, AppStorage>, lang: State<'_, ContentLang>) -> Result<Vec<Armor>, CmdError> {
+    content(&state, &lang)?.armor().map(|c| c.entries).map_err(CmdError::from)
 }
 
 #[tauri::command]
-fn list_weapons(lang: State<'_, ContentLang>) -> Result<Vec<Weapon>, CmdError> {
-    content(&lang)?.weapons().map(|c| c.entries).map_err(CmdError::from)
+fn list_weapons(state: State<'_, AppStorage>, lang: State<'_, ContentLang>) -> Result<Vec<Weapon>, CmdError> {
+    content(&state, &lang)?.weapons().map(|c| c.entries).map_err(CmdError::from)
 }
 
 #[tauri::command]
-fn list_gear(lang: State<'_, ContentLang>) -> Result<Vec<GearItem>, CmdError> {
-    content(&lang)?.gear().map(|c| c.entries).map_err(CmdError::from)
+fn list_gear(state: State<'_, AppStorage>, lang: State<'_, ContentLang>) -> Result<Vec<GearItem>, CmdError> {
+    content(&state, &lang)?.gear().map(|c| c.entries).map_err(CmdError::from)
 }
 
 #[tauri::command]
-fn list_ammo(lang: State<'_, ContentLang>) -> Result<Vec<Ammo>, CmdError> {
-    content(&lang)?.ammo().map(|c| c.entries).map_err(CmdError::from)
+fn list_ammo(state: State<'_, AppStorage>, lang: State<'_, ContentLang>) -> Result<Vec<Ammo>, CmdError> {
+    content(&state, &lang)?.ammo().map(|c| c.entries).map_err(CmdError::from)
 }
 
 #[tauri::command]
-fn list_weapon_mods(lang: State<'_, ContentLang>) -> Result<Vec<WeaponMod>, CmdError> {
-    content(&lang)?.weapon_mods().map(|c| c.entries).map_err(CmdError::from)
+fn list_weapon_mods(state: State<'_, AppStorage>, lang: State<'_, ContentLang>) -> Result<Vec<WeaponMod>, CmdError> {
+    content(&state, &lang)?.weapon_mods().map(|c| c.entries).map_err(CmdError::from)
 }
 
 /// Magazine sizes by weapon class (core table, the same in every language).
@@ -134,18 +138,18 @@ fn list_magazines() -> Result<Vec<MagazineRow>, CmdError> {
 
 /// Suggested specialties of skills (languages, instruments); the sheet also accepts typed text.
 #[tauri::command]
-fn list_specialties(lang: State<'_, ContentLang>) -> Result<Vec<Specialty>, CmdError> {
-    content(&lang)?.specialties().map(|c| c.entries).map_err(CmdError::from)
+fn list_specialties(state: State<'_, AppStorage>, lang: State<'_, ContentLang>) -> Result<Vec<Specialty>, CmdError> {
+    content(&state, &lang)?.specialties().map(|c| c.entries).map_err(CmdError::from)
 }
 
 #[tauri::command]
-fn list_clothing(lang: State<'_, ContentLang>) -> Result<Vec<ClothingStyle>, CmdError> {
-    content(&lang)?.clothing().map(|c| c.entries).map_err(CmdError::from)
+fn list_clothing(state: State<'_, AppStorage>, lang: State<'_, ContentLang>) -> Result<Vec<ClothingStyle>, CmdError> {
+    content(&state, &lang)?.clothing().map(|c| c.entries).map_err(CmdError::from)
 }
 
 #[tauri::command]
-fn list_street_drugs(lang: State<'_, ContentLang>) -> Result<Vec<StreetDrug>, CmdError> {
-    content(&lang)?.street_drugs().map(|c| c.entries).map_err(CmdError::from)
+fn list_street_drugs(state: State<'_, AppStorage>, lang: State<'_, ContentLang>) -> Result<Vec<StreetDrug>, CmdError> {
+    content(&state, &lang)?.street_drugs().map(|c| c.entries).map_err(CmdError::from)
 }
 
 /// Price categories with their minimum prices (core table); the UI derives a price's category from it.
@@ -155,8 +159,8 @@ fn list_price_categories() -> Result<Vec<PriceCategory>, CmdError> {
 }
 
 #[tauri::command]
-fn list_npc_templates(lang: State<'_, ContentLang>) -> Result<Vec<NpcTemplate>, CmdError> {
-    content(&lang)?.npc_templates().map(|c| c.entries).map_err(CmdError::from)
+fn list_npc_templates(state: State<'_, AppStorage>, lang: State<'_, ContentLang>) -> Result<Vec<NpcTemplate>, CmdError> {
+    content(&state, &lang)?.npc_templates().map(|c| c.entries).map_err(CmdError::from)
 }
 
 /// Clones a ready-made NPC into a new NPC sheet: own HP and SP, so one
@@ -171,7 +175,7 @@ fn create_npc_from_template(
     notes: String,
     session_id: Option<i64>,
 ) -> Result<CharacterRecord, CmdError> {
-    let templates = content(&lang)?.npc_templates()?;
+    let templates = content(&state, &lang)?.npc_templates()?;
     let template = templates
         .entries
         .iter()
@@ -321,11 +325,11 @@ fn book_override(storage: &Storage, code: &str) -> Result<Option<UserTemplateRec
 /// changed (nothing is stored until the first edit, see `save_book_template_copy`).
 #[tauri::command]
 fn book_template_sheet(
-    lang: State<'_, ContentLang>,
+    state: State<'_, AppStorage>, lang: State<'_, ContentLang>,
     code: String,
     notes: String,
 ) -> Result<Character, CmdError> {
-    let templates = content(&lang)?.npc_templates()?;
+    let templates = content(&state, &lang)?.npc_templates()?;
     let template = templates
         .entries
         .iter()
@@ -349,7 +353,7 @@ fn save_book_template_copy(
     character.validate()?;
     let role_catalog = SeedDataSource::default().roles()?.entries;
     rules_core::roles::validate_against(&character.roles, &role_catalog)?;
-    let templates = content(&lang)?.npc_templates()?;
+    let templates = content(&state, &lang)?.npc_templates()?;
     let tier = templates
         .entries
         .iter()
@@ -389,7 +393,7 @@ fn assess_encounter(
     encounter: Encounter,
     players: u32,
 ) -> Result<Assessment, CmdError> {
-    let book = content(&lang)?.npc_templates()?;
+    let book = content(&state, &lang)?.npc_templates()?;
     let storage = lock(&state)?;
     let (mut weight, mut skipped) = (0, 0);
     for line in &encounter.entries {
@@ -789,18 +793,19 @@ fn export_encounters(
 #[tauri::command]
 fn import_encounter_file(
     state: State<'_, AppStorage>,
+    lang: State<'_, ContentLang>,
     dir: State<'_, ExportsDir>,
     name: String,
 ) -> Result<EncountersImported, CmdError> {
     let path = resolve_export(&dir.0, ExportKind::Encounters, &name)
         .ok_or_else(|| CmdError::wrong_file_kind(&name))?;
     let json = std::fs::read_to_string(path)?;
-    store_encounters_file(&state, &json)
+    store_encounters_file(&state, &lang, &json)
 }
 
 /// Validates an encounters file and stores its templates and encounters as new ones.
-fn store_encounters_file(state: &State<'_, AppStorage>, json: &str) -> Result<EncountersImported, CmdError> {
-    let file = encounter_transfer::parse_import(json, &SeedDataSource::default())?;
+fn store_encounters_file(state: &State<'_, AppStorage>, lang: &State<'_, ContentLang>, json: &str) -> Result<EncountersImported, CmdError> {
+    let file = encounter_transfer::parse_import(json, &content(state, lang)?)?;
     let storage = lock(state)?;
     let mut new_ids = std::collections::HashMap::new();
     let mut templates = Vec::new();
@@ -879,9 +884,10 @@ async fn import_picked_file(
 async fn import_picked_encounter_file(
     app: AppHandle,
     state: State<'_, AppStorage>,
+    lang: State<'_, ContentLang>,
 ) -> Result<Option<EncountersImported>, CmdError> {
     let Some(json) = picker::pick_and_read(&app).await? else { return Ok(None) };
-    store_encounters_file(&state, &json).map(Some)
+    store_encounters_file(&state, &lang, &json).map(Some)
 }
 
 /// Hands a file just written to the exports folder over to the system "save as" dialog. False when the
@@ -1320,8 +1326,8 @@ fn get_scene(state: State<'_, AppStorage>) -> Result<SceneRecord, CmdError> {
 }
 
 #[tauri::command]
-fn list_cover_presets(lang: State<'_, ContentLang>) -> Result<Vec<CoverPreset>, CmdError> {
-    cover_presets(&content(&lang)?).map_err(CmdError::from)
+fn list_cover_presets(state: State<'_, AppStorage>, lang: State<'_, ContentLang>) -> Result<Vec<CoverPreset>, CmdError> {
+    cover_presets(&content(&state, &lang)?).map_err(CmdError::from)
 }
 
 /// Adds a cover from a preset (`preset` = its id) or a hand-made one (`None`,
@@ -1336,7 +1342,7 @@ fn add_cover(
 ) -> Result<SceneRecord, CmdError> {
     let preset = match preset {
         Some(id) => Some(
-            cover_presets(&content(&lang)?)
+            cover_presets(&content(&state, &lang)?)
                 ?
                 .into_iter()
                 .find(|p| p.id == id)
@@ -2094,12 +2100,19 @@ pub fn run() {
             app.manage(AppStorage(Mutex::new(storage)));
             app.manage(ContentLang(Mutex::new(Lang::default())));
             app.manage(updater::PendingUpdate::default());
+            app.manage(content::SyncLock::default());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             rules_info,
             make_portrait,
             set_content_lang,
+            content::content_status,
+            content::set_content_settings,
+            content::set_pack_enabled,
+            content::delete_cached_content,
+            content::sync_content,
+            content::ensure_content,
             list_skills,
             list_articles,
             list_range_tables,

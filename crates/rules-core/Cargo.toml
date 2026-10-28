@@ -4,6 +4,11 @@ description = "Cyberpunk RED rules engine: pure Rust, no Tauri dependency"
 version.workspace = true
 edition.workspace = true
 
+[features]
+# Compiles the server-side content (weapons, armor, NPCs, ...) into the binary. Off in the app: that content
+# is downloaded. Tests of this crate always have it; other crates ask for it in their dev-dependencies.
+embedded-content = []
+
 [dependencies]
 base64 = "0.22"
 ed25519-dalek = { version = "2", default-features = false, features = ["std"] }

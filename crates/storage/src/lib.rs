@@ -1,14 +1,17 @@
 //! Local user storage on SQLite. Documents are opaque JSON strings here; their
-//! schema lives in `rules-core`.
+//! schema lives in `rules-core`. The content sync keeps its own tables (see `content`).
 
 use std::path::Path;
 use std::time::Duration;
 
 use rusqlite::{Connection, OptionalExtension, params};
 
+mod content;
 mod embedded {
     refinery::embed_migrations!("migrations");
 }
+
+pub use content::{CacheEntry, CachedCollection};
 
 #[derive(Debug, thiserror::Error)]
 pub enum StorageError {
@@ -590,7 +593,7 @@ mod tests {
     }
 
     /// A file as an older build left it: only the first migration applied, one character in it.
-    fn old_database(path: &Path) {
+    pub(crate) fn old_database(path: &Path) {
         let mut conn = Connection::open(path).unwrap();
         embedded::migrations::runner().set_target(refinery::Target::Version(1)).run(&mut conn).unwrap();
         conn.execute("INSERT INTO characters (kind, name, data) VALUES ('pc', 'V', '{}')", []).unwrap();

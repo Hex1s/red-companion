@@ -16,6 +16,7 @@ import type { Role } from "@/bindings/Role";
 import type { Skill } from "@/bindings/Skill";
 import type { Weapon } from "@/bindings/Weapon";
 import { api, hasBackend } from "@/lib/api";
+import { useContentStore } from "@/store/content-store";
 
 export type ReferenceData = {
   articles: Article[];
@@ -44,6 +45,7 @@ const EMPTY: ReferenceData = { articles: [], martialArts: [], injuries: [], cove
 export function useReferenceData(enabled = true): ReferenceData {
   const { i18n } = useTranslation();
   const [data, setData] = useState<ReferenceData>(EMPTY);
+  const contentVersion = useContentStore((s) => s.version);
 
   useEffect(() => {
     if (!hasBackend || !enabled) return;
@@ -76,7 +78,7 @@ export function useReferenceData(enabled = true): ReferenceData {
     return () => {
       cancelled = true;
     };
-  }, [i18n.language, enabled]);
+  }, [i18n.language, enabled, contentVersion]);
 
   return data;
 }

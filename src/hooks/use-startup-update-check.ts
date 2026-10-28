@@ -6,30 +6,30 @@ import { useUpdateStore } from "@/store/update-store";
 
 /** Wait a little after the start so the check never competes with the first screen. */
 const START_DELAY_MS = 8000;
-/** Restarting the app often does not ask the server every time. */
-const MIN_INTERVAL_MS = 6 * 60 * 60 * 1000;
-const LAST_CHECK_KEY = "rc.update.checked_at";
+/** The notice for one version is not repeated on every restart; the mark on the About button stays. */
+const NOTICE_INTERVAL_MS = 6 * 60 * 60 * 1000;
+const NOTICED_KEY = "rc.update.noticed";
 const NOTICE_MS = 12000;
 
-function recentlyChecked(): boolean {
+function alreadyNoticed(version: string): boolean {
   try {
-    const last = Number(window.localStorage.getItem(LAST_CHECK_KEY));
-    return Number.isFinite(last) && Date.now() - last < MIN_INTERVAL_MS;
+    const noticed = JSON.parse(window.localStorage.getItem(NOTICED_KEY) ?? "null") as { version?: string; at?: number } | null;
+    return noticed?.version === version && Date.now() - (noticed.at ?? 0) < NOTICE_INTERVAL_MS;
   } catch {
     return false;
   }
 }
 
-function rememberCheck() {
+function rememberNotice(version: string) {
   try {
-    window.localStorage.setItem(LAST_CHECK_KEY, String(Date.now()));
+    window.localStorage.setItem(NOTICED_KEY, JSON.stringify({ version, at: Date.now() }));
   } catch {
-    // The check just runs again on the next start.
+    // The notice just shows again on the next start.
   }
 }
 
 /**
- * Looks for a newer app version a few seconds after the start, quietly: no network or any error is
+ * Looks for a newer app version a few seconds after every start, quietly: no network or any error is
  * ignored (the About dialog reports errors of a manual check). Never installs anything, it only
  * tells: a notice in the status area and the mark on the About button (see `useUpdateStore`).
  */
@@ -38,15 +38,15 @@ export function useStartupUpdateCheck(openAbout: () => void) {
   const setAvailable = useUpdateStore((s) => s.setAvailable);
 
   useEffect(() => {
-    if (!hasBackend || recentlyChecked()) return;
+    if (!hasBackend) return;
     let cancelled = false;
     const timer = window.setTimeout(() => {
       api.checkUpdate().then(
         (found) => {
           if (cancelled) return;
-          rememberCheck();
           setAvailable(found);
-          if (!found) return;
+          if (!found || alreadyNoticed(found.version)) return;
+          rememberNotice(found.version);
           status.show({
             id: "update:available",
             kind: "info",

@@ -1,0 +1,21 @@
+[package]
+name = "content-sync"
+description = "Client of the Red Companion content server: registration, signed manifest, collection download. No Tauri."
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+rules-core = { path = "../rules-core" }
+storage = { path = "../storage" }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+
+[dev-dependencies]
+# The tests read the embedded content to build downloaded copies from.
+rules-core = { path = "../rules-core", features = ["embedded-content"] }
+base64 = "0.22"
+ed25519-dalek = { version = "2", default-features = false, features = ["std"] }
+tokio = { version = "1", features = ["macros", "rt"] }
+tempfile = "3"

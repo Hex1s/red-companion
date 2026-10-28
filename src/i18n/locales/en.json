@@ -1304,10 +1304,11 @@
       "unknown_injury": "Template “{{name}}”: unknown injury “{{injury}}”. The file may have been edited by hand.",
       "invalid_encounter": "Encounter “{{name}}”: {{cause}}",
       "missing_template": "Encounter “{{name}}”: its own template “{{key}}” is not in the file.",
-      "unknown_book_template": "Encounter “{{name}}”: the reference has no NPC “{{template}}”."
+      "unknown_book_template": "Encounter “{{name}}”: the reference has no NPC “{{template}}”. Download the NPC reference and import again."
     },
     "data": {
-      "malformed": "The reference “{{name}}” is damaged. Reinstall or update the app."
+      "malformed": "The reference “{{name}}” is damaged. Reinstall or update the app.",
+      "cache_failed": "The \"{{name}}\" reference could not be read from the saved data. Download it again."
     },
     "manifest": {
       "missing_signature": "Could not verify that the server data is genuine. Try again later or update the app.",
@@ -1321,6 +1322,27 @@
       "missing_field": "The reference entry “{{id}}” lacks data. Update the app.",
       "out_of_range": "The reference entry “{{id}}” has a value out of range. Update the app.",
       "incomplete_injury_table": "The injury table of area “{{area}}” is incomplete. Update the app."
+    },
+    "sync": {
+      "unreachable": "Could not reach the server. Check your connection and try again.",
+      "bad_response": "The server's answer was not understood. Try again later or update the app.",
+      "release_rollback": "The server offered older reference data than you have. Nothing was changed; try again later.",
+      "app_too_old": "The new reference data needs app version {{needed}} or newer. Open About and check for updates."
+    },
+    "server": {
+      "unauthorized": "The server did not recognise this installation. Try again: the app will register anew.",
+      "revoked": "This installation's access to the server has been closed. Update the app or contact the author.",
+      "rate_limited": "Too many requests. Wait a little and try again.",
+      "unavailable": "The server is temporarily unavailable. Try again later.",
+      "invalid_request": "The server rejected the request. Update the app.",
+      "bad_language": "The server does not support the chosen language. Update the app.",
+      "unknown_collection": "The server has no such reference. Refresh the list of references.",
+      "unknown_pack": "The server has no such pack. Refresh the list of references.",
+      "unknown_release": "The server does not know that version of the reference data. Refresh the list of references.",
+      "unknown": "The server returned an unknown error. Try again later or update the app."
+    },
+    "content": {
+      "invalid_settings": "Invalid reference settings: choose a mode and at least one language."
     },
     "updater": {
       "unavailable": "Could not reach the update server. Check your internet connection and try again a little later.",
@@ -1658,6 +1680,38 @@
       "contacts": "Contact lenses",
       "hats": "Hats"
     }
+  },
+  "content": {
+    "title": "Server references",
+    "description": "Weapons, armor, NPCs and other content come from the server. The rules mechanics are built into the app and work offline.",
+    "intro": "Choose the language of the references and how to get them. You can change this later with the \"Server references\" button in the header.",
+    "button": "Server references",
+    "mode": "Mode",
+    "mode_online": "On request",
+    "mode_local": "Downloaded only",
+    "mode_online_hint": "A reference is downloaded when it is needed and kept on the device. After that it works offline.",
+    "mode_local_hint": "Nothing is downloaded by itself: only what you download with the buttons below.",
+    "languages": "Reference languages",
+    "lang_ru": "Русский",
+    "lang_en": "English",
+    "not_checked": "The server has not been checked yet.",
+    "release": "References version: {{release}}",
+    "check": "Check the server",
+    "checking": "Checking…",
+    "checked": "Server checked, references version {{release}}.",
+    "download_all": "Download all",
+    "downloading": "Downloading…",
+    "downloaded": "Collections downloaded: {{count}}.",
+    "up_to_date": "Everything chosen is already downloaded.",
+    "packs": "Packs",
+    "no_packs": "The list of packs appears after the server is checked.",
+    "pack_download": "Download",
+    "pack_remove": "Delete downloaded",
+    "pack_have": "{{lang}}: {{have}} of {{total}}",
+    "skip": "Skip",
+    "open": "Open",
+    "fetch_failed": "Could not get the reference from the server: {{error}}",
+    "empty_hint": "The reference is empty. Download the data from the server."
   },
   "about": {
     "button": "About",

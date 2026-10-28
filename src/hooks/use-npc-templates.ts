@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { NpcTemplate } from "@/bindings/NpcTemplate";
 import { api, hasBackend } from "@/lib/api";
+import { useContentStore } from "@/store/content-store";
 import { errorMessage } from "@/lib/errors";
 import { status } from "@/store/status-store";
 
@@ -9,6 +10,7 @@ import { status } from "@/store/status-store";
 export function useNpcTemplates(): NpcTemplate[] {
   const { t, i18n } = useTranslation();
   const [templates, setTemplates] = useState<NpcTemplate[]>([]);
+  const contentVersion = useContentStore((s) => s.version);
 
   const load = useCallback(() => {
     api.listNpcTemplates(i18n.language).then(
@@ -24,7 +26,7 @@ export function useNpcTemplates(): NpcTemplate[] {
         });
       },
     );
-  }, [i18n.language, t]);
+  }, [i18n.language, t, contentVersion]);
 
   useEffect(() => {
     if (hasBackend) load();

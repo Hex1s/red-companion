@@ -67,6 +67,32 @@ async function inLanguage<T>(lang: string, load: () => Promise<T>): Promise<T> {
   return load();
 }
 
+/** Told when a collection could not be fetched on request; the UI decides whether to bother the user. */
+let ensureFailed: (error: unknown) => void = () => {};
+export function onContentFetchFailed(handler: (error: unknown) => void) {
+  ensureFailed = handler;
+}
+
+/**
+ * A list of server content (weapons, armor, NPCs...). Empty and the mode is "online": the backend
+ * downloads the collection now (data on request) and the list is read again. A failed download is
+ * reported, not thrown: the list is then simply empty.
+ */
+async function fromServer<T>(collections: string | string[], lang: string, load: () => Promise<T[]>): Promise<T[]> {
+  const list = await inLanguage(lang, load);
+  if (list.length > 0) return list;
+  let downloaded = 0;
+  try {
+    for (const collection of Array.isArray(collections) ? collections : [collections]) {
+      downloaded += await invoke<number>("ensure_content", { collection });
+    }
+  } catch (e) {
+    ensureFailed(e);
+    return list;
+  }
+  return downloaded > 0 ? inLanguage(lang, load) : list;
+}
+
 /**
  * The framed square of a picture: its centre as fractions of the width and height, and its side as a
  * fraction of the shorter side (1 = the biggest square). Mirrors `portrait::Crop` in Rust.
@@ -79,29 +105,66 @@ export const hasBackend = "__TAURI_INTERNALS__" in globalThis;
 /** A newer app version found on the server. */
 export type UpdateInfo = { version: string; notes: string | null };
 
+/** A pack of the server's content as the last accepted manifest lists it. */
+export type ContentPack = {
+  code: string;
+  kind: string;
+  /** Names and summaries by language (`ru`, `en`). */
+  name: Record<string, string>;
+  summary: Record<string, string>;
+  enabled: boolean;
+  /** Entries per collection. */
+  counts: Record<string, number>;
+  languages: string[];
+};
+
+export type ContentStatus = {
+  registered: boolean;
+  /** `online`: data on request; `local`: only what was downloaded on purpose. */
+  mode: "online" | "local";
+  langs: string[];
+  /** Newest content release accepted from the server. */
+  release: number | null;
+  packs: ContentPack[];
+  cached: { pack: string; collection: string; lang: string; release: number }[];
+};
+
+export type SyncRequest = { langs: string[]; packs?: string[] | null; collections?: string[] | null };
+export type SyncReport = { release: number; downloaded: number; unchanged: number };
+
 export const api = {
   /** `null` = this is the latest version. Throws a coded error when the server cannot be reached. */
   checkUpdate: () => invoke<UpdateInfo | null>("check_update"),
   /** Downloads and installs the update found by `checkUpdate` (progress arrives as `update-progress` events). `true`: restart now; `false` (Android): the system installer has taken over. */
   installUpdate: () => invoke<boolean>("install_update"),
   restartApp: () => invoke<void>("restart_app"),
-  listArmor: (lang: string) => inLanguage(lang, () => invoke<Armor[]>("list_armor")),
-  listWeapons: (lang: string) => inLanguage(lang, () => invoke<Weapon[]>("list_weapons")),
-  listGear: (lang: string) => inLanguage(lang, () => invoke<GearItem[]>("list_gear")),
-  listAmmo: (lang: string) => inLanguage(lang, () => invoke<Ammo[]>("list_ammo")),
-  listWeaponMods: (lang: string) => inLanguage(lang, () => invoke<WeaponMod[]>("list_weapon_mods")),
+  contentStatus: () => invoke<ContentStatus>("content_status"),
+  setContentSettings: (mode: ContentStatus["mode"], langs: string[]) => invoke<void>("set_content_settings", { mode, langs }),
+  setPackEnabled: (code: string, enabled: boolean) => invoke<void>("set_pack_enabled", { code, enabled }),
+  /** Deletes downloaded collections of a pack (narrowed to one collection and / or language); returns how many. */
+  deleteCachedContent: (pack: string, collection?: string, lang?: string) =>
+    invoke<number>("delete_cached_content", { pack, collection: collection ?? null, lang: lang ?? null }),
+  /** Checks the server and downloads what the request names; empty `langs` only refreshes the manifest. */
+  syncContent: (request: SyncRequest) => invoke<SyncReport>("sync_content", { request }),
+  /** Data on request: downloads a collection when the mode is `online` and none of it is cached; returns how many. */
+  ensureContent: (collection: string) => invoke<number>("ensure_content", { collection }),
+  listArmor: (lang: string) => fromServer("armor", lang, () => invoke<Armor[]>("list_armor")),
+  listWeapons: (lang: string) => fromServer("weapons", lang, () => invoke<Weapon[]>("list_weapons")),
+  listGear: (lang: string) => fromServer("gear", lang, () => invoke<GearItem[]>("list_gear")),
+  listAmmo: (lang: string) => fromServer("ammo", lang, () => invoke<Ammo[]>("list_ammo")),
+  listWeaponMods: (lang: string) => fromServer("weapon_mods", lang, () => invoke<WeaponMod[]>("list_weapon_mods")),
   listMagazines: () => invoke<MagazineRow[]>("list_magazines"),
   listPriceCategories: () => invoke<PriceCategory[]>("list_price_categories"),
-  listClothing: (lang: string) => inLanguage(lang, () => invoke<ClothingStyle[]>("list_clothing")),
-  listStreetDrugs: (lang: string) => inLanguage(lang, () => invoke<StreetDrug[]>("list_street_drugs")),
+  listClothing: (lang: string) => fromServer("clothing", lang, () => invoke<ClothingStyle[]>("list_clothing")),
+  listStreetDrugs: (lang: string) => fromServer("street_drugs", lang, () => invoke<StreetDrug[]>("list_street_drugs")),
   listSpecialties: (lang: string) => inLanguage(lang, () => invoke<Specialty[]>("list_specialties")),
   listSkills: () => invoke<Skill[]>("list_skills"),
   listArticles: () => invoke<Article[]>("list_articles"),
   listRangeTables: () => invoke<RangeTable[]>("list_range_tables"),
-  listMartialArts: (lang: string) => inLanguage(lang, () => invoke<MartialArt[]>("list_martial_arts")),
+  listMartialArts: (lang: string) => fromServer("martial_arts", lang, () => invoke<MartialArt[]>("list_martial_arts")),
   listRoles: (lang: string) => inLanguage(lang, () => invoke<Role[]>("list_roles")),
   listNpcTemplates: (lang: string) =>
-    inLanguage(lang, () => invoke<NpcTemplate[]>("list_npc_templates")),
+    fromServer("npc_templates", lang, () => invoke<NpcTemplate[]>("list_npc_templates")),
   /** Clones a ready-made NPC into a new NPC sheet; `notes` is the localized weapons and gear text. */
   /** A fresh NPC copy (an instance) in `sessionId`, or in the active session when `null`. */
   createNpcFromTemplate: (templateId: string, name: string, notes: string, sessionId: number | null = null) =>
@@ -206,7 +269,7 @@ export const api = {
     invoke<ExplorerNode[]>("remove_from_container", { containerId, characterId }),
   getScene: () => invoke<SceneRecord>("get_scene"),
   listCoverPresets: (lang: string) =>
-    inLanguage(lang, () => invoke<CoverPreset[]>("list_cover_presets")),
+    fromServer(["cover_materials", "shields"], lang, () => invoke<CoverPreset[]>("list_cover_presets")),
   addCover: (preset: string | null, name: string, hp: number | null) =>
     invoke<SceneRecord>("add_cover", { preset, name, hp }),
   editCover: (coverId: number, name: string, hp: number, maxHp: number) =>

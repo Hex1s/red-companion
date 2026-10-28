@@ -1,9 +1,9 @@
 [workspace]
 resolver = "3"
-members = ["src-tauri", "crates/rules-core", "crates/storage"]
+members = ["src-tauri", "crates/rules-core", "crates/storage", "crates/content-sync"]
 
 [workspace.package]
-version = "0.9.3"
+version = "0.9.4"
 edition = "2024"
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration

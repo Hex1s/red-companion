@@ -43,6 +43,10 @@ impl CmdError {
         Self::new("folder.invalid_parent", Params::new(), "a folder can only sit in a root folder".to_string())
     }
 
+    pub fn invalid_content_settings() -> Self {
+        Self::new("content.invalid_settings", Params::new(), "invalid content settings".to_string())
+    }
+
     pub fn nothing_to_export() -> Self {
         Self::new("transfer.nothing_to_export", Params::new(), "nothing to export".to_string())
     }
@@ -149,6 +153,7 @@ from_rules_error!(
     rules_core::skill_check::SkillCheckError,
     rules_core::transfer::TransferError,
     rules_core::vitals::VitalsError,
+    content_sync::SyncError,
 );
 
 impl From<storage::StorageError> for CmdError {
@@ -284,6 +289,21 @@ mod tests {
                 "updater.bad_checksum",
                 "updater.install_permission",
                 "updater.failed",
+                "content.invalid_settings",
+                "sync.unreachable",
+                "sync.bad_response",
+                "sync.release_rollback",
+                "sync.app_too_old",
+                "server.unauthorized",
+                "server.revoked",
+                "server.rate_limited",
+                "server.unavailable",
+                "server.invalid_request",
+                "server.bad_language",
+                "server.unknown_collection",
+                "server.unknown_pack",
+                "server.unknown_release",
+                "server.unknown",
             ]
             .map(String::from),
         );

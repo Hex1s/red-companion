@@ -14,6 +14,9 @@ use crate::catalog::{
 pub enum DataError {
     #[error("collection {name:?} is malformed: {source}")]
     Malformed { name: &'static str, source: serde_json::Error },
+    /// The downloaded copy could not be read from the local cache.
+    #[error("collection {name:?} could not be read from the cache: {reason}")]
+    Cache { name: &'static str, reason: String },
 }
 
 pub type DataResult<T> = Result<T, DataError>;
@@ -117,7 +120,7 @@ fn parse<T: serde::de::DeserializeOwned>(
     serde_json::from_str(json).map_err(|source| DataError::Malformed { name, source })
 }
 
-/// Picks the compiled-in file of a content collection by language.
+/// Picks the compiled-in file of a content collection by language (roles, specialties: mechanics).
 macro_rules! content {
     ($lang:expr, $name:literal) => {
         match $lang {
@@ -127,33 +130,50 @@ macro_rules! content {
     };
 }
 
+/// Server content (weapons, armor, NPCs, ...): compiled in only for tests and with the
+/// `embedded-content` feature; the app gets it by download and starts with empty collections.
+#[cfg(any(test, feature = "embedded-content"))]
+macro_rules! server_content {
+    ($lang:expr, $name:literal) => {
+        content!($lang, $name)
+    };
+}
+
+#[cfg(not(any(test, feature = "embedded-content")))]
+macro_rules! server_content {
+    ($lang:expr, $name:literal) => {{
+        let _ = $lang;
+        Ok(Collection { name: $name.to_string(), version: 0, entries: Vec::new() })
+    }};
+}
+
 impl DataSource for SeedDataSource {
     fn critical_injuries(&self) -> DataResult<Collection<CriticalInjury>> {
         parse("critical_injuries", include_str!("../data/seed/critical_injuries.json"))
     }
     fn cover_materials(&self) -> DataResult<Collection<CoverMaterial>> {
-        content!(self.lang, "cover_materials")
+        server_content!(self.lang, "cover_materials")
     }
     fn armor(&self) -> DataResult<Collection<Armor>> {
-        content!(self.lang, "armor")
+        server_content!(self.lang, "armor")
     }
     fn shields(&self) -> DataResult<Collection<Shield>> {
-        content!(self.lang, "shields")
+        server_content!(self.lang, "shields")
     }
     fn weapons(&self) -> DataResult<Collection<Weapon>> {
-        content!(self.lang, "weapons")
+        server_content!(self.lang, "weapons")
     }
     fn skills(&self) -> DataResult<Collection<Skill>> {
         parse("skills", include_str!("../data/seed/skills.json"))
     }
     fn npc_templates(&self) -> DataResult<Collection<NpcTemplate>> {
-        content!(self.lang, "npc_templates")
+        server_content!(self.lang, "npc_templates")
     }
     fn roles(&self) -> DataResult<Collection<Role>> {
         content!(self.lang, "roles")
     }
     fn martial_arts(&self) -> DataResult<Collection<MartialArt>> {
-        content!(self.lang, "martial_arts")
+        server_content!(self.lang, "martial_arts")
     }
     fn articles(&self) -> DataResult<Collection<Article>> {
         parse("rules", include_str!("../data/seed/rules.json"))
@@ -162,13 +182,13 @@ impl DataSource for SeedDataSource {
         parse("range_tables", include_str!("../data/seed/range_tables.json"))
     }
     fn gear(&self) -> DataResult<Collection<GearItem>> {
-        content!(self.lang, "gear")
+        server_content!(self.lang, "gear")
     }
     fn ammo(&self) -> DataResult<Collection<Ammo>> {
-        content!(self.lang, "ammo")
+        server_content!(self.lang, "ammo")
     }
     fn weapon_mods(&self) -> DataResult<Collection<WeaponMod>> {
-        content!(self.lang, "weapon_mods")
+        server_content!(self.lang, "weapon_mods")
     }
     fn magazines(&self) -> DataResult<Collection<MagazineRow>> {
         parse("magazines", include_str!("../data/seed/magazines.json"))
@@ -180,10 +200,10 @@ impl DataSource for SeedDataSource {
         content!(self.lang, "specialties")
     }
     fn clothing(&self) -> DataResult<Collection<ClothingStyle>> {
-        content!(self.lang, "clothing")
+        server_content!(self.lang, "clothing")
     }
     fn street_drugs(&self) -> DataResult<Collection<StreetDrug>> {
-        content!(self.lang, "street_drugs")
+        server_content!(self.lang, "street_drugs")
     }
 }
 

@@ -27,6 +27,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 rules-core = { path = "../crates/rules-core" }
 storage = { path = "../crates/storage" }
+content-sync = { path = "../crates/content-sync" }
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp", "bmp"] }
 webp = "0.3"
 base64 = "0.22"
@@ -42,4 +43,5 @@ sha2 = "0.10"
 
 [dev-dependencies]
 tempfile = "3"
+rules-core = { path = "../crates/rules-core", features = ["embedded-content"] }
 

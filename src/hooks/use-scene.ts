@@ -4,6 +4,7 @@ import type { CoverPreset } from "@/bindings/CoverPreset";
 import type { Scene } from "@/bindings/Scene";
 import type { SceneRecord } from "@/bindings/SceneRecord";
 import { api, hasBackend } from "@/lib/api";
+import { useContentStore } from "@/store/content-store";
 import { status } from "@/store/status-store";
 import { errorMessage } from "@/lib/errors";
 
@@ -41,11 +42,12 @@ export function useScene(sessionId: number | null) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, attempt]);
 
-  // Presets are server content: names follow the language.
+  // Presets are server content: names follow the language, and they load again after a download.
+  const contentVersion = useContentStore((s) => s.version);
   useEffect(() => {
     if (!hasBackend) return;
     api.listCoverPresets(i18n.language).then(setPresets, (e: unknown) => setError(e ?? "unknown"));
-  }, [i18n.language]);
+  }, [i18n.language, contentVersion]);
 
   /** Runs a scene command; the backend answers with the whole updated scene. */
   const run = useCallback(async (command: Promise<SceneRecord>) => {
