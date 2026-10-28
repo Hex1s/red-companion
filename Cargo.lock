@@ -560,7 +560,7 @@ checksum = "a6ef517f0926dd24a1582492c791b6a4818a4d94e789a334894aa15b0d12f55c"
 
 [[package]]
 name = "content-sync"
-version = "0.9.4"
+version = "1.0.0"
 dependencies = [
  "base64 0.22.1",
  "ed25519-dalek",
@@ -3252,7 +3252,7 @@ checksum = "20675572f6f24e9e76ef639bc5552774ed45f1c30e2951e1e99c59888861c539"
 
 [[package]]
 name = "red-companion"
-version = "0.9.4"
+version = "1.0.0"
 dependencies = [
  "base64 0.22.1",
  "content-sync",
@@ -3502,7 +3502,7 @@ dependencies = [
 
 [[package]]
 name = "rules-core"
-version = "0.9.4"
+version = "1.0.0"
 dependencies = [
  "base64 0.22.1",
  "ed25519-dalek",
@@ -4145,7 +4145,7 @@ checksum = "ff7589a1859b09232522bb9edf076ca7fcf14ded96685d3fa629db73023ffbb7"
 
 [[package]]
 name = "storage"
-version = "0.9.4"
+version = "1.0.0"
 dependencies = [
  "refinery",
  "rusqlite",
