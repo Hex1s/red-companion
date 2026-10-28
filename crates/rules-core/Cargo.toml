@@ -5,6 +5,8 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+base64 = "0.22"
+ed25519-dalek = { version = "2", default-features = false, features = ["std"] }
 rand = "0.10.3"
 schemars = "1.2.3"
 serde = { version = "1", features = ["derive"] }

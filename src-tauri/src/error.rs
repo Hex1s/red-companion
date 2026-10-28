@@ -142,6 +142,7 @@ from_rules_error!(
     rules_core::healing::HealingError,
     rules_core::humanity::HumanityError,
     rules_core::initiative::InitiativeError,
+    rules_core::manifest::ManifestError,
     rules_core::roles::DrugError,
     rules_core::roles::RoleError,
     rules_core::scene::SceneError,

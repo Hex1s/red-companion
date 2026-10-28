@@ -51,6 +51,8 @@ import type { EncounterRecord } from "@/bindings/EncounterRecord";
 import type { UserTemplateRecord } from "@/bindings/UserTemplateRecord";
 import { SUPPORTED_LANGUAGES } from "@/i18n";
 import { status } from "@/store/status-store";
+import { useUpdateStore } from "@/store/update-store";
+import { useStartupUpdateCheck } from "@/hooks/use-startup-update-check";
 import { useUiStore } from "@/store/ui-store";
 import { AppPath } from "@/components/layout/app-path";
 
@@ -103,6 +105,8 @@ export default function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const updateAvailable = useUpdateStore((s) => s.available);
+  useStartupUpdateCheck(() => setAboutOpen(true));
   const [stabilizeTargetId, setStabilizeTargetId] = useState<number | null>(null);
   const [restTargetId, setRestTargetId] = useState<number | null>(null);
   const [humanityLossTargetId, setHumanityLossTargetId] = useState<number | null>(null);
@@ -776,11 +780,13 @@ export default function App() {
             <Button
               size="xs"
               variant="outline"
+              className="relative"
               aria-label={t("about.button")}
-              title={t("about.button")}
+              title={updateAvailable ? t("about.button_update", { version: updateAvailable.version }) : t("about.button")}
               onClick={() => setAboutOpen(true)}
             >
               <Info className="size-4" />
+              {updateAvailable && <span className="absolute -top-0.5 -right-0.5 size-2 bg-primary" aria-hidden />}
             </Button>
             <div className="flex gap-1">
               {SUPPORTED_LANGUAGES.map((lng) => (

@@ -16,6 +16,7 @@ mod error_codes;
 pub mod healing;
 pub mod humanity;
 pub mod initiative;
+pub mod manifest;
 pub mod roles;
 pub mod scene;
 pub mod skill_check;

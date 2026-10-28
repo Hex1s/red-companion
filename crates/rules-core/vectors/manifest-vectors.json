@@ -1,0 +1,380 @@
+{
+  "description": "Ed25519 over the canonical JSON (keys sorted, no whitespace, UTF-8) of the manifest without `signature`; signature is base64. `canonical` is exactly the signed text. The key is for these vectors only.",
+  "public_key": "8ohTa12MorBW6TrnFOEhw9aDofmsbW9mVzrgWUbki0g=",
+  "cases": [
+    {
+      "name": "content_only",
+      "valid": true,
+      "canonical": "{\"content\":{\"languages\":[\"ru\",\"en\"],\"locales\":{\"en\":\"d75e190f771c951e8a7641ef6cf48545827d9a7a361361b1947f5fb632e10271\",\"ru\":\"943731297f15a4328d5694fc99e6558517422d27fed7a4f9103380ee24fc2c9e\"},\"min_app_version\":\"0.1.0\",\"note\":{\"en\":\"Fixes and new entries\",\"ru\":\"Исправления и новые записи\"},\"packs\":{\"core\":{\"collections\":{\"en\":{\"armor\":\"56ce7ffc5760e11ff6f8b94eb9327162660c20f2a6517c5c305cad0ee6d35faf\",\"weapons\":\"3d45160f43719601c60c79313f88639a6cff906feaebbf63ddbb5203229cf6a5\"},\"ru\":{\"armor\":\"0c91edf411394e065eef8d2318fc4b9697ce649672a5fdad3f85d6583f0ae3da\",\"weapons\":\"560881842f5a43e8c60b8aa8374039cc5be074ca540223985aa7419f728e1aed\"}},\"counts\":{\"armor\":1,\"weapons\":2},\"hash\":\"a7ae86c72b2ad0d9db127f5bc7bf5c44717c1eb55360be473095eddda7cd317d\",\"kind\":\"core\",\"name\":{\"en\":\"Core Rulebook\",\"ru\":\"Основная книга\"},\"position\":0,\"summary\":{\"en\":\"Core rules\",\"ru\":\"Базовые правила\"}}},\"release\":3,\"root\":\"4813494d137e1631bba301d5acab6e7bb7aa74ce1185d456565ef51d737677b2\"},\"issued_at\":\"2026-10-27T09:00:00.000Z\",\"schema_version\":1}",
+      "document": {
+        "schema_version": 1,
+        "issued_at": "2026-10-27T09:00:00.000Z",
+        "content": {
+          "release": 3,
+          "root": "4813494d137e1631bba301d5acab6e7bb7aa74ce1185d456565ef51d737677b2",
+          "min_app_version": "0.1.0",
+          "note": {
+            "ru": "Исправления и новые записи",
+            "en": "Fixes and new entries"
+          },
+          "languages": [
+            "ru",
+            "en"
+          ],
+          "packs": {
+            "core": {
+              "kind": "core",
+              "position": 0,
+              "name": {
+                "ru": "Основная книга",
+                "en": "Core Rulebook"
+              },
+              "summary": {
+                "ru": "Базовые правила",
+                "en": "Core rules"
+              },
+              "hash": "a7ae86c72b2ad0d9db127f5bc7bf5c44717c1eb55360be473095eddda7cd317d",
+              "counts": {
+                "weapons": 2,
+                "armor": 1
+              },
+              "collections": {
+                "ru": {
+                  "weapons": "560881842f5a43e8c60b8aa8374039cc5be074ca540223985aa7419f728e1aed",
+                  "armor": "0c91edf411394e065eef8d2318fc4b9697ce649672a5fdad3f85d6583f0ae3da"
+                },
+                "en": {
+                  "weapons": "3d45160f43719601c60c79313f88639a6cff906feaebbf63ddbb5203229cf6a5",
+                  "armor": "56ce7ffc5760e11ff6f8b94eb9327162660c20f2a6517c5c305cad0ee6d35faf"
+                }
+              }
+            }
+          },
+          "locales": {
+            "ru": "943731297f15a4328d5694fc99e6558517422d27fed7a4f9103380ee24fc2c9e",
+            "en": "d75e190f771c951e8a7641ef6cf48545827d9a7a361361b1947f5fb632e10271"
+          }
+        },
+        "signature": "7zg43pWXSmEhpa/xqhP+X8kEnp9+3rmswoIvvhcTawRlRL4geXt19nshZtyAtWCX7ZT6bgK8KO1k1sAfttzsCw=="
+      }
+    },
+    {
+      "name": "with_app_block",
+      "valid": true,
+      "canonical": "{\"app\":{\"android\":{\"sha256\":\"dd37c2d7274f7ea982cb83390c36918fee9ce8889073c44b68cdc00bdb8c3e04\",\"size\":31457280,\"url\":\"/api/v1/download/android\",\"version\":\"1.0.1\"},\"changelog_url\":\"/api/v1/app/changelog?lang=\",\"issued_at\":\"2026-10-27T12:34:56.000Z\",\"latest\":\"1.0.1\",\"min_supported\":\"1.0.0\",\"published_at\":\"2026-10-27T10:00:00.000Z\",\"update_url\":\"/api/v1/app/update/{target}/{arch}/{current_version}\"},\"content\":{\"languages\":[\"ru\",\"en\"],\"locales\":{\"en\":\"d75e190f771c951e8a7641ef6cf48545827d9a7a361361b1947f5fb632e10271\",\"ru\":\"943731297f15a4328d5694fc99e6558517422d27fed7a4f9103380ee24fc2c9e\"},\"min_app_version\":\"0.1.0\",\"note\":{\"en\":\"Fixes and new entries\",\"ru\":\"Исправления и новые записи\"},\"packs\":{\"core\":{\"collections\":{\"en\":{\"armor\":\"56ce7ffc5760e11ff6f8b94eb9327162660c20f2a6517c5c305cad0ee6d35faf\",\"weapons\":\"3d45160f43719601c60c79313f88639a6cff906feaebbf63ddbb5203229cf6a5\"},\"ru\":{\"armor\":\"0c91edf411394e065eef8d2318fc4b9697ce649672a5fdad3f85d6583f0ae3da\",\"weapons\":\"560881842f5a43e8c60b8aa8374039cc5be074ca540223985aa7419f728e1aed\"}},\"counts\":{\"armor\":1,\"weapons\":2},\"hash\":\"a7ae86c72b2ad0d9db127f5bc7bf5c44717c1eb55360be473095eddda7cd317d\",\"kind\":\"core\",\"name\":{\"en\":\"Core Rulebook\",\"ru\":\"Основная книга\"},\"position\":0,\"summary\":{\"en\":\"Core rules\",\"ru\":\"Базовые правила\"}}},\"release\":3,\"root\":\"4813494d137e1631bba301d5acab6e7bb7aa74ce1185d456565ef51d737677b2\"},\"issued_at\":\"2026-10-27T09:00:00.000Z\",\"schema_version\":1}",
+      "document": {
+        "schema_version": 1,
+        "issued_at": "2026-10-27T09:00:00.000Z",
+        "content": {
+          "release": 3,
+          "root": "4813494d137e1631bba301d5acab6e7bb7aa74ce1185d456565ef51d737677b2",
+          "min_app_version": "0.1.0",
+          "note": {
+            "ru": "Исправления и новые записи",
+            "en": "Fixes and new entries"
+          },
+          "languages": [
+            "ru",
+            "en"
+          ],
+          "packs": {
+            "core": {
+              "kind": "core",
+              "position": 0,
+              "name": {
+                "ru": "Основная книга",
+                "en": "Core Rulebook"
+              },
+              "summary": {
+                "ru": "Базовые правила",
+                "en": "Core rules"
+              },
+              "hash": "a7ae86c72b2ad0d9db127f5bc7bf5c44717c1eb55360be473095eddda7cd317d",
+              "counts": {
+                "weapons": 2,
+                "armor": 1
+              },
+              "collections": {
+                "ru": {
+                  "weapons": "560881842f5a43e8c60b8aa8374039cc5be074ca540223985aa7419f728e1aed",
+                  "armor": "0c91edf411394e065eef8d2318fc4b9697ce649672a5fdad3f85d6583f0ae3da"
+                },
+                "en": {
+                  "weapons": "3d45160f43719601c60c79313f88639a6cff906feaebbf63ddbb5203229cf6a5",
+                  "armor": "56ce7ffc5760e11ff6f8b94eb9327162660c20f2a6517c5c305cad0ee6d35faf"
+                }
+              }
+            }
+          },
+          "locales": {
+            "ru": "943731297f15a4328d5694fc99e6558517422d27fed7a4f9103380ee24fc2c9e",
+            "en": "d75e190f771c951e8a7641ef6cf48545827d9a7a361361b1947f5fb632e10271"
+          }
+        },
+        "app": {
+          "latest": "1.0.1",
+          "min_supported": "1.0.0",
+          "published_at": "2026-10-27T10:00:00.000Z",
+          "changelog_url": "/api/v1/app/changelog?lang=",
+          "update_url": "/api/v1/app/update/{target}/{arch}/{current_version}",
+          "issued_at": "2026-10-27T12:34:56.000Z",
+          "android": {
+            "version": "1.0.1",
+            "url": "/api/v1/download/android",
+            "sha256": "dd37c2d7274f7ea982cb83390c36918fee9ce8889073c44b68cdc00bdb8c3e04",
+            "size": 31457280
+          }
+        },
+        "signature": "q9X8V1IA3vpfpXs8rClwHBucs0UpjYzA88f2b5YDVTVDe8LDipJ4Yg7NZ3FHgSxssemCW5pTcSZblfPbuNlZAA=="
+      }
+    },
+    {
+      "name": "tampered_release_number",
+      "valid": false,
+      "document": {
+        "schema_version": 1,
+        "issued_at": "2026-10-27T09:00:00.000Z",
+        "content": {
+          "release": 4,
+          "root": "4813494d137e1631bba301d5acab6e7bb7aa74ce1185d456565ef51d737677b2",
+          "min_app_version": "0.1.0",
+          "note": {
+            "ru": "Исправления и новые записи",
+            "en": "Fixes and new entries"
+          },
+          "languages": [
+            "ru",
+            "en"
+          ],
+          "packs": {
+            "core": {
+              "kind": "core",
+              "position": 0,
+              "name": {
+                "ru": "Основная книга",
+                "en": "Core Rulebook"
+              },
+              "summary": {
+                "ru": "Базовые правила",
+                "en": "Core rules"
+              },
+              "hash": "a7ae86c72b2ad0d9db127f5bc7bf5c44717c1eb55360be473095eddda7cd317d",
+              "counts": {
+                "weapons": 2,
+                "armor": 1
+              },
+              "collections": {
+                "ru": {
+                  "weapons": "560881842f5a43e8c60b8aa8374039cc5be074ca540223985aa7419f728e1aed",
+                  "armor": "0c91edf411394e065eef8d2318fc4b9697ce649672a5fdad3f85d6583f0ae3da"
+                },
+                "en": {
+                  "weapons": "3d45160f43719601c60c79313f88639a6cff906feaebbf63ddbb5203229cf6a5",
+                  "armor": "56ce7ffc5760e11ff6f8b94eb9327162660c20f2a6517c5c305cad0ee6d35faf"
+                }
+              }
+            }
+          },
+          "locales": {
+            "ru": "943731297f15a4328d5694fc99e6558517422d27fed7a4f9103380ee24fc2c9e",
+            "en": "d75e190f771c951e8a7641ef6cf48545827d9a7a361361b1947f5fb632e10271"
+          }
+        },
+        "signature": "7zg43pWXSmEhpa/xqhP+X8kEnp9+3rmswoIvvhcTawRlRL4geXt19nshZtyAtWCX7ZT6bgK8KO1k1sAfttzsCw=="
+      }
+    },
+    {
+      "name": "tampered_app_block",
+      "valid": false,
+      "document": {
+        "schema_version": 1,
+        "issued_at": "2026-10-27T09:00:00.000Z",
+        "content": {
+          "release": 3,
+          "root": "4813494d137e1631bba301d5acab6e7bb7aa74ce1185d456565ef51d737677b2",
+          "min_app_version": "0.1.0",
+          "note": {
+            "ru": "Исправления и новые записи",
+            "en": "Fixes and new entries"
+          },
+          "languages": [
+            "ru",
+            "en"
+          ],
+          "packs": {
+            "core": {
+              "kind": "core",
+              "position": 0,
+              "name": {
+                "ru": "Основная книга",
+                "en": "Core Rulebook"
+              },
+              "summary": {
+                "ru": "Базовые правила",
+                "en": "Core rules"
+              },
+              "hash": "a7ae86c72b2ad0d9db127f5bc7bf5c44717c1eb55360be473095eddda7cd317d",
+              "counts": {
+                "weapons": 2,
+                "armor": 1
+              },
+              "collections": {
+                "ru": {
+                  "weapons": "560881842f5a43e8c60b8aa8374039cc5be074ca540223985aa7419f728e1aed",
+                  "armor": "0c91edf411394e065eef8d2318fc4b9697ce649672a5fdad3f85d6583f0ae3da"
+                },
+                "en": {
+                  "weapons": "3d45160f43719601c60c79313f88639a6cff906feaebbf63ddbb5203229cf6a5",
+                  "armor": "56ce7ffc5760e11ff6f8b94eb9327162660c20f2a6517c5c305cad0ee6d35faf"
+                }
+              }
+            }
+          },
+          "locales": {
+            "ru": "943731297f15a4328d5694fc99e6558517422d27fed7a4f9103380ee24fc2c9e",
+            "en": "d75e190f771c951e8a7641ef6cf48545827d9a7a361361b1947f5fb632e10271"
+          }
+        },
+        "app": {
+          "latest": "1.0.1",
+          "min_supported": "0.0.0",
+          "published_at": "2026-10-27T10:00:00.000Z",
+          "changelog_url": "/api/v1/app/changelog?lang=",
+          "update_url": "/api/v1/app/update/{target}/{arch}/{current_version}",
+          "issued_at": "2026-10-27T12:34:56.000Z",
+          "android": {
+            "version": "1.0.1",
+            "url": "/api/v1/download/android",
+            "sha256": "dd37c2d7274f7ea982cb83390c36918fee9ce8889073c44b68cdc00bdb8c3e04",
+            "size": 31457280
+          }
+        },
+        "signature": "q9X8V1IA3vpfpXs8rClwHBucs0UpjYzA88f2b5YDVTVDe8LDipJ4Yg7NZ3FHgSxssemCW5pTcSZblfPbuNlZAA=="
+      }
+    },
+    {
+      "name": "app_block_stripped_from_signed_document",
+      "valid": false,
+      "document": {
+        "schema_version": 1,
+        "issued_at": "2026-10-27T09:00:00.000Z",
+        "content": {
+          "release": 3,
+          "root": "4813494d137e1631bba301d5acab6e7bb7aa74ce1185d456565ef51d737677b2",
+          "min_app_version": "0.1.0",
+          "note": {
+            "ru": "Исправления и новые записи",
+            "en": "Fixes and new entries"
+          },
+          "languages": [
+            "ru",
+            "en"
+          ],
+          "packs": {
+            "core": {
+              "kind": "core",
+              "position": 0,
+              "name": {
+                "ru": "Основная книга",
+                "en": "Core Rulebook"
+              },
+              "summary": {
+                "ru": "Базовые правила",
+                "en": "Core rules"
+              },
+              "hash": "a7ae86c72b2ad0d9db127f5bc7bf5c44717c1eb55360be473095eddda7cd317d",
+              "counts": {
+                "weapons": 2,
+                "armor": 1
+              },
+              "collections": {
+                "ru": {
+                  "weapons": "560881842f5a43e8c60b8aa8374039cc5be074ca540223985aa7419f728e1aed",
+                  "armor": "0c91edf411394e065eef8d2318fc4b9697ce649672a5fdad3f85d6583f0ae3da"
+                },
+                "en": {
+                  "weapons": "3d45160f43719601c60c79313f88639a6cff906feaebbf63ddbb5203229cf6a5",
+                  "armor": "56ce7ffc5760e11ff6f8b94eb9327162660c20f2a6517c5c305cad0ee6d35faf"
+                }
+              }
+            }
+          },
+          "locales": {
+            "ru": "943731297f15a4328d5694fc99e6558517422d27fed7a4f9103380ee24fc2c9e",
+            "en": "d75e190f771c951e8a7641ef6cf48545827d9a7a361361b1947f5fb632e10271"
+          }
+        },
+        "signature": "q9X8V1IA3vpfpXs8rClwHBucs0UpjYzA88f2b5YDVTVDe8LDipJ4Yg7NZ3FHgSxssemCW5pTcSZblfPbuNlZAA=="
+      }
+    },
+    {
+      "name": "signature_of_other_document",
+      "valid": false,
+      "document": {
+        "schema_version": 1,
+        "issued_at": "2026-10-27T09:00:00.000Z",
+        "content": {
+          "release": 3,
+          "root": "4813494d137e1631bba301d5acab6e7bb7aa74ce1185d456565ef51d737677b2",
+          "min_app_version": "0.1.0",
+          "note": {
+            "ru": "Исправления и новые записи",
+            "en": "Fixes and new entries"
+          },
+          "languages": [
+            "ru",
+            "en"
+          ],
+          "packs": {
+            "core": {
+              "kind": "core",
+              "position": 0,
+              "name": {
+                "ru": "Основная книга",
+                "en": "Core Rulebook"
+              },
+              "summary": {
+                "ru": "Базовые правила",
+                "en": "Core rules"
+              },
+              "hash": "a7ae86c72b2ad0d9db127f5bc7bf5c44717c1eb55360be473095eddda7cd317d",
+              "counts": {
+                "weapons": 2,
+                "armor": 1
+              },
+              "collections": {
+                "ru": {
+                  "weapons": "560881842f5a43e8c60b8aa8374039cc5be074ca540223985aa7419f728e1aed",
+                  "armor": "0c91edf411394e065eef8d2318fc4b9697ce649672a5fdad3f85d6583f0ae3da"
+                },
+                "en": {
+                  "weapons": "3d45160f43719601c60c79313f88639a6cff906feaebbf63ddbb5203229cf6a5",
+                  "armor": "56ce7ffc5760e11ff6f8b94eb9327162660c20f2a6517c5c305cad0ee6d35faf"
+                }
+              }
+            }
+          },
+          "locales": {
+            "ru": "943731297f15a4328d5694fc99e6558517422d27fed7a4f9103380ee24fc2c9e",
+            "en": "d75e190f771c951e8a7641ef6cf48545827d9a7a361361b1947f5fb632e10271"
+          }
+        },
+        "app": {
+          "latest": "1.0.1",
+          "min_supported": "1.0.0",
+          "published_at": "2026-10-27T10:00:00.000Z",
+          "changelog_url": "/api/v1/app/changelog?lang=",
+          "update_url": "/api/v1/app/update/{target}/{arch}/{current_version}",
+          "issued_at": "2026-10-27T12:34:56.000Z",
+          "android": {
+            "version": "1.0.1",
+            "url": "/api/v1/download/android",
+            "sha256": "dd37c2d7274f7ea982cb83390c36918fee9ce8889073c44b68cdc00bdb8c3e04",
+            "size": 31457280
+          }
+        },
+        "signature": "7zg43pWXSmEhpa/xqhP+X8kEnp9+3rmswoIvvhcTawRlRL4geXt19nshZtyAtWCX7ZT6bgK8KO1k1sAfttzsCw=="
+      }
+    }
+  ]
+}

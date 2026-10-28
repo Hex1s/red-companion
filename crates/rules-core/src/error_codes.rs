@@ -15,6 +15,7 @@ use crate::error::{ErrorInfo, Params};
 use crate::healing::HealingError;
 use crate::humanity::HumanityError;
 use crate::initiative::InitiativeError;
+use crate::manifest::ManifestError;
 use crate::params;
 use crate::roles::{DrugError, RoleError};
 use crate::scene::SceneError;
@@ -40,6 +41,25 @@ impl ErrorInfo for DiceError {
             Self::WrongManualCount { expected, got } => params! { "expected" => expected, "got" => got },
             Self::ManualValueOutOfRange { value, sides } => params! { "value" => value, "sides" => sides },
             Self::CheckTotalOutOfRange(total) => params! { "total" => total },
+        }
+    }
+}
+
+impl ErrorInfo for ManifestError {
+    fn code(&self) -> &'static str {
+        match self {
+            Self::MissingSignature => "manifest.missing_signature",
+            Self::MalformedSignature => "manifest.malformed_signature",
+            Self::UntrustedSignature => "manifest.untrusted_signature",
+            Self::BadKey => "manifest.bad_key",
+            Self::HashMismatch { .. } => "manifest.hash_mismatch",
+        }
+    }
+
+    fn params(&self) -> Params {
+        match self {
+            Self::HashMismatch { name } => params! { "name" => name },
+            Self::MissingSignature | Self::MalformedSignature | Self::UntrustedSignature | Self::BadKey => Params::new(),
         }
     }
 }

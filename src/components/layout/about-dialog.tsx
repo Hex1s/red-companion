@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ErrorNotice } from "@/components/ui/error-notice";
 import { api, hasBackend, type UpdateInfo } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
+import { useUpdateStore } from "@/store/update-store";
 
 type AboutDialogProps = {
   open: boolean;
@@ -26,6 +27,16 @@ export function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
   const [progress, setProgress] = useState<Progress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mobile, setMobile] = useState(false);
+  const found = useUpdateStore((s) => s.available);
+  const setFound = useUpdateStore((s) => s.setAvailable);
+
+  // The start-up check may already have found one: show it without asking the server again.
+  useEffect(() => {
+    if (open && found && phase === "idle") {
+      setUpdate(found);
+      setPhase("available");
+    }
+  }, [open, found, phase]);
 
   useEffect(() => {
     if (hasBackend) api.isMobile().then(setMobile, () => setMobile(false));
@@ -51,9 +62,10 @@ export function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
     setError(null);
     setPhase("checking");
     try {
-      const found = await api.checkUpdate();
-      setUpdate(found);
-      setPhase(found ? "available" : "latest");
+      const checked = await api.checkUpdate();
+      setFound(checked);
+      setUpdate(checked);
+      setPhase(checked ? "available" : "latest");
     } catch (e) {
       setError(errorMessage(e));
       setPhase("idle");

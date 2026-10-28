@@ -1309,6 +1309,13 @@
     "data": {
       "malformed": "The reference “{{name}}” is damaged. Reinstall or update the app."
     },
+    "manifest": {
+      "missing_signature": "Could not verify that the server data is genuine. Try again later or update the app.",
+      "malformed_signature": "Could not verify that the server data is genuine. Try again later or update the app.",
+      "untrusted_signature": "Could not verify that the server data is genuine. Try again later or update the app.",
+      "bad_key": "The built-in verification key is damaged. Reinstall the app.",
+      "hash_mismatch": "The \"{{name}}\" reference failed the integrity check. Try again."
+    },
     "catalog": {
       "duplicate_id": "The reference has the entry “{{id}}” twice. Update the app.",
       "missing_field": "The reference entry “{{id}}” lacks data. Update the app.",
@@ -1656,6 +1663,9 @@
     "button": "About",
     "title": "About",
     "description": "Red Companion: a game master's helper for the Cyberpunk RED tabletop game. All your data stays on your computer.",
+    "startup_available": "Version {{version}} is available",
+    "startup_open": "Open",
+    "button_update": "About: version {{version}} is available",
     "unofficial": "Unofficial material. This app is not affiliated with or endorsed by R. Talsorian Games. Cyberpunk and Cyberpunk RED are trademarks of R. Talsorian Games Inc.",
     "version": "Version",
     "updates": "Updates",
